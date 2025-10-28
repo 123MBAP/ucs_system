@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles (add component-specific styles below) */
+:root {
+	--bg: #f3f4f6;
+}
+
+html, body, #root {
+	height: 100%;
+}
+
+body {
+	background-color: var(--bg);
+}
