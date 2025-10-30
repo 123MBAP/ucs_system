@@ -11,7 +11,7 @@ type ManpowerInfo = {
 };
 
 const ManpowerDashboard = () => {
-  const [me, setMe] = useState<Me | null>(null);
+  const [, setMe] = useState<Me | null>(null);
   const [info, setInfo] = useState<ManpowerInfo>({ name: '', zone: null, salary: null });
   const [loading, setLoading] = useState(false);
 

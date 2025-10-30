@@ -31,7 +31,7 @@ const ZoneSupervision = () => {
   const [editDays, setEditDays] = useState<number[]>([]);
   const [editDrivers, setEditDrivers] = useState<Record<number, string>>({});
   const [editVehicleDriver, setEditVehicleDriver] = useState<Record<number, string>>({});
-  const [editVehicleManpower, setEditVehicleManpower] = useState<Record<number, Set<number>>>({});
+  const [, setEditVehicleManpower] = useState<Record<number, Set<number>>>({});
   const [addingMp, setAddingMp] = useState<string>('');
 
   function load() {
@@ -69,18 +69,6 @@ const ZoneSupervision = () => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ days: editDays })
-    });
-    load();
-  }
-
-  async function saveVehicleManpowers(driverUserId: number) {
-    const token = localStorage.getItem('token');
-    if (!token || !id) return;
-    const ids = Array.from(editVehicleManpower[driverUserId] || []);
-    await fetch(`${apiBase}/api/supervisor/zones/${id}/driver/vehicle/manpowers`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ driverUserId, manpowerIds: ids })
     });
     load();
   }

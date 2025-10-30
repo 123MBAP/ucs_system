@@ -128,7 +128,7 @@ const ManageWorkers = () => {
         body: JSON.stringify({ zoneId: Number(addZoneId) })
       });
       if (res.status === 409) {
-        const data = await res.json().catch(() => ({}));
+        await res.json().catch(() => ({}));
         const proceed = window.confirm('This zone is already assigned to a supervisor. Do you want to move it to this supervisor?');
         if (proceed) {
           await fetch(`${apiBase}/api/manager/supervisors/${supervisorId}/zones/move`, {
