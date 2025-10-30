@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: ucs-backend
+    env: node
+    rootDir: .
+    plan: free
+    autoDeploy: true
+    buildCommand: npm ci
+    startCommand: npm run start
+    runtime:
+      nodeVersion: 20
+    previews:
+      autoDeploy: true
+      buildCommand: npm ci
+      startCommand: npm run start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MOMO_BASE_URL
+        sync: false
+      - key: MOMO_API_USER
+        sync: false
+      - key: MOMO_API_KEY
+        sync: false
+      - key: MOMO_PRIMARY_KEY
+        sync: false
+      - key: MOMO_TARGET_ENV
+        sync: false
+      - key: MOMO_CALLBACK_HOST
+        sync: false
+      - key: MOMO_DEFAULT_COUNTRY_CODE
+        sync: false
+      - key: MOMO_DEFAULT_CURRENCY
+        sync: false
