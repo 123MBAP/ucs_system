@@ -16,6 +16,7 @@ function requireManager(req, res, next) {
 // List zones (any authenticated user)
 router.get('/', auth, async (req, res) => {
   try {
+    const onlyUnassigned = String(req.query.unassigned || '').toLowerCase() === 'true';
     const { rows } = await db.query(
       `SELECT 
          z.id,
@@ -37,6 +38,7 @@ router.get('/', auth, async (req, res) => {
        LEFT JOIN users uc ON uc.id = z.assigned_chief
        LEFT JOIN users us ON us.id = z.supervisor_id
        LEFT JOIN vehicles v ON v.id = z.vehicle_id
+       ${onlyUnassigned ? 'WHERE z.supervisor_id IS NULL' : ''}
        ORDER BY z.id DESC`
     );
     return res.json({ zones: rows });

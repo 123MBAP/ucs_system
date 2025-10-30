@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import Sidebar from './src/Components/SideBar';
 import AddNewZone from './src/Pages/AddNewZone';
 import Dashboard from './src/Pages/Dashboard';
@@ -21,10 +21,12 @@ import Zones from './src/Pages/Zones';
 import ZoneDetail from './src/Pages/ZoneDetail';
 import Clients from './src/Pages/Clients';
 import ZoneClients from './src/Pages/ZoneClients';
+import ZoneSupervision from './src/Pages/ZoneSupervision';
 import ZoneManpower from './src/Pages/ZoneManpower';
 import VehiclesDrivers from './src/Pages/VehiclesDrivers';
 import RegisterVehicle from './src/Pages/RegisterVehicle';
 import Payments from './src/Pages/Payments';
+import ManageWorkers from './src/Pages/ManageWorkers';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -73,7 +75,7 @@ function App() {
           <main className="flex-1 overflow-y-auto p-6">
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<RoleHome />} />
               <Route path="/register-driver" element={<RegisterDriver />} />
               <Route path="/register-car" element={<RegisterCar />} />
               <Route path="/add-zone" element={<AddNewZone />} />
@@ -89,11 +91,13 @@ function App() {
               <Route path="/zones/:id" element={<ZoneDetail />} />
               <Route path="/zones/:id/clients" element={<ZoneClients />} />
               <Route path="/zones/:id/manpower" element={<ZoneManpower />} />
+              <Route path="/supervisor/zones/:id/supervision" element={<ZoneSupervision />} />
               <Route path="/vehicles" element={<VehiclesDrivers />} />
               <Route path="/register-vehicle" element={<RegisterVehicle />} />
               <Route path="/register-car" element={<RegisterVehicle />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/payments" element={<Payments />} />
+              <Route path="/manage-workers" element={<ManageWorkers />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/register-manpower" element={<RegisterManpower />} />
               <Route path="/register-client" element={<RegisterClient />} />
@@ -103,6 +107,31 @@ function App() {
       </div>
     </BrowserRouter>
   );
+}
+
+function RoleHome() {
+  // decide landing page based on role
+  let role: string | null = null;
+  try {
+    const stored = localStorage.getItem('user');
+    role = stored ? (JSON.parse(stored)?.role ?? null) : null;
+  } catch {}
+  switch (role) {
+    case 'manager':
+      return <Dashboard />;
+    case 'supervisor':
+      return <Navigate to="/supervisor" replace />;
+    case 'chief':
+      return <Navigate to="/chief-dashboard" replace />;
+    case 'client':
+      return <Navigate to="/client-dashboard" replace />;
+    case 'manpower':
+      return <Navigate to="/manpower-dashboard" replace />;
+    case 'driver':
+      return <Navigate to="/driver-dashboard" replace />;
+    default:
+      return <Navigate to="/login" replace />;
+  }
 }
 
 export default App;

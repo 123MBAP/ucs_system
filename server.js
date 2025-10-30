@@ -7,6 +7,10 @@ import auth from './backend/middlewares/auth.js';
 import zonesRouter from './backend/routes/zones.js';
 import managerRouter from './backend/routes/manager.js';
 import clientsRouter from './backend/routes/clients.js';
+import paymentsRouter from './backend/routes/payments.js';
+import reportRouter from './backend/routes/report.js';
+import chiefRouter from './backend/routes/chief.js';
+import supervisorRouter from './backend/routes/supervisor.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -19,6 +23,10 @@ app.use('/api', loginRouter);
 app.use('/api/zones', zonesRouter);
 app.use('/api/manager', managerRouter);
 app.use('/api/clients', clientsRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/report', reportRouter);
+app.use('/api/chief', chiefRouter);
+app.use('/api/supervisor', supervisorRouter);
 
 app.get('/api/me', auth, (req, res) => {
   return res.json({ user: req.user });

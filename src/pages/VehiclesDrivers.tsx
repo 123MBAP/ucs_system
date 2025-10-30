@@ -7,22 +7,24 @@ type DriverRow = {
   username: string;
   vehicle_id?: number | null;
   vehicle_plate: string | null;
+  assigned_manpowers?: number[];
+  assigned_manpower_users?: { id: number; username: string }[];
   zones: { id: number; name: string }[];
 };
 
 type Vehicle = { id: number; plate: string; make?: string | null; model?: string | null };
-type Zone = { id: string; name: string };
+type Manpower = { id: number; username: string };
 
 const VehiclesDrivers = () => {
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [zones, setZones] = useState<Zone[]>([]);
+  const [manpower, setManpower] = useState<Manpower[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editVehicleId, setEditVehicleId] = useState<string>('');
-  const [editZoneIds, setEditZoneIds] = useState<string[]>([]);
+  const [editManpowerIds, setEditManpowerIds] = useState<Set<number>>(new Set());
 
   function load() {
     const token = localStorage.getItem('token');
@@ -32,25 +34,27 @@ const VehiclesDrivers = () => {
     Promise.all([
       fetch(`${apiBase}/api/manager/drivers/with-assignments`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`${apiBase}/api/manager/vehicles`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`${apiBase}/api/zones`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${apiBase}/api/manager/manpower`, { headers: { Authorization: `Bearer ${token}` } })
     ])
-      .then(async ([dr, vr, zr]) => {
+      .then(async ([dr, vr, mr]) => {
         const ddata = await dr.json();
         const vdata = await vr.json();
-        const zdata = await zr.json();
+        const mdata = await mr.json();
         if (!dr.ok) throw new Error(ddata?.error || 'Failed to load drivers');
         if (!vr.ok) throw new Error(vdata?.error || 'Failed to load vehicles');
-        if (!zr.ok) throw new Error(zdata?.error || 'Failed to load zones');
+        if (!mr.ok) throw new Error(mdata?.error || 'Failed to load manpower');
         const list: DriverRow[] = (ddata.drivers || []).map((d: any) => ({
           id: d.id,
           username: d.username,
           vehicle_id: d.vehicle_id ?? null,
           vehicle_plate: d.vehicle_plate || null,
+          assigned_manpowers: Array.isArray(d.assigned_manpowers) ? d.assigned_manpowers.map((x: any) => Number(x)) : [],
+          assigned_manpower_users: Array.isArray(d.assigned_manpower_users) ? d.assigned_manpower_users.map((u: any) => ({ id: Number(u.id), username: String(u.username) })) : [],
           zones: Array.isArray(d.zones) ? d.zones.map((z: any) => ({ id: Number(z.id), name: z.name })) : []
         }));
         setDrivers(list);
         setVehicles((vdata.vehicles || []).map((v: any) => ({ id: v.id, plate: v.plate, make: v.make, model: v.model })));
-        setZones((zdata.zones || []).map((z: any) => ({ id: String(z.id), name: z.zone_name })));
+        setManpower((mdata.manpower || []).map((u: any) => ({ id: u.id, username: u.username })));
       })
       .catch((e: any) => setError(e?.message || 'Failed to load'))
       .finally(() => setLoading(false));
@@ -61,17 +65,21 @@ const VehiclesDrivers = () => {
   function startEdit(d: DriverRow) {
     setEditingId(d.id);
     setEditVehicleId(d.vehicle_id != null ? String(d.vehicle_id) : '');
-    setEditZoneIds(d.zones.map(z => String(z.id)));
+    setEditManpowerIds(new Set(d.assigned_manpowers || []));
   }
 
-  function toggleZoneId(id: string) {
-    setEditZoneIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+  function toggleManpowerId(id: number) {
+    setEditManpowerIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   }
 
   function cancelEdit() {
     setEditingId(null);
     setEditVehicleId('');
-    setEditZoneIds([]);
+    setEditManpowerIds(new Set());
   }
 
   async function saveEdit(driverId: number) {
@@ -90,11 +98,11 @@ const VehiclesDrivers = () => {
           body: JSON.stringify({ vehicleId: Number(editVehicleId) })
         });
       }
-      // zones set
-      await fetch(`${apiBase}/api/manager/drivers/${driverId}/zones`, {
+      // vehicle manpowers set
+      await fetch(`${apiBase}/api/manager/drivers/${driverId}/vehicle/manpowers`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ zoneIds: editZoneIds.map(z => Number(z)) })
+        body: JSON.stringify({ manpowerIds: Array.from(editManpowerIds) })
       });
       cancelEdit();
       load();
@@ -123,8 +131,11 @@ const VehiclesDrivers = () => {
                   <span className="ml-2 font-medium">{d.vehicle_plate || 'Not set'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 text-sm">Assigned Zones:</span>
-                  <span className="ml-2 font-medium">{d.zones && d.zones.length ? d.zones.map(z => z.name).join(', ') : 'None'}</span>
+                  <span className="text-gray-500 text-sm">Assigned Manpowers:</span>
+                  <span className="ml-2 font-medium">{d.assigned_manpower_users && d.assigned_manpower_users.length ? d.assigned_manpower_users.map(u => u.username).join(', ') : 'None'}</span>
+                </div>
+                <div>
+                  {/* Zones intentionally hidden per request */}
                 </div>
               </div>
 
@@ -139,13 +150,14 @@ const VehiclesDrivers = () => {
                       ))}
                     </select>
                   </div>
+                  
                   <div>
-                    <label className="block text-sm text-gray-700 mb-1">Assign Zones</label>
+                    <label className="block text-sm text-gray-700 mb-1">Assign Manpowers to Vehicle</label>
                     <div className="max-h-40 overflow-auto border rounded p-2 space-y-1">
-                      {zones.map(z => (
-                        <label key={z.id} className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" checked={editZoneIds.includes(z.id)} onChange={() => toggleZoneId(z.id)} />
-                          <span>{z.name}</span>
+                      {manpower.map(mp => (
+                        <label key={mp.id} className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" checked={editManpowerIds.has(mp.id)} onChange={() => toggleManpowerId(mp.id)} />
+                          <span>{mp.username}</span>
                         </label>
                       ))}
                     </div>
@@ -157,7 +169,7 @@ const VehiclesDrivers = () => {
                 </div>
               ) : (
                 <div className="mt-3">
-                  <button onClick={() => startEdit(d)} className="text-blue-600 underline text-sm">Assign</button>
+                  <button onClick={() => startEdit(d)} className="text-blue-600 underline text-sm">Manage manpowers</button>
                 </div>
               )}
             </div>

@@ -16,6 +16,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   }
   const menuItems: { name: string; icon: string; to: string }[] = [
     { name: 'Dashboard', icon: '📊', to: '/' },
+    { name: 'Manage Workers', icon: '🧑‍🔧', to: '/manage-workers' },
     { name: 'Supervisor Dashboard', icon: '🧭', to: '/supervisor' },
     { name: 'Chief Dashboard', icon: '🏷️', to: '/chief-dashboard' },
     { name: 'Client Dashboard', icon: '🧑', to: '/client-dashboard' },
@@ -44,6 +45,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     // add new zone, profile, reports, register manpower, register client, payments
     manager: new Set([
       '/',
+      '/manage-workers',
       '/register-supervisor',
       '/register-driver',
       '/register-vehicle',

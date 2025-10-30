@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 
 const apiBase = 'http://localhost:4000';
 
-type Client = { id: number; username: string };
 type PendingTxn = {
   id: number;
   client_id: number;
@@ -35,18 +34,16 @@ type CompletedPayment = {
 };
 
 const Payments = () => {
-  const [clients, setClients] = useState<Client[]>([]);
   const [pending, setPending] = useState<PendingTxn[]>([]);
   const [completed, setCompleted] = useState<CompletedPayment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // form
-  const [clientId, setClientId] = useState('');
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState('');
   const [purpose, setPurpose] = useState('');
-  const [externalRef, setExternalRef] = useState('');
+  const [purposeEdit, setPurposeEdit] = useState(false);
 
   function loadAll() {
     const token = localStorage.getItem('token');
@@ -54,18 +51,14 @@ const Payments = () => {
     setLoading(true);
     setError(null);
     Promise.all([
-      fetch(`${apiBase}/api/payments/clients`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`${apiBase}/api/payments/transactions`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`${apiBase}/api/payments/completed`, { headers: { Authorization: `Bearer ${token}` } })
     ])
-      .then(async ([cr, pr, rr]) => {
-        const cdata = await cr.json();
+      .then(async ([pr, rr]) => {
         const pdata = await pr.json();
         const rdata = await rr.json();
-        if (!cr.ok) throw new Error(cdata?.error || 'Failed to load clients');
         if (!pr.ok) throw new Error(pdata?.error || 'Failed to load pending');
         if (!rr.ok) throw new Error(rdata?.error || 'Failed to load completed');
-        setClients(cdata.clients || []);
         setPending(pdata.transactions || []);
         setCompleted(rdata.payments || []);
       })
@@ -73,24 +66,30 @@ const Payments = () => {
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    const now = new Date();
+    const month = now.toLocaleString(undefined, { month: 'long' });
+    const def = `Pay for ${month}`;
+    setPurpose(def);
+    loadAll();
+  }, []);
 
   function initiate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     const token = localStorage.getItem('token');
     if (!token) return;
-    if (!clientId || !amount || !phone) { setError('Client, Amount, and Phone are required'); return; }
+    if (!amount || !phone) { setError('Amount and Phone are required'); return; }
     fetch(`${apiBase}/api/payments/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ clientId: Number(clientId), amount: Number(amount), phoneNumber: phone, purpose: purpose || undefined, externalRef: externalRef || undefined })
+      body: JSON.stringify({ amount: Number(amount), phoneNumber: phone, purpose: purpose || undefined })
     })
       .then(async r => {
         const data = await r.json();
         if (!r.ok) throw new Error(data?.error || 'Failed to initiate payment');
         // reset minimal
-        setAmount(''); setPhone(''); setPurpose(''); setExternalRef('');
+        setAmount(''); setPhone('');
         loadAll();
       })
       .catch((e: any) => setError(e?.message || 'Failed to initiate payment'));
@@ -121,15 +120,14 @@ const Payments = () => {
       {loading && <div>Loading…</div>}
 
       <div className="bg-white border rounded shadow p-4">
-        <h3 className="text-lg font-semibold mb-3">Initiate Payment</h3>
-        <form onSubmit={initiate} className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div>
-            <label className="block text-sm text-gray-700">Client</label>
-            <select value={clientId} onChange={e => setClientId(e.target.value)} className="mt-1 w-full border rounded px-2 py-2" required>
-              <option value="">-- Select client --</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.username}</option>)}
-            </select>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Initiate Payment</h3>
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1 rounded text-black font-semibold" style={{ backgroundColor: '#FFCB05' }}>MTN MoMo</div>
+            <span className="text-sm text-gray-600">You will pay using MTN Mobile Money</span>
           </div>
+        </div>
+        <form onSubmit={initiate} className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div>
             <label className="block text-sm text-gray-700">Amount</label>
             <input type="number" min="0" step="0.01" className="mt-1 w-full border rounded px-2 py-2" value={amount} onChange={e => setAmount(e.target.value)} required />
@@ -139,15 +137,21 @@ const Payments = () => {
             <input className="mt-1 w-full border rounded px-2 py-2" value={phone} onChange={e => setPhone(e.target.value)} required />
           </div>
           <div>
-            <label className="block text-sm text-gray-700">Purpose (optional)</label>
-            <input className="mt-1 w-full border rounded px-2 py-2" value={purpose} onChange={e => setPurpose(e.target.value)} />
+            <div className="flex items-center justify-between">
+              <label className="block text-sm text-gray-700">Purpose</label>
+              <button type="button" onClick={() => setPurposeEdit(v => !v)} className="text-sm text-blue-600 underline">
+                {purposeEdit ? 'Done' : 'Edit'}
+              </button>
+            </div>
+            <input
+              className="mt-1 w-full border rounded px-2 py-2"
+              value={purpose}
+              onChange={e => setPurpose(e.target.value)}
+              readOnly={!purposeEdit}
+            />
           </div>
-          <div>
-            <label className="block text-sm text-gray-700">External Ref (optional)</label>
-            <input className="mt-1 w-full border rounded px-2 py-2" value={externalRef} onChange={e => setExternalRef(e.target.value)} />
-          </div>
-          <div className="md:col-span-5">
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Initiate</button>
+          <div className="md:col-span-1 flex items-end">
+            <button type="submit" className="w-full px-4 py-2 rounded font-semibold text-black" style={{ backgroundColor: '#FFCB05' }}>Initiate MTN MoMo Payment</button>
           </div>
         </form>
       </div>

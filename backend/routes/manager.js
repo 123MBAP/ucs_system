@@ -25,6 +25,69 @@ router.post('/chiefs', auth, requireManager, async (req, res) => {
 
     if (!username || typeof username !== 'string') {
       return res.status(400).json({ error: 'username is required' });
+
+// Move (reassign) a vehicle to the specified supervisor, even if currently assigned to another (manager only)
+router.patch('/supervisors/:id/vehicle/move', auth, requireManager, async (req, res) => {
+  const client = await db.pool.connect();
+  try {
+    const supervisorId = Number(req.params.id);
+    const { vehicleId } = req.body || {};
+    if (!Number.isFinite(supervisorId)) return res.status(400).json({ error: 'Invalid supervisor id' });
+    if (!Number.isFinite(Number(vehicleId))) return res.status(400).json({ error: 'Invalid vehicle id' });
+    // Validate supervisor role
+    const roleRes = await db.query('SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1', [supervisorId]);
+    if (!roleRes.rows.length || roleRes.rows[0].role_name !== 'supervisor') {
+      return res.status(400).json({ error: 'Provided user is not a supervisor' });
+    }
+    const v = await db.query('SELECT id FROM vehicles WHERE id = $1', [Number(vehicleId)]);
+    if (!v.rows.length) return res.status(404).json({ error: 'Vehicle not found' });
+    await client.query('BEGIN');
+    // Remove any existing assignment for this vehicle
+    await client.query('DELETE FROM supervisor_vehicle_assignments WHERE vehicle_id = $1', [Number(vehicleId)]);
+    // Upsert for target supervisor
+    const up = await client.query(
+      `INSERT INTO supervisor_vehicle_assignments (supervisor_id, vehicle_id)
+       VALUES ($1, $2)
+       ON CONFLICT (supervisor_id) DO UPDATE SET vehicle_id = EXCLUDED.vehicle_id
+       RETURNING supervisor_id, vehicle_id`,
+      [supervisorId, Number(vehicleId)]
+    );
+    await client.query('COMMIT');
+    return res.json({ assignment: up.rows[0] });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch {}
+    console.error('Move vehicle to supervisor error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+});
+
+// Move (reassign) a zone to the specified supervisor, even if currently assigned to another (manager only)
+router.patch('/supervisors/:id/zones/move', auth, requireManager, async (req, res) => {
+  try {
+    const supervisorId = Number(req.params.id);
+    const { zoneId } = req.body || {};
+    if (!Number.isFinite(supervisorId)) return res.status(400).json({ error: 'Invalid supervisor id' });
+    if (!Number.isFinite(Number(zoneId))) return res.status(400).json({ error: 'Invalid zone id' });
+    // Validate supervisor role
+    const roleRes = await db.query('SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1', [supervisorId]);
+    if (!roleRes.rows.length || roleRes.rows[0].role_name !== 'supervisor') {
+      return res.status(400).json({ error: 'Provided user is not a supervisor' });
+    }
+    const zr = await db.query('SELECT id FROM zones WHERE id = $1', [Number(zoneId)]);
+    if (!zr.rows.length) return res.status(404).json({ error: 'Zone not found' });
+    const upd = await db.query(
+      `UPDATE zones SET supervisor_id = $1 WHERE id = $2
+       RETURNING id, zone_name, supervisor_id`,
+      [supervisorId, Number(zoneId)]
+    );
+    return res.json({ zone: upd.rows[0] });
+  } catch (err) {
+    console.error('Move zone to supervisor error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
     }
 
     // Ensure username not taken
@@ -104,6 +167,140 @@ router.post('/chiefs', auth, requireManager, async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   } finally {
     client.release();
+  }
+});
+
+// List supervisors with assigned vehicle and zones (manager only)
+router.get('/supervisors/with-assignments', auth, requireManager, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT u.id,
+              u.username,
+              sva.vehicle_id,
+              v.plate AS vehicle_plate,
+              COALESCE(
+                (
+                  SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
+                  FROM zones z
+                  WHERE z.supervisor_id = u.id
+                ),
+                '[]'::json
+              ) AS zones
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN supervisor_vehicle_assignments sva ON sva.supervisor_id = u.id
+       LEFT JOIN vehicles v ON v.id = sva.vehicle_id
+       WHERE r.role_name = 'supervisor'
+       ORDER BY u.username ASC`
+    );
+    return res.json({ supervisors: rows });
+  } catch (err) {
+    console.error('Supervisors with assignments error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Assign a vehicle to a supervisor (manager only)
+router.patch('/supervisors/:id/vehicle', auth, requireManager, async (req, res) => {
+  try {
+    const supervisorId = Number(req.params.id);
+    const { vehicleId } = req.body || {};
+    if (!Number.isFinite(supervisorId)) return res.status(400).json({ error: 'Invalid supervisor id' });
+    if (!vehicleId) return res.status(400).json({ error: 'vehicleId is required' });
+    // Validate supervisor role
+    const roleRes = await db.query('SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1', [supervisorId]);
+    if (!roleRes.rows.length || roleRes.rows[0].role_name !== 'supervisor') {
+      return res.status(400).json({ error: 'Provided user is not a supervisor' });
+    }
+    const v = await db.query('SELECT id FROM vehicles WHERE id = $1', [vehicleId]);
+    if (!v.rows.length) return res.status(404).json({ error: 'Vehicle not found' });
+    // Prevent assigning a vehicle that is already assigned to another supervisor
+    const current = await db.query(
+      `SELECT supervisor_id FROM supervisor_vehicle_assignments WHERE vehicle_id = $1`,
+      [Number(vehicleId)]
+    );
+    if (current.rows.length && current.rows[0].supervisor_id !== supervisorId) {
+      return res.status(409).json({ error: 'Vehicle already assigned to another supervisor', currentSupervisorId: current.rows[0].supervisor_id });
+    }
+    const up = await db.query(
+      `INSERT INTO supervisor_vehicle_assignments (supervisor_id, vehicle_id)
+       VALUES ($1, $2)
+       ON CONFLICT (supervisor_id) DO UPDATE SET vehicle_id = EXCLUDED.vehicle_id
+       RETURNING supervisor_id, vehicle_id`,
+      [supervisorId, Number(vehicleId)]
+    );
+    return res.json({ assignment: up.rows[0] });
+  } catch (err) {
+    console.error('Assign vehicle to supervisor error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Unassign vehicle from supervisor (manager only)
+router.delete('/supervisors/:id/vehicle', auth, requireManager, async (req, res) => {
+  try {
+    const supervisorId = Number(req.params.id);
+    if (!Number.isFinite(supervisorId)) return res.status(400).json({ error: 'Invalid supervisor id' });
+    const del = await db.query('DELETE FROM supervisor_vehicle_assignments WHERE supervisor_id = $1 RETURNING supervisor_id', [supervisorId]);
+    if (!del.rows.length) return res.status(404).json({ error: 'Assignment not found' });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Unassign vehicle from supervisor error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add a zone to supervisor (manager only)
+router.patch('/supervisors/:id/zones/add', auth, requireManager, async (req, res) => {
+  try {
+    const supervisorId = Number(req.params.id);
+    const { zoneId } = req.body || {};
+    if (!Number.isFinite(supervisorId)) return res.status(400).json({ error: 'Invalid supervisor id' });
+    if (!Number.isFinite(Number(zoneId))) return res.status(400).json({ error: 'Invalid zone id' });
+    // Validate supervisor role
+    const roleRes = await db.query('SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1', [supervisorId]);
+    if (!roleRes.rows.length || roleRes.rows[0].role_name !== 'supervisor') {
+      return res.status(400).json({ error: 'Provided user is not a supervisor' });
+    }
+    // Only allow adding unsupervised zones
+    const zr = await db.query('SELECT id, supervisor_id FROM zones WHERE id = $1', [Number(zoneId)]);
+    if (!zr.rows.length) return res.status(404).json({ error: 'Zone not found' });
+    const currentSupervisor = zr.rows[0].supervisor_id;
+    if (currentSupervisor != null) {
+      return res.status(409).json({
+        error: 'Zone already assigned to a supervisor',
+        currentSupervisorId: currentSupervisor
+      });
+    }
+    const upd = await db.query(
+      `UPDATE zones SET supervisor_id = $1 WHERE id = $2
+       RETURNING id, zone_name, supervisor_id`,
+      [supervisorId, Number(zoneId)]
+    );
+    return res.json({ zone: upd.rows[0] });
+  } catch (err) {
+    console.error('Add zone to supervisor error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Remove a zone from supervisor (manager only)
+router.patch('/supervisors/:id/zones/remove', auth, requireManager, async (req, res) => {
+  try {
+    const supervisorId = Number(req.params.id);
+    const { zoneId } = req.body || {};
+    if (!Number.isFinite(supervisorId)) return res.status(400).json({ error: 'Invalid supervisor id' });
+    if (!Number.isFinite(Number(zoneId))) return res.status(400).json({ error: 'Invalid zone id' });
+    const upd = await db.query(
+      `UPDATE zones SET supervisor_id = NULL WHERE id = $1 AND supervisor_id = $2
+       RETURNING id`,
+      [Number(zoneId), supervisorId]
+    );
+    if (!upd.rows.length) return res.status(404).json({ error: 'Zone not found or not assigned to this supervisor' });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Remove zone from supervisor error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -505,7 +702,7 @@ router.delete('/manpower/:id/zone', auth, requireManager, async (req, res) => {
   }
 });
 
-// List drivers with assigned vehicle and zones (manager only)
+// List drivers with assigned vehicle, zones, and assigned manpowers (manager only)
 router.get('/drivers/with-assignments', auth, requireManager, async (req, res) => {
   try {
     const { rows } = await db.query(
@@ -513,6 +710,16 @@ router.get('/drivers/with-assignments', auth, requireManager, async (req, res) =
               u.username,
               dva.vehicle_id,
               v.plate AS vehicle_plate,
+              COALESCE(dva.assigned_manpowers, '{}') AS assigned_manpowers,
+              COALESCE(
+                (
+                  SELECT json_agg(json_build_object('id', uu.id, 'username', uu.username) ORDER BY uu.username)
+                  FROM manpower_vehicle_assignments mva
+                  JOIN users uu ON uu.id = mva.manpower_id
+                  WHERE mva.vehicle_id = dva.vehicle_id
+                ),
+                '[]'::json
+              ) AS assigned_manpower_users,
               COALESCE(
                 (
                   SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
@@ -532,6 +739,93 @@ router.get('/drivers/with-assignments', auth, requireManager, async (req, res) =
     return res.json({ drivers: rows });
   } catch (err) {
     console.error('Drivers with assignments error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// List all manpower users not assigned to any vehicle (manager only)
+router.get('/manpower', auth, requireManager, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT u.id, u.username
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN manpower_vehicle_assignments mva ON mva.manpower_id = u.id
+       WHERE r.role_name = 'manpower' AND mva.id IS NULL
+       ORDER BY u.username ASC`
+    );
+    return res.json({ manpower: rows });
+  } catch (err) {
+    console.error('List manpower error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Set assigned manpowers for a driver's vehicle assignment (manager only)
+router.patch('/drivers/:id/vehicle/manpowers', auth, requireManager, async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const { manpowerIds } = req.body || {};
+    if (!Number.isFinite(userId)) return res.status(400).json({ error: 'Invalid driver id' });
+    if (!Array.isArray(manpowerIds)) return res.status(400).json({ error: 'manpowerIds must be an array' });
+    // Validate driver role
+    const roleRes = await db.query('SELECT r.role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1', [userId]);
+    if (!roleRes.rows.length || roleRes.rows[0].role_name !== 'driver') {
+      return res.status(400).json({ error: 'Provided user is not a driver' });
+    }
+    const ids = manpowerIds.map((x) => Number(x)).filter((x) => Number.isFinite(x));
+    // Require an existing assignment with a non-null vehicle
+    const drv = await db.query(
+      `SELECT user_id, vehicle_id FROM driver_vehicle_assignments WHERE user_id = $1`,
+      [userId]
+    );
+    if (!drv.rows.length || drv.rows[0].vehicle_id == null) {
+      return res.status(400).json({ error: 'Assign a vehicle to this driver first' });
+    }
+    const vehicleId = drv.rows[0].vehicle_id;
+
+    // Transaction: replace current mva rows for this vehicle with the new set (only unassigned will insert due to unique constraint)
+    const client = await db.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM manpower_vehicle_assignments WHERE vehicle_id = $1', [vehicleId]);
+      for (const mpId of ids) {
+        if (!Number.isFinite(mpId)) continue;
+        await client.query(
+          `INSERT INTO manpower_vehicle_assignments (manpower_id, vehicle_id)
+           VALUES ($1, $2)
+           ON CONFLICT (manpower_id) DO NOTHING`,
+          [mpId, vehicleId]
+        );
+      }
+      // Sync the ids that are actually assigned now back to dva.assigned_manpowers
+      const after = await client.query(
+        `SELECT manpower_id FROM manpower_vehicle_assignments WHERE vehicle_id = $1 ORDER BY manpower_id`,
+        [vehicleId]
+      );
+      const assignedIds = after.rows.map(r => r.manpower_id);
+      await client.query(
+        `UPDATE driver_vehicle_assignments SET assigned_manpowers = $2 WHERE user_id = $1`,
+        [userId, assignedIds]
+      );
+      await client.query('COMMIT');
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch {}
+      throw e;
+    } finally {
+      client.release();
+    }
+
+    const up = await db.query(
+      `UPDATE driver_vehicle_assignments
+       SET assigned_manpowers = assigned_manpowers
+       WHERE user_id = $1
+       RETURNING user_id, vehicle_id, assigned_manpowers`,
+      [userId]
+    );
+    return res.json({ assignment: up.rows[0] });
+  } catch (err) {
+    console.error('Set driver vehicle manpowers error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

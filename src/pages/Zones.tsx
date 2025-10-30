@@ -67,9 +67,8 @@ const Zones = () => {
                   <span className="text-gray-500 text-sm">Supervisor:</span>
                   <span className="ml-2 font-medium">{/* TODO: populate when schema exists */}Not set</span>
                 </div>
-                <div className="mt-3 flex items-center gap-4">
+                <div className="mt-3">
                   <Link to={`/zones/${z.id}`} className="text-blue-600 underline text-sm">Go to zone</Link>
-                  <Link to={`/zones/${z.id}/manpower`} className="text-blue-600 underline text-sm">Manage zone manpower</Link>
                 </div>
               </div>
             </div>
