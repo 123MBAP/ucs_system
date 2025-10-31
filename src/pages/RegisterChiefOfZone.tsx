@@ -4,7 +4,7 @@ import { useLocation, Link } from 'react-router-dom';
 type ZoneOption = { id: string; name: string };
 type UserOption = { id: string; username: string };
 
-const apiBase = 'http://localhost:4000';
+const apiBase = import.meta.env.VITE_API_URL as string;
 
 const RegisterChiefOfZone = () => {
   const [firstName, setFirstName] = useState('');

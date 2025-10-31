@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const apiBase = 'http://localhost:4000';
+const apiBase = import.meta.env.VITE_API_URL as string;
 
 type PaymentRow = {
   id: number;

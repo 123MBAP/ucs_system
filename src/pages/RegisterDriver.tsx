@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 type ZoneOption = { id: string; name: string };
 type VehicleOption = { id: string; plate: string };
 
-const apiBase = 'http://localhost:4000';
+const apiBase = import.meta.env.VITE_API_URL as string;
 
 const RegisterDriver = () => {
   const [firstName, setFirstName] = useState('');

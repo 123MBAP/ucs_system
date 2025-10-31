@@ -16,7 +16,19 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const app = express();
 
-app.use(cors());
+const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || '*';
+const corsOptions = allowedOriginsEnv === '*'
+  ? {}
+  : {
+      origin: function (origin, callback) {
+        // Allow non-browser requests or missing origin (e.g., curl, server-to-server)
+        if (!origin) return callback(null, true);
+        const allowed = allowedOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
+        if (allowed.includes(origin)) return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+      }
+    };
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use('/api', loginRouter);

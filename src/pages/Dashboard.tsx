@@ -16,7 +16,7 @@ type StatCardProps = {
   actionTo?: string;
 };
 
-const apiBase = 'http://localhost:4000';
+const apiBase = import.meta.env.VITE_API_URL as string;
 
 const Dashboard = () => {
   const [chartType, setChartType] = useState<'monthly' | 'weekly'>('monthly');

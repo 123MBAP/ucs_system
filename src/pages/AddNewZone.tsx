@@ -45,7 +45,8 @@ const AddNewZone = () => {
 
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:4000/api/zones', {
+      const apiBase = import.meta.env.VITE_API_URL as string;
+      const res = await fetch(`${apiBase}/api/zones`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-const apiBase = 'http://localhost:4000';
+const apiBase = import.meta.env.VITE_API_URL as string;
 
 type Driver = { id: number; username: string; vehicle_id?: number | null; vehicle_plate?: string | null; assigned_manpowers?: number[] };
 type Manpower = { id: number; username: string };
