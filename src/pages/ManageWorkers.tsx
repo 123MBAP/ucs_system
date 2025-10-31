@@ -5,8 +5,7 @@ const apiBase = import.meta.env.VITE_API_URL as string;
 type SupervisorRow = {
   id: number;
   username: string;
-  vehicle_id?: number | null;
-  vehicle_plate?: string | null;
+  vehicles: { id: number; plate: string }[];
   zones: { id: number; name: string }[];
 };
 
@@ -46,8 +45,7 @@ const ManageWorkers = () => {
         const list: SupervisorRow[] = (sdata.supervisors || []).map((s: any) => ({
           id: s.id,
           username: s.username,
-          vehicle_id: s.vehicle_id ?? null,
-          vehicle_plate: s.vehicle_plate ?? null,
+          vehicles: Array.isArray(s.vehicles) ? s.vehicles.map((v: any) => ({ id: Number(v.id), plate: String(v.plate) })) : [],
           zones: Array.isArray(s.zones) ? s.zones.map((z: any) => ({ id: Number(z.id), name: z.name })) : [],
         }));
         setSupervisors(list);
@@ -62,7 +60,7 @@ const ManageWorkers = () => {
 
   function startEdit(s: SupervisorRow) {
     setEditingId(s.id);
-    setEditVehicleId(s.vehicle_id != null ? String(s.vehicle_id) : '');
+    setEditVehicleId('');
     setAddZoneId('');
   }
 
@@ -106,14 +104,13 @@ const ManageWorkers = () => {
     }
   }
 
-  async function unassignVehicle(supervisorId: number) {
+  async function unassignVehicle(supervisorId: number, vehicleId: number) {
     const token = localStorage.getItem('token');
     if (!token) return;
-    await fetch(`${apiBase}/api/manager/supervisors/${supervisorId}/vehicle`, {
+    await fetch(`${apiBase}/api/manager/supervisors/${supervisorId}/vehicle/${vehicleId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     });
-    cancelEdit();
     load();
   }
 
@@ -192,8 +189,8 @@ const ManageWorkers = () => {
               </div>
               <div className="space-y-1">
                 <div>
-                  <span className="text-gray-500 text-sm">Assigned Vehicle:</span>
-                  <span className="ml-2 font-medium">{s.vehicle_plate || 'Not set'}</span>
+                  <span className="text-gray-500 text-sm">Assigned Vehicles:</span>
+                  <span className="ml-2 font-medium">{s.vehicles && s.vehicles.length ? s.vehicles.map(v => v.plate).join(', ') : 'None'}</span>
                 </div>
                 <div>
                   <span className="text-gray-500 text-sm">Zones:</span>
@@ -206,14 +203,22 @@ const ManageWorkers = () => {
                   <div>
                     <label className="block text-sm text-gray-700">Assign Vehicle</label>
                     <select value={editVehicleId} onChange={e => setEditVehicleId(e.target.value)} className="mt-1 w-full border rounded px-2 py-1 text-sm">
-                      <option value="">-- None --</option>
+                      <option value="">Select a vehicle…</option>
                       {vehicles.map(v => (
                         <option key={v.id} value={v.id}>{v.plate}</option>
                       ))}
                     </select>
                     <div className="flex items-center gap-2 mt-2">
-                      <button onClick={() => saveVehicle(s.id)} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">Save Vehicle</button>
-                      <button onClick={() => unassignVehicle(s.id)} className="px-3 py-1 border rounded text-sm">Unassign Vehicle</button>
+                      <button onClick={() => saveVehicle(s.id)} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">Add Vehicle</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Unassign Vehicle</label>
+                    <div className="flex flex-wrap gap-2">
+                      {s.vehicles.map(v => (
+                        <button key={v.id} onClick={() => unassignVehicle(s.id, v.id)} className="px-2 py-1 border rounded text-xs">{v.plate} ✕</button>
+                      ))}
+                      {!s.vehicles.length && <div className="text-gray-500 text-sm">No vehicles to unassign</div>}
                     </div>
                   </div>
                   <div>

@@ -15,8 +15,9 @@ const paymentRoles = ['manager', 'supervisor', 'chief', 'client'];
 router.post('/transactions', auth, requireRole(...paymentRoles), async (req, res) => {
   try {
     const { clientId, amount, currency = momoConfig.defaultCurrency, provider = 'momo', phoneNumber, externalRef, metadata, purpose: purposeFromBody } = req.body || {};
-    const clientIdToUse = req?.user?.id ?? clientId;
-    if (!clientIdToUse || !amount || !phoneNumber) return res.status(400).json({ error: 'clientId (or logged-in user), amount, phoneNumber are required' });
+    const role = req?.user?.role;
+    const clientIdToUse = role === 'client' ? req.user.id : clientId;
+    if (!clientIdToUse || !amount || !phoneNumber) return res.status(400).json({ error: 'clientId, amount, phoneNumber are required' });
     const c = await db.query('SELECT id FROM clients WHERE id = $1', [clientIdToUse]);
     if (!c.rows.length) return res.status(404).json({ error: 'Client not found' });
 
@@ -72,11 +73,39 @@ router.post('/transactions', auth, requireRole(...paymentRoles), async (req, res
 // List pending transactions
 router.get('/transactions', auth, requireRole(...paymentRoles), async (req, res) => {
   try {
+    const scopeChief = String(req.query.scope || '').toLowerCase() === 'chief' && (req?.user?.role === 'chief');
+    const filter = String(req.query.filter || '').toLowerCase();
+    const mine = String(req.query.mine || '').toLowerCase() === 'true';
+
+    // Build WHERE parts and params
+    const whereParts = [];
+    const params = [];
+    if (mine) {
+      if (req?.user?.role !== 'client') {
+        return res.json({ transactions: [] });
+      }
+      params.push(req.user.id);
+      whereParts.push(`pt.client_id = $${params.length}`);
+    }
+    if (scopeChief) {
+      const zonesRes = await db.query(`SELECT id FROM zones WHERE assigned_chief = $1`, [req.user.id]);
+      const zoneIds = zonesRes.rows.map(r => r.id);
+      if (!zoneIds.length) return res.json({ transactions: [] });
+      params.push(zoneIds);
+      whereParts.push(`c.zone_id = ANY($${params.length})`);
+    }
+    if (filter === 'today') {
+      whereParts.push(`DATE(pt.created_at) = CURRENT_DATE`);
+    }
+    const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
     const { rows } = await db.query(
       `SELECT pt.*, c.username AS client_username
        FROM payments_transactions pt
        JOIN clients c ON c.id = pt.client_id
-       ORDER BY pt.created_at DESC`
+       ${whereSql}
+       ORDER BY pt.created_at DESC`,
+      params
     );
     return res.json({ transactions: rows });
   } catch (err) {
@@ -88,11 +117,38 @@ router.get('/transactions', auth, requireRole(...paymentRoles), async (req, res)
 // List completed payments
 router.get('/completed', auth, requireRole(...paymentRoles), async (req, res) => {
   try {
+    const scopeChief = String(req.query.scope || '').toLowerCase() === 'chief' && (req?.user?.role === 'chief');
+    const filter = String(req.query.filter || '').toLowerCase();
+    const mine = String(req.query.mine || '').toLowerCase() === 'true';
+
+    const whereParts = [];
+    const params = [];
+    if (mine) {
+      if (req?.user?.role !== 'client') {
+        return res.json({ payments: [] });
+      }
+      params.push(req.user.id);
+      whereParts.push(`pc.client_id = $${params.length}`);
+    }
+    if (scopeChief) {
+      const zonesRes = await db.query(`SELECT id FROM zones WHERE assigned_chief = $1`, [req.user.id]);
+      const zoneIds = zonesRes.rows.map(r => r.id);
+      if (!zoneIds.length) return res.json({ payments: [] });
+      params.push(zoneIds);
+      whereParts.push(`c.zone_id = ANY($${params.length})`);
+    }
+    if (filter === 'today') {
+      whereParts.push(`DATE(pc.completed_at) = CURRENT_DATE`);
+    }
+    const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
     const { rows } = await db.query(
       `SELECT pc.*, c.username AS client_username
        FROM payments_completed pc
        LEFT JOIN clients c ON c.id = pc.client_id
-       ORDER BY pc.completed_at DESC`
+       ${whereSql}
+       ORDER BY pc.completed_at DESC`,
+      params
     );
     return res.json({ payments: rows });
   } catch (err) {

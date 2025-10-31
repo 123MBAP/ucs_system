@@ -17,6 +17,24 @@ function requireManager(req, res, next) {
 router.get('/', auth, async (req, res) => {
   try {
     const onlyUnassigned = String(req.query.unassigned || '').toLowerCase() === 'true';
+    const scopeChief = String(req.query.scope || '').toLowerCase() === 'chief' && (req?.user?.role === 'chief');
+    const scopeSupervisor = String(req.query.scope || '').toLowerCase() === 'supervisor' && (req?.user?.role === 'supervisor');
+
+    const whereParts = [];
+    const params = [];
+    if (onlyUnassigned) {
+      whereParts.push('z.supervisor_id IS NULL');
+    }
+    if (scopeChief) {
+      params.push(req.user.id);
+      whereParts.push(`z.assigned_chief = $${params.length}`);
+    }
+    if (scopeSupervisor) {
+      params.push(req.user.id);
+      whereParts.push(`z.supervisor_id = $${params.length}`);
+    }
+    const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
     const { rows } = await db.query(
       `SELECT 
          z.id,
@@ -38,8 +56,9 @@ router.get('/', auth, async (req, res) => {
        LEFT JOIN users uc ON uc.id = z.assigned_chief
        LEFT JOIN users us ON us.id = z.supervisor_id
        LEFT JOIN vehicles v ON v.id = z.vehicle_id
-       ${onlyUnassigned ? 'WHERE z.supervisor_id IS NULL' : ''}
-       ORDER BY z.id DESC`
+       ${whereSql}
+       ORDER BY z.id DESC`,
+      params
     );
     return res.json({ zones: rows });
   } catch (err) {

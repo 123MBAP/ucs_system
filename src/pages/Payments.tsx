@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -34,6 +35,7 @@ type CompletedPayment = {
 };
 
 const Payments = () => {
+  const location = useLocation();
   const [pending, setPending] = useState<PendingTxn[]>([]);
   const [completed, setCompleted] = useState<CompletedPayment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,9 +52,18 @@ const Payments = () => {
     if (!token) return;
     setLoading(true);
     setError(null);
+    const params = new URLSearchParams(location.search);
+    const scope = params.get('scope');
+    const filter = params.get('filter');
+    const parts: string[] = [];
+    if (scope) parts.push(`scope=${encodeURIComponent(scope)}`);
+    if (filter) parts.push(`filter=${encodeURIComponent(filter)}`);
+    // Default to showing only the logged-in user's payments when no scope is set
+    if (!scope) parts.push('mine=true');
+    const qs = parts.length ? `?${parts.join('&')}` : '';
     Promise.all([
-      fetch(`${apiBase}/api/payments/transactions`, { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`${apiBase}/api/payments/completed`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`${apiBase}/api/payments/transactions${qs}`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${apiBase}/api/payments/completed${qs}`, { headers: { Authorization: `Bearer ${token}` } })
     ])
       .then(async ([pr, rr]) => {
         const pdata = await pr.json();
@@ -72,7 +83,7 @@ const Payments = () => {
     const def = `Pay for ${month}`;
     setPurpose(def);
     loadAll();
-  }, []);
+  }, [location.search]);
 
   function initiate(e: React.FormEvent) {
     e.preventDefault();
@@ -91,6 +102,7 @@ const Payments = () => {
         // reset minimal
         setAmount(''); setPhone('');
         loadAll();
+        try { window.dispatchEvent(new Event('payments-updated')); } catch {}
       })
       .catch((e: any) => setError(e?.message || 'Failed to initiate payment'));
   }
@@ -109,6 +121,7 @@ const Payments = () => {
         const data = await r.json();
         if (!r.ok) throw new Error(data?.error || 'Failed to complete transaction');
         loadAll();
+        try { window.dispatchEvent(new Event('payments-updated')); } catch {}
       })
       .catch((e: any) => setError(e?.message || 'Failed to complete transaction'));
   }

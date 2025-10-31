@@ -24,6 +24,24 @@ async function ensureTables() {
       ALTER TABLE driver_vehicle_assignments
       ADD COLUMN IF NOT EXISTS assigned_manpowers INTEGER[] DEFAULT '{}';
     `);
+    await db.query(`
+      ALTER TABLE vehicles
+      ADD COLUMN IF NOT EXISTS supervisor_id INT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+    `);
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS supervisor_service_schedule (
+        id SERIAL PRIMARY KEY,
+        zone_id INT NOT NULL REFERENCES zones(id) ON UPDATE CASCADE ON DELETE CASCADE,
+        supervisor_id INT NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+        vehicle_id INT NOT NULL REFERENCES vehicles(id) ON UPDATE CASCADE ON DELETE CASCADE,
+        driver_id INT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+        service_day SMALLINT NOT NULL CHECK (service_day BETWEEN 1 AND 7),
+        service_start TIME NOT NULL,
+        service_end TIME NOT NULL,
+        assigned_manpower_ids INT[] NOT NULL DEFAULT '{}',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
   } catch (e) {
     console.error('ensureTables error', e);
   }
@@ -32,6 +50,82 @@ async function ensureTables() {
 router.use(async (req, res, next) => {
   await ensureTables();
   next();
+});
+
+// List service schedule entries for this supervisor in a zone
+router.get('/zones/:id/schedule', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const zoneId = Number(req.params.id);
+    if (!Number.isFinite(zoneId)) return res.status(400).json({ error: 'Invalid zone id' });
+    const { rows } = await db.query(
+      `SELECT id, zone_id, supervisor_id, vehicle_id, driver_id, service_day, service_start, service_end, assigned_manpower_ids, created_at
+       FROM supervisor_service_schedule
+       WHERE zone_id = $1 AND supervisor_id = $2
+       ORDER BY service_day, service_start`,
+      [zoneId, supervisorId]
+    );
+    return res.json({ schedule: rows });
+  } catch (err) {
+    console.error('List schedule error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a new schedule entry
+router.post('/zones/:id/schedule', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const zoneId = Number(req.params.id);
+    const { service_day, service_start, service_end, vehicle_id, driver_id, assigned_manpower_ids } = req.body || {};
+    if (!Number.isFinite(zoneId)) return res.status(400).json({ error: 'Invalid zone id' });
+    const day = Number(service_day);
+    if (!Number.isFinite(day) || day < 1 || day > 7) return res.status(400).json({ error: 'Invalid service_day' });
+    if (!Number.isFinite(Number(vehicle_id))) return res.status(400).json({ error: 'vehicle_id is required' });
+    if (typeof service_start !== 'string' || typeof service_end !== 'string') return res.status(400).json({ error: 'service_start/end must be time strings' });
+    const manpowers = Array.isArray(assigned_manpower_ids) ? assigned_manpower_ids.map(Number).filter(Number.isFinite) : [];
+    // Ensure vehicle belongs to this supervisor
+    const v = await db.query('SELECT id FROM vehicles WHERE id = $1 AND supervisor_id = $2', [Number(vehicle_id), supervisorId]);
+    if (!v.rows.length) return res.status(400).json({ error: 'Vehicle not assigned to you' });
+    // Optional: validate driver exists
+    let driverIdVal = null;
+    if (Number.isFinite(Number(driver_id))) {
+      const dr = await db.query("SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1 AND r.role_name = 'driver'", [Number(driver_id)]);
+      if (!dr.rows.length) return res.status(400).json({ error: 'Invalid driver_id' });
+      driverIdVal = Number(driver_id);
+    }
+    const ins = await db.query(
+      `INSERT INTO supervisor_service_schedule (zone_id, supervisor_id, vehicle_id, driver_id, service_day, service_start, service_end, assigned_manpower_ids)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [zoneId, supervisorId, Number(vehicle_id), driverIdVal, day, service_start, service_end, manpowers]
+    );
+    return res.status(201).json({ entry: ins.rows[0] });
+  } catch (err) {
+    console.error('Create schedule error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a schedule entry
+router.delete('/zones/:id/schedule/:entryId', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const zoneId = Number(req.params.id);
+    const entryId = Number(req.params.entryId);
+    if (!Number.isFinite(zoneId) || !Number.isFinite(entryId)) return res.status(400).json({ error: 'Invalid id' });
+    const del = await db.query(
+      `DELETE FROM supervisor_service_schedule
+       WHERE id = $1 AND zone_id = $2 AND supervisor_id = $3
+       RETURNING id`,
+      [entryId, zoneId, supervisorId]
+    );
+    if (!del.rows.length) return res.status(404).json({ error: 'Entry not found' });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Delete schedule error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Zones supervised by current user
@@ -88,24 +182,30 @@ router.get('/zones/:id/supervision', auth, requireRole('supervisor'), async (req
     );
 
     const manpower = await db.query(
-      `SELECT u.id, u.username
-       FROM manpower_assignments ma
-       JOIN users u ON u.id = ma.user_id
+      `SELECT DISTINCT u.id, u.username
+       FROM manpower_vehicle_assignments mva
+       JOIN users u ON u.id = mva.manpower_id
        JOIN roles r ON r.id = u.role_id
-       WHERE ma.zone_id = $1 AND r.role_name = 'manpower'
+       JOIN vehicles v ON v.id = mva.vehicle_id
+       WHERE v.supervisor_id = $1 AND r.role_name = 'manpower'
        ORDER BY u.username ASC`,
-      [zoneId]
+      [supervisorId]
     );
 
-    const vehicles = await db.query('SELECT id, plate FROM vehicles ORDER BY plate ASC');
-
-    // Supervisor's assigned vehicle (if any)
-    const sveh = await db.query(
-      `SELECT sva.vehicle_id AS id, v.plate
-       FROM supervisor_vehicle_assignments sva
-       JOIN vehicles v ON v.id = sva.vehicle_id
-       WHERE sva.supervisor_id = $1
-       LIMIT 1`,
+    const vehicles = await db.query(
+      `SELECT v.id, v.plate,
+              COALESCE(
+                (
+                  SELECT json_agg(json_build_object('id', u.id, 'username', u.username) ORDER BY u.username)
+                  FROM manpower_vehicle_assignments mva
+                  JOIN users u ON u.id = mva.manpower_id
+                  WHERE mva.vehicle_id = v.id
+                ),
+                '[]'::json
+              ) AS assigned_manpower_users
+       FROM vehicles v
+       WHERE v.supervisor_id = $1
+       ORDER BY v.plate ASC`,
       [supervisorId]
     );
 
@@ -116,7 +216,7 @@ router.get('/zones/:id/supervision', auth, requireRole('supervisor'), async (req
       drivers: drivers.rows,
       manpower: manpower.rows,
       vehicles: vehicles.rows,
-      supervisorVehicle: sveh.rows.length ? sveh.rows[0] : null,
+      supervisorVehicles: vehicles.rows,
     });
   } catch (err) {
     console.error('Zone supervision detail error:', err);

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-type ZoneOption = { id: string; name: string };
+type VehicleOption = { id: string; plate: string };
+type SupervisorOption = { id: string; username: string };
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -11,8 +12,10 @@ const RegisterManpower = () => {
   const [username, setUsername] = useState('');
   const [salary, setSalary] = useState('');
 
-  const [zones, setZones] = useState<ZoneOption[]>([]);
-  const [selectedZone, setSelectedZone] = useState<string>('');
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<string>('');
+  const [supervisors, setSupervisors] = useState<SupervisorOption[]>([]);
+  const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
   const location = useLocation();
 
   const [loading, setLoading] = useState(false);
@@ -22,21 +25,21 @@ const RegisterManpower = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
-    fetch(`${apiBase}/api/zones`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(async r => {
-        const data = await r.json();
-        if (!r.ok) throw new Error(data?.error || 'Failed to load zones');
-        const opts: ZoneOption[] = (data.zones || []).map((z: any) => ({ id: String(z.id), name: z.zone_name }));
-        setZones(opts);
-        const params = new URLSearchParams(location.search);
-        const qZoneId = params.get('zoneId');
-        if (qZoneId && opts.some(o => o.id === String(qZoneId))) {
-          setSelectedZone(String(qZoneId));
-        }
+    Promise.all([
+      fetch(`${apiBase}/api/manager/vehicles`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${apiBase}/api/manager/users?role=supervisor`, { headers: { Authorization: `Bearer ${token}` } })
+    ])
+      .then(async ([vr, sr]) => {
+        const vdata = await vr.json();
+        const sdata = await sr.json();
+        if (!vr.ok) throw new Error(vdata?.error || 'Failed to load vehicles');
+        if (!sr.ok) throw new Error(sdata?.error || 'Failed to load supervisors');
+        const vopts: VehicleOption[] = (vdata.vehicles || []).map((v: any) => ({ id: String(v.id), plate: String(v.plate) }));
+        const sopts: SupervisorOption[] = (sdata.users || []).map((u: any) => ({ id: String(u.id), username: String(u.username) }));
+        setVehicles(vopts);
+        setSupervisors(sopts);
       })
-      .catch(err => console.error('Load zones error:', err));
+      .catch(err => console.error('Load vehicles/supervisors error:', err));
   }, [location.search]);
 
   function handleSubmit(e: React.FormEvent) {
@@ -45,7 +48,7 @@ const RegisterManpower = () => {
     setSuccess(null);
     setLoading(true);
 
-    if (!firstName.trim() || !lastName.trim() || !username.trim() || !salary.trim() || !selectedZone) {
+    if (!firstName.trim() || !lastName.trim() || !username.trim() || !salary.trim()) {
       setError('All fields are required.');
       setLoading(false);
       return;
@@ -58,13 +61,21 @@ const RegisterManpower = () => {
       return;
     }
 
-    const payload = {
+    const payload: any = {
       firstName,
       lastName,
       username,
       salary: salaryNum,
-      zoneId: selectedZone
     };
+    if (!selectedVehicle) {
+      setError('Please select a vehicle to assign.');
+      setLoading(false);
+      return;
+    }
+    payload.vehicleId = Number(selectedVehicle);
+    if (selectedSupervisor) {
+      payload.supervisorUserId = Number(selectedSupervisor);
+    }
 
     const token = localStorage.getItem('token');
     if (!token) {
@@ -89,7 +100,8 @@ const RegisterManpower = () => {
         setLastName('');
         setUsername('');
         setSalary('');
-        setSelectedZone('');
+        setSelectedVehicle('');
+        setSelectedSupervisor('');
       })
       .catch((err: any) => setError(err?.message || 'Failed to register manpower'))
       .finally(() => setLoading(false));
@@ -125,13 +137,24 @@ const RegisterManpower = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Assign Zone</label>
-          <select value={selectedZone} onChange={e => setSelectedZone(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
-            <option value="">-- Select zone --</option>
-            {zones.map(z => (
-              <option key={z.id} value={z.id}>{z.name}</option>
+          <label className="block text-sm font-medium text-gray-700">Assign Vehicle</label>
+          <select value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <option value="">-- Select vehicle --</option>
+            {vehicles.map(v => (
+              <option key={v.id} value={v.id}>{v.plate}</option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Assign Supervisor (optional)</label>
+          <select value={selectedSupervisor} onChange={e => setSelectedSupervisor(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <option value="">-- Select supervisor (optional) --</option>
+            {supervisors.map(s => (
+              <option key={s.id} value={s.id}>{s.username}</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">If not selected, we will use the vehicle's supervisor automatically (if set).</p>
         </div>
 
         <div>

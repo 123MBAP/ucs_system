@@ -92,4 +92,66 @@ router.get('/dashboard', auth, requireRole('chief'), async (req, res) => {
   }
 });
 
+// List clients assigned to this chief with optional filter
+// GET /api/chief/clients?filter=all|paid|remaining
+router.get('/clients', auth, requireRole('chief'), async (req, res) => {
+  try {
+    const chiefId = req.user.id;
+    const filter = String(req.query.filter || 'all').toLowerCase();
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const zonesRes = await db.query('SELECT id FROM zones WHERE assigned_chief = $1', [chiefId]);
+    const zoneIds = zonesRes.rows.map(r => r.id);
+    if (!zoneIds.length) return res.json({ clients: [] });
+
+    if (filter === 'paid') {
+      const { rows } = await db.query(
+        `SELECT DISTINCT c.id, c.username, c.name, c.zone_id, c.phone_number, c.monthly_amount, c.created_at
+         FROM clients c
+         JOIN payments_completed pc ON pc.client_id = c.id
+         WHERE c.zone_id = ANY($1)
+           AND pc.status = 'success'
+           AND EXTRACT(YEAR FROM pc.completed_at) = $2
+           AND EXTRACT(MONTH FROM pc.completed_at) = $3
+         ORDER BY c.id DESC`,
+        [zoneIds, year, month]
+      );
+      return res.json({ clients: rows });
+    }
+
+    if (filter === 'remaining') {
+      const { rows } = await db.query(
+        `SELECT c.id, c.username, c.name, c.zone_id, c.phone_number, c.monthly_amount, c.created_at
+         FROM clients c
+         WHERE c.zone_id = ANY($1)
+           AND c.id NOT IN (
+             SELECT DISTINCT pc.client_id
+             FROM payments_completed pc
+             WHERE pc.status = 'success'
+               AND EXTRACT(YEAR FROM pc.completed_at) = $2
+               AND EXTRACT(MONTH FROM pc.completed_at) = $3
+           )
+         ORDER BY c.id DESC`,
+        [zoneIds, year, month]
+      );
+      return res.json({ clients: rows });
+    }
+
+    // default all
+    const { rows } = await db.query(
+      `SELECT c.id, c.username, c.name, c.zone_id, c.phone_number, c.monthly_amount, c.created_at
+       FROM clients c
+       WHERE c.zone_id = ANY($1)
+       ORDER BY c.id DESC`,
+      [zoneIds]
+    );
+    return res.json({ clients: rows });
+  } catch (err) {
+    console.error('Chief clients list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

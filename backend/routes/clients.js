@@ -64,10 +64,15 @@ router.post('/', auth, requireRole('manager', 'supervisor'), async (req, res) =>
 });
 
 // List clients by zone
-router.get('/by-zone/:id', auth, requireRole('manager', 'supervisor'), async (req, res) => {
+router.get('/by-zone/:id', auth, requireRole('manager', 'supervisor', 'chief'), async (req, res) => {
   try {
     const zoneId = Number(req.params.id);
     if (!Number.isFinite(zoneId)) return res.status(400).json({ error: 'Invalid zone id' });
+    // If chief, ensure the requested zone is assigned to this chief
+    if (req?.user?.role === 'chief') {
+      const chk = await db.query('SELECT 1 FROM zones WHERE id = $1 AND assigned_chief = $2', [zoneId, req.user.id]);
+      if (!chk.rows.length) return res.status(403).json({ error: 'Forbidden: zone not assigned to this chief' });
+    }
     const { rows } = await db.query(
       `SELECT id, username, name, zone_id, phone_number, monthly_amount, created_at
        FROM clients

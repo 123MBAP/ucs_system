@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -21,7 +22,7 @@ const ChiefDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function load() {
     const token = localStorage.getItem('token');
     if (!token) return;
     setLoading(true);
@@ -34,6 +35,15 @@ const ChiefDashboard = () => {
       })
       .catch((e: any) => setError(e?.message || 'Failed to load'))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    load();
+    function onPaymentsUpdated() { load(); }
+    window.addEventListener('payments-updated', onPaymentsUpdated as any);
+    return () => {
+      window.removeEventListener('payments-updated', onPaymentsUpdated as any);
+    };
   }, []);
 
   const chiefName = data?.chiefName || '-';
@@ -58,6 +68,9 @@ const ChiefDashboard = () => {
           <p className="text-lg font-semibold text-gray-900">{chiefName}</p>
           <p className="text-sm text-gray-500 mt-2">Zone</p>
           <p className="text-lg font-semibold text-gray-900">{zoneName}</p>
+          <div className="mt-2">
+            <button onClick={load} className="text-blue-600 underline text-sm">Refresh</button>
+          </div>
         </div>
       </div>
 
@@ -71,6 +84,9 @@ const ChiefDashboard = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Number of Clients</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">{clientsTotal.toLocaleString()}</p>
+                <div className="mt-2">
+                  <Link to="/clients?scope=chief&filter=all" className="text-blue-600 underline text-sm">View</Link>
+                </div>
               </div>
               <div className="text-3xl">👥</div>
             </div>
@@ -91,6 +107,9 @@ const ChiefDashboard = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Amount Paid</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">{amountPaid.toLocaleString()}</p>
+                <div className="mt-2">
+                  <Link to="/clients?scope=chief&filter=paid" className="text-blue-600 underline text-sm">View</Link>
+                </div>
               </div>
               <div className="text-3xl">💰</div>
             </div>
@@ -111,6 +130,9 @@ const ChiefDashboard = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Clients Paid</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">{clientsPaid.toLocaleString()}</p>
+                <div className="mt-2">
+                  <Link to="/clients?scope=chief&filter=paid" className="text-blue-600 underline text-sm">View</Link>
+                </div>
               </div>
               <div className="text-3xl">✅</div>
             </div>
@@ -121,6 +143,9 @@ const ChiefDashboard = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Clients Remaining</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">{clientsRemaining.toLocaleString()}</p>
+                <div className="mt-2">
+                  <Link to="/clients?scope=chief&filter=remaining" className="text-blue-600 underline text-sm">View</Link>
+                </div>
               </div>
               <div className="text-3xl">⏳</div>
             </div>
@@ -132,6 +157,9 @@ const ChiefDashboard = () => {
                 <p className="text-sm font-medium text-gray-600">Today's Payments</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">{todayPayments.toLocaleString()}</p>
                 <p className="text-sm text-gray-500 mt-1">Payments received today</p>
+                <div className="mt-2">
+                  <Link to="/payments?scope=chief&filter=today" className="text-blue-600 underline text-sm">View</Link>
+                </div>
               </div>
               <div className="text-3xl">📅</div>
             </div>
