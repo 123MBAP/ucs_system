@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "baseUrl": "src",
+    // map `@/*` -> `src/*` so both `tsc` and IDEs resolve imports like `@/Pages/...`
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["src/*"]
     }
   },
   "files": [],
