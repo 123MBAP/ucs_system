@@ -42,7 +42,9 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { name: 'Dashboard', icon: <Icons.Dashboard />, to: '/' },
     { name: 'Manage Workers', icon: <Icons.Workers />, to: '/manage-workers' },
     { name: 'Supervisor Dashboard', icon: <Icons.Supervisor />, to: '/supervisor' },
+    { name: 'Services Supervision', icon: <Icons.Supervisor />, to: '/supervisor/services' },
     { name: 'Chief Dashboard', icon: <Icons.Chief />, to: '/chief-dashboard' },
+    { name: 'Day of Service Plan', icon: <Icons.Folder />, to: '/chief-service-plan' },
     { name: 'Client Dashboard', icon: <Icons.Client />, to: '/client-dashboard' },
     { name: 'Manpower Dashboard', icon: <Icons.Manpower />, to: '/manpower-dashboard' },
     { name: 'Driver Dashboard', icon: <Icons.Driver />, to: '/driver-dashboard' },
@@ -81,6 +83,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     ]),
     supervisor: new Set([
       '/supervisor',
+      '/supervisor/services',
       '/register-client',
       '/profile',
       '/reports',
@@ -94,6 +97,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     ]),
     chief: new Set([
       '/chief-dashboard',
+      '/chief-service-plan',
       '/profile',
       '/reports',
       '/payments',

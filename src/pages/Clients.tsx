@@ -27,6 +27,7 @@ const Clients = () => {
   const location = useLocation();
   const [rows, setRows] = useState<ZoneRow[]>([]);
   const [clients, setClients] = useState<ClientRow[]>([]);
+  const [selectedClient, setSelectedClient] = useState<ClientRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,6 +92,7 @@ const Clients = () => {
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -102,6 +104,14 @@ const Clients = () => {
                         <td className="px-3 py-2">{c.username}</td>
                         <td className="px-3 py-2">{c.phone_number}</td>
                         <td className="px-3 py-2">{c.monthly_amount != null ? Number(c.monthly_amount).toLocaleString() : '-'}</td>
+                        <td className="px-3 py-2">
+                          <button
+                            onClick={() => setSelectedClient(c)}
+                            className="px-2 py-1 text-sm bg-blue-600 text-white rounded"
+                          >
+                            Select
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -136,6 +146,33 @@ const Clients = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Make Payment card when a client is selected */}
+          {selectedClient && (
+            <div className="mt-4 bg-white border rounded shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">Make Payment</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    For client: <span className="font-medium">{(selectedClient.name ? `${selectedClient.name.first || ''} ${selectedClient.name.last || ''}`.trim() : '') || selectedClient.username}</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedClient(null)}
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >Clear</button>
+              </div>
+              <div className="mt-3">
+                <Link
+                  to={`/payments?scope=chief&clientId=${encodeURIComponent(String(selectedClient.id))}&clientName=${encodeURIComponent(((selectedClient.name ? `${selectedClient.name.first || ''} ${selectedClient.name.last || ''}`.trim() : '') || selectedClient.username))}`}
+                  className="inline-flex items-center px-4 py-2 rounded font-semibold text-black"
+                  style={{ backgroundColor: '#FFCB05' }}
+                >
+                  Proceed to Payment
+                </Link>
+              </div>
             </div>
           )}
         </>

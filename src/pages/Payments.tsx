@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
@@ -46,6 +46,9 @@ const Payments = () => {
   const [phone, setPhone] = useState('');
   const [purpose, setPurpose] = useState('');
   const [purposeEdit, setPurposeEdit] = useState(false);
+  const paramsObj = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const selectedClientId = paramsObj.get('clientId');
+  const selectedClientName = paramsObj.get('clientName');
 
   function loadAll() {
     const token = localStorage.getItem('token');
@@ -80,8 +83,9 @@ const Payments = () => {
   useEffect(() => {
     const now = new Date();
     const month = now.toLocaleString(undefined, { month: 'long' });
-    const def = `Pay for ${month}`;
-    setPurpose(def);
+    const base = `Pay for ${month}`;
+    const withClient = selectedClientName ? `${base} — ${selectedClientName}` : base;
+    setPurpose(withClient);
     loadAll();
   }, [location.search]);
 
@@ -94,7 +98,12 @@ const Payments = () => {
     fetch(`${apiBase}/api/payments/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ amount: Number(amount), phoneNumber: phone, purpose: purpose || undefined })
+      body: JSON.stringify({
+        amount: Number(amount),
+        phoneNumber: phone,
+        purpose: purpose || undefined,
+        clientId: selectedClientId ? Number(selectedClientId) : undefined,
+      })
     })
       .then(async r => {
         const data = await r.json();
@@ -129,6 +138,11 @@ const Payments = () => {
   return (
     <div className="p-6 space-y-6">
       <h2 className="text-2xl font-bold">Payments</h2>
+      {selectedClientName && (
+        <div className="rounded border border-amber-300 bg-amber-50 p-3 text-amber-900">
+          Paying for client: <span className="font-semibold">{selectedClientName}</span>
+        </div>
+      )}
       {error && <div className="text-red-600">{error}</div>}
       {loading && <div>Loading…</div>}
 

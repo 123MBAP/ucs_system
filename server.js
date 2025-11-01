@@ -18,7 +18,11 @@ const app = express();
 
 const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || '*';
 const corsOptions = allowedOriginsEnv === '*'
-  ? {}
+  ? {
+      // Reflect the request Origin header. This works with credentials and avoids '*'.
+      origin: true,
+      credentials: true,
+    }
   : {
       origin: function (origin, callback) {
         // Allow non-browser requests or missing origin (e.g., curl, server-to-server)
@@ -26,9 +30,11 @@ const corsOptions = allowedOriginsEnv === '*'
         const allowed = allowedOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
         if (allowed.includes(origin)) return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
-      }
+      },
+      credentials: true,
     };
 app.use(cors(corsOptions));
+
 app.use(express.json());
 
 app.use('/api', loginRouter);

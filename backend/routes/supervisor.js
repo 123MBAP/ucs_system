@@ -52,6 +52,117 @@ router.use(async (req, res, next) => {
   next();
 });
 
+// List all unconfirmed services for this supervisor across all zones
+router.get('/schedule', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const { rows } = await db.query(
+      `SELECT 
+         s.id, s.zone_id, s.supervisor_id,
+         s.vehicle_id, v.plate AS vehicle_plate,
+         s.driver_id, ud.username AS driver_username,
+         s.service_day, s.service_start, s.service_end,
+         s.assigned_manpower_ids, s.created_at,
+         s.chief_report_status, s.chief_report_reason, s.chief_reported_at,
+         s.supervisor_status, s.supervisor_reason, s.supervisor_decided_at,
+         z.zone_name
+       FROM supervisor_service_schedule s
+       JOIN zones z ON z.id = s.zone_id
+       LEFT JOIN vehicles v ON v.id = s.vehicle_id
+       LEFT JOIN users ud ON ud.id = s.driver_id
+       WHERE s.supervisor_id = $1
+         AND s.supervisor_status IS NULL
+       ORDER BY s.service_day, s.service_start`,
+      [supervisorId]
+    );
+    return res.json({ schedule: rows });
+  } catch (err) {
+    console.error('List unconfirmed schedule error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// List completed (supervisor-confirmed) services for this supervisor with year/month filters
+router.get('/completed-services', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const year = req.query.year != null && req.query.year !== '' ? Number(req.query.year) : null;
+    const month = req.query.month != null && req.query.month !== '' ? Number(req.query.month) : null;
+    const zoneId = req.query.zone_id != null && req.query.zone_id !== '' ? Number(req.query.zone_id) : null;
+
+    const where = ["s.supervisor_id = $1", "s.supervisor_status IN ('complete','not_complete')", 's.supervisor_decided_at IS NOT NULL'];
+    const params = [supervisorId];
+    let p = 2;
+    if (zoneId != null && Number.isFinite(zoneId)) { where.push(`s.zone_id = $${p++}`); params.push(zoneId); }
+    if (year != null && Number.isFinite(year)) { where.push(`EXTRACT(YEAR FROM s.supervisor_decided_at) = $${p++}`); params.push(year); }
+    if (month != null && Number.isFinite(month)) { where.push(`EXTRACT(MONTH FROM s.supervisor_decided_at) = $${p++}`); params.push(month); }
+
+    const sql = `SELECT 
+         s.id,
+         s.zone_id,
+         z.zone_name,
+         s.vehicle_id,
+         v.plate AS vehicle_plate,
+         s.driver_id,
+         ud.username AS driver_username,
+         s.service_day,
+         s.service_start,
+         s.service_end,
+         s.created_at,
+         s.supervisor_status,
+         s.supervisor_reason,
+         s.supervisor_decided_at
+       FROM supervisor_service_schedule s
+       JOIN zones z ON z.id = s.zone_id
+       LEFT JOIN vehicles v ON v.id = s.vehicle_id
+       LEFT JOIN users ud ON ud.id = s.driver_id
+       WHERE ${where.join(' AND ')}
+       ORDER BY s.supervisor_decided_at DESC, s.id DESC`;
+
+    const { rows } = await db.query(sql, params);
+    return res.json({ services: rows, filters: { zone_id: zoneId, year, month } });
+  } catch (err) {
+    console.error('Supervisor completed services list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Supervisor verifies (confirm or reject) a reported service status
+// POST /api/supervisor/service/:id/verify { status: 'complete'|'not_complete', reason?: string }
+router.post('/service/:id/verify', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const entryId = Number(req.params.id);
+    if (!Number.isFinite(entryId)) return res.status(400).json({ error: 'Invalid id' });
+    const { status, reason } = req.body || {};
+    const st = String(status || '').toLowerCase();
+    if (st !== 'complete' && st !== 'not_complete') {
+      return res.status(400).json({ error: "status must be 'complete' or 'not_complete'" });
+    }
+
+    // Ensure this schedule entry belongs to this supervisor
+    const own = await db.query(
+      'SELECT id FROM supervisor_service_schedule WHERE id = $1 AND supervisor_id = $2',
+      [entryId, supervisorId]
+    );
+    if (!own.rows.length) return res.status(404).json({ error: 'Entry not found' });
+
+    const up = await db.query(
+      `UPDATE supervisor_service_schedule
+       SET supervisor_status = $2,
+           supervisor_reason = $3,
+           supervisor_decided_at = NOW()
+       WHERE id = $1
+       RETURNING id, supervisor_status, supervisor_reason, supervisor_decided_at`,
+      [entryId, st, reason || null]
+    );
+    return res.json({ verification: up.rows[0] });
+  } catch (err) {
+    console.error('Supervisor verify service error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // List service schedule entries for this supervisor in a zone
 router.get('/zones/:id/schedule', auth, requireRole('supervisor'), async (req, res) => {
   try {
@@ -59,10 +170,19 @@ router.get('/zones/:id/schedule', auth, requireRole('supervisor'), async (req, r
     const zoneId = Number(req.params.id);
     if (!Number.isFinite(zoneId)) return res.status(400).json({ error: 'Invalid zone id' });
     const { rows } = await db.query(
-      `SELECT id, zone_id, supervisor_id, vehicle_id, driver_id, service_day, service_start, service_end, assigned_manpower_ids, created_at
-       FROM supervisor_service_schedule
-       WHERE zone_id = $1 AND supervisor_id = $2
-       ORDER BY service_day, service_start`,
+      `SELECT 
+         s.id, s.zone_id, s.supervisor_id,
+         s.vehicle_id, v.plate AS vehicle_plate,
+         s.driver_id, ud.username AS driver_username,
+         s.service_day, s.service_start, s.service_end,
+         s.assigned_manpower_ids, s.created_at,
+         s.chief_report_status, s.chief_report_reason, s.chief_reported_at,
+         s.supervisor_status, s.supervisor_reason, s.supervisor_decided_at
+       FROM supervisor_service_schedule s
+       LEFT JOIN vehicles v ON v.id = s.vehicle_id
+       LEFT JOIN users ud ON ud.id = s.driver_id
+       WHERE s.zone_id = $1 AND s.supervisor_id = $2
+       ORDER BY s.service_day, s.service_start`,
       [zoneId, supervisorId]
     );
     return res.json({ schedule: rows });

@@ -17,11 +17,18 @@ router.post('/transactions', auth, requireRole(...paymentRoles), async (req, res
     const { clientId, amount, currency = momoConfig.defaultCurrency, provider = 'momo', phoneNumber, externalRef, metadata, purpose: purposeFromBody } = req.body || {};
     const role = req?.user?.role;
     const clientIdToUse = role === 'client' ? req.user.id : clientId;
-    if (!clientIdToUse || !amount || !phoneNumber) return res.status(400).json({ error: 'clientId, amount, phoneNumber are required' });
-    const c = await db.query('SELECT id FROM clients WHERE id = $1', [clientIdToUse]);
+    if (!clientIdToUse || !amount) return res.status(400).json({ error: 'clientId and amount are required' });
+    const c = await db.query('SELECT id, phone_number FROM clients WHERE id = $1', [clientIdToUse]);
     if (!c.rows.length) return res.status(404).json({ error: 'Client not found' });
 
-    const phone = normalizePhone(phoneNumber);
+    // Align chief flow with client flow: chief uses their entered phone; client can provide or fallback to stored
+    const phoneBase = role === 'chief' ? (phoneNumber || '') : ((phoneNumber || c.rows[0]?.phone_number) || '');
+    if (!phoneBase) return res.status(400).json({ error: 'Phone number is required for payment' });
+
+    const phone = normalizePhone(phoneBase);
+    if (process.env.MOMO_DEBUG === 'true') {
+      try { console.log('[payments:init]', { role, normalizedPhone: phone, currency }); } catch {}
+    }
     const now = new Date();
     const purposeMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const defaultPurpose = `Payment for ${purposeMonth}`;
@@ -31,11 +38,15 @@ router.post('/transactions', auth, requireRole(...paymentRoles), async (req, res
     // Always have a reference id saved even if MoMo call fails
     const referenceId = externalRef ?? crypto.randomUUID();
 
+    const isChief = role === 'chief';
     const ins = await db.query(
-      `INSERT INTO payments_transactions (client_id, amount, currency, provider, phone_number, purpose, external_ref, status, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)
+      `INSERT INTO payments_transactions (
+         client_id, amount, currency, provider, phone_number, purpose, external_ref, status, metadata,
+         is_paid_by_chief, paid_by_chief_id
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10)
        RETURNING *`,
-      [clientIdToUse, Number(amount), currency, provider, phone, purpose, referenceId, metadata ?? null]
+      [clientIdToUse, Number(amount), currency, provider, phone, purpose, referenceId, metadata ?? null, isChief, isChief ? req.user.id : null]
     );
     let txn = ins.rows[0];
 
@@ -88,11 +99,10 @@ router.get('/transactions', auth, requireRole(...paymentRoles), async (req, res)
       whereParts.push(`pt.client_id = $${params.length}`);
     }
     if (scopeChief) {
-      const zonesRes = await db.query(`SELECT id FROM zones WHERE assigned_chief = $1`, [req.user.id]);
-      const zoneIds = zonesRes.rows.map(r => r.id);
-      if (!zoneIds.length) return res.json({ transactions: [] });
-      params.push(zoneIds);
-      whereParts.push(`c.zone_id = ANY($${params.length})`);
+      // Only show payments initiated by this chief
+      whereParts.push(`pt.is_paid_by_chief = true`);
+      params.push(req.user.id);
+      whereParts.push(`pt.paid_by_chief_id = $${params.length}`);
     }
     if (filter === 'today') {
       whereParts.push(`DATE(pt.created_at) = CURRENT_DATE`);
@@ -131,11 +141,10 @@ router.get('/completed', auth, requireRole(...paymentRoles), async (req, res) =>
       whereParts.push(`pc.client_id = $${params.length}`);
     }
     if (scopeChief) {
-      const zonesRes = await db.query(`SELECT id FROM zones WHERE assigned_chief = $1`, [req.user.id]);
-      const zoneIds = zonesRes.rows.map(r => r.id);
-      if (!zoneIds.length) return res.json({ payments: [] });
-      params.push(zoneIds);
-      whereParts.push(`c.zone_id = ANY($${params.length})`);
+      // Only show payments initiated by this chief
+      whereParts.push(`pc.is_paid_by_chief = true`);
+      params.push(req.user.id);
+      whereParts.push(`pc.paid_by_chief_id = $${params.length}`);
     }
     if (filter === 'today') {
       whereParts.push(`DATE(pc.completed_at) = CURRENT_DATE`);
@@ -268,10 +277,13 @@ router.post('/transactions/:id/complete', auth, requireRole(...paymentRoles), as
     }
 
     const ins = await client.query(
-      `INSERT INTO payments_completed (client_id, amount, currency, provider, phone_number, purpose, external_ref, transaction_id, status, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO payments_completed (
+         client_id, amount, currency, provider, phone_number, purpose, external_ref, transaction_id, status, metadata,
+         is_paid_by_chief, paid_by_chief_id
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
-      [t.client_id, t.amount, t.currency, t.provider, t.phone_number, t.purpose, effectiveRef, transactionId ?? null, status, t.metadata]
+      [t.client_id, t.amount, t.currency, t.provider, t.phone_number, t.purpose, effectiveRef, transactionId ?? null, status, t.metadata, t.is_paid_by_chief || false, t.paid_by_chief_id || null]
     );
 
     await client.query('DELETE FROM payments_transactions WHERE id = $1', [id]);

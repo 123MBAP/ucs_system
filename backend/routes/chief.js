@@ -154,4 +154,143 @@ router.get('/clients', auth, requireRole('chief'), async (req, res) => {
   }
 });
 
+// Get Day of Service Plan for a zone assigned to this chief
+// GET /api/chief/zones/:id/service-plan
+router.get('/zones/:id/service-plan', auth, requireRole('chief'), async (req, res) => {
+  try {
+    const chiefId = req.user.id;
+    const zoneId = Number(req.params.id);
+    if (!Number.isFinite(zoneId)) return res.status(400).json({ error: 'Invalid zone id' });
+
+    // Ensure zone is assigned to this chief
+    const zr = await db.query('SELECT id, zone_name FROM zones WHERE id = $1 AND assigned_chief = $2', [zoneId, chiefId]);
+    if (!zr.rows.length) return res.status(403).json({ error: 'Forbidden' });
+
+    const q = await db.query(
+      `SELECT 
+         s.id,
+         s.zone_id,
+         z.zone_name,
+         s.supervisor_id,
+         s.vehicle_id,
+         v.plate AS vehicle_plate,
+         s.driver_id,
+         ud.username AS driver_username,
+         s.service_day,
+         s.service_start,
+         s.service_end,
+         s.created_at,
+         s.chief_report_status,
+         s.chief_report_reason,
+         s.chief_reported_at,
+         s.supervisor_status,
+         s.supervisor_reason,
+         s.supervisor_decided_at,
+         COALESCE(
+           (
+             SELECT json_agg(json_build_object('id', u.id, 'username', u.username) ORDER BY u.username)
+             FROM unnest(s.assigned_manpower_ids) mid
+             JOIN users u ON u.id = mid
+           ),
+           '[]'::json
+         ) AS assigned_manpower_users
+       FROM supervisor_service_schedule s
+       JOIN zones z ON z.id = s.zone_id
+       LEFT JOIN vehicles v ON v.id = s.vehicle_id
+       LEFT JOIN users ud ON ud.id = s.driver_id
+       WHERE s.zone_id = $1
+       ORDER BY s.service_day, s.service_start`,
+      [zoneId]
+    );
+
+    return res.json({
+      zone: { id: zr.rows[0].id, name: zr.rows[0].zone_name },
+      schedule: q.rows,
+    });
+  } catch (err) {
+    console.error('Chief service plan error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Chief reports a service status (complete or not_complete with optional reason)
+router.post('/service/:id/report', auth, requireRole('chief'), async (req, res) => {
+  try {
+    const chiefId = req.user.id;
+    const entryId = Number(req.params.id);
+    if (!Number.isFinite(entryId)) return res.status(400).json({ error: 'Invalid id' });
+    const { status, reason } = req.body || {};
+    const st = String(status || '').toLowerCase();
+    if (st !== 'complete' && st !== 'not_complete') {
+      return res.status(400).json({ error: "status must be 'complete' or 'not_complete'" });
+    }
+
+    // Ensure the schedule entry belongs to a zone assigned to this chief
+    const own = await db.query(
+      `SELECT s.id
+       FROM supervisor_service_schedule s
+       JOIN zones z ON z.id = s.zone_id
+       WHERE s.id = $1 AND z.assigned_chief = $2`,
+      [entryId, chiefId]
+    );
+    if (!own.rows.length) return res.status(404).json({ error: 'Entry not found' });
+
+    const up = await db.query(
+      `UPDATE supervisor_service_schedule
+       SET chief_report_status = $2,
+           chief_report_reason = $3,
+           chief_reported_at = NOW()
+       WHERE id = $1
+       RETURNING id, chief_report_status, chief_report_reason, chief_reported_at`,
+      [entryId, st, reason || null]
+    );
+    return res.json({ report: up.rows[0] });
+  } catch (err) {
+    console.error('Chief report service error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// List completed services for this chief with year/month filters (uses supervisor_decided_at)
+router.get('/completed-services', auth, requireRole('chief'), async (req, res) => {
+  try {
+    const chiefId = req.user.id;
+    const year = Number(req.query.year) || new Date().getFullYear();
+    const month = Number(req.query.month) || (new Date().getMonth() + 1);
+
+    const { rows } = await db.query(
+      `SELECT 
+         s.id,
+         s.zone_id,
+         z.zone_name,
+         s.vehicle_id,
+         v.plate AS vehicle_plate,
+         s.driver_id,
+         ud.username AS driver_username,
+         s.service_day,
+         s.service_start,
+         s.service_end,
+         s.created_at,
+         s.supervisor_status,
+         s.supervisor_reason,
+         s.supervisor_decided_at
+       FROM supervisor_service_schedule s
+       JOIN zones z ON z.id = s.zone_id
+       LEFT JOIN vehicles v ON v.id = s.vehicle_id
+       LEFT JOIN users ud ON ud.id = s.driver_id
+       WHERE z.assigned_chief = $1
+         AND s.supervisor_status = 'complete'
+         AND s.supervisor_decided_at IS NOT NULL
+         AND EXTRACT(YEAR FROM s.supervisor_decided_at) = $2
+         AND EXTRACT(MONTH FROM s.supervisor_decided_at) = $3
+       ORDER BY s.supervisor_decided_at DESC, s.id DESC`,
+      [chiefId, year, month]
+    );
+    return res.json({ services: rows, period: { year, month } });
+  } catch (err) {
+    console.error('Chief completed services list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

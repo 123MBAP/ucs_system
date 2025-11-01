@@ -38,6 +38,16 @@ const getAccessToken = async () => {
   return j.access_token;
 };
 
+// Sanitize text fields for MoMo API (ASCII only, trimmed length)
+const sanitizeMoMoText = (s, max = 80) => {
+  const str = String(s == null ? '' : s)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+    .replace(/[^\x20-\x7E]/g, '-')   // replace non-ASCII with '-'
+    .trim();
+  return str.length > max ? str.slice(0, max) : str;
+};
+
 const requestToPay = async ({ amount, currency, phoneNumber, externalId, payerMessage, payeeNote, callbackUrl, referenceId: providedRef }) => {
   const token = await getAccessToken();
   const referenceId = providedRef || crypto.randomUUID();
@@ -47,8 +57,8 @@ const requestToPay = async ({ amount, currency, phoneNumber, externalId, payerMe
     currency: currency || momoConfig.defaultCurrency,
     externalId: externalId || referenceId,
     payer: { partyIdType: 'MSISDN', partyId: normalizePhone(phoneNumber) },
-    payerMessage: payerMessage || 'Payment',
-    payeeNote: payeeNote || 'Payment',
+    payerMessage: sanitizeMoMoText(payerMessage || 'Payment'),
+    payeeNote: sanitizeMoMoText(payeeNote || 'Payment'),
   };
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -61,8 +71,8 @@ const requestToPay = async ({ amount, currency, phoneNumber, externalId, payerMe
   const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
   if (!r.ok) {
     const errBody = await readErr(r);
-    if (MOMO_DEBUG) console.error('MoMo requestToPay error', r.status, errBody, 'payload', body, 'headers', { ...headers, Authorization: 'Bearer ***' });
-    throw new Error(`MoMo requestToPay error ${r.status}${errBody ? `: ${typeof errBody === 'string' ? errBody : JSON.stringify(errBody)}` : ''}`);
+    if (MOMO_DEBUG) console.error('MoMo requestToPay error', r.status, r.statusText, errBody, 'payload', body, 'headers', { ...headers, Authorization: 'Bearer ***' });
+    throw new Error(`MoMo requestToPay error ${r.status} ${r.statusText}${errBody ? `: ${typeof errBody === 'string' ? errBody : JSON.stringify(errBody)}` : ''}`);
   }
   return { referenceId };
 };

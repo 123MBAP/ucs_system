@@ -22,12 +22,14 @@ import RegisterVehicle from 'Src/Pages/RegisterVehicle';
 import Reports from 'Src/Pages/Reports';
 import SupervisorDashboard from 'Src/Pages/SupervisorDashboard';
 import SupervisorServiceSchedule from 'Src/Pages/SupervisorServiceSchedule';
+import SupervisorServices from 'Src/Pages/SupervisorServices';
 import VehiclesDrivers from 'Src/Pages/VehiclesDrivers';
 import ZoneClients from 'Src/Pages/ZoneClients';
 import ZoneDetail from 'Src/Pages/ZoneDetail';
 import ZoneManpower from 'Src/Pages/ZoneManpower';
 import Zones from 'Src/Pages/Zones';
 import ZoneSupervision from 'Src/Pages/ZoneSupervision';
+import ChiefServicePlan from 'Src/Pages/ChiefServicePlan';
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -114,7 +116,9 @@ function AppShell() {
               <Route path="/register-chief" element={<RegisterChiefOfZone />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/supervisor" element={<SupervisorDashboard />} />
+              <Route path="/supervisor/services" element={<SupervisorServices />} />
               <Route path="/chief-dashboard" element={<ChiefDashboard />} />
+              <Route path="/chief-service-plan" element={<ChiefServicePlan />} />
               <Route path="/client-dashboard" element={<ClientDashboard />} />
               <Route path="/manpower-dashboard" element={<ManpowerDashboard />} />
               <Route path="/driver-dashboard" element={<DriverDashboard />} />
@@ -146,7 +150,9 @@ function AppShell() {
                 <Route path="/register-chief" element={<RegisterChiefOfZone />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/supervisor" element={<SupervisorDashboard />} />
+                <Route path="/supervisor/services" element={<SupervisorServices />} />
                 <Route path="/chief-dashboard" element={<ChiefDashboard />} />
+                <Route path="/chief-service-plan" element={<ChiefServicePlan />} />
                 <Route path="/client-dashboard" element={<ClientDashboard />} />
                 <Route path="/manpower-dashboard" element={<ManpowerDashboard />} />
                 <Route path="/driver-dashboard" element={<DriverDashboard />} />

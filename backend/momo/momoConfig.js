@@ -23,7 +23,7 @@ const momoConfig = Object.freeze({
   targetEnv: process.env.MOMO_TARGET_ENV || 'sandbox',
   callbackHost: process.env.MOMO_CALLBACK_HOST || '',
   defaultCountryCode: process.env.MOMO_DEFAULT_COUNTRY_CODE || '250',
-  defaultCurrency: process.env.MOMO_DEFAULT_CURRENCY || 'EUR',
+  defaultCurrency: process.env.MOMO_DEFAULT_CURRENCY || 'RWF',
 });
 
 export default momoConfig;
