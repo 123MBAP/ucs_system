@@ -21,7 +21,8 @@
     /* Path aliases (ensure available to this build) */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["Src/*"]
+      "@/*": ["Src/*"],
+      "Src/*": ["Src/*"]
     },
 
     /* Linting */

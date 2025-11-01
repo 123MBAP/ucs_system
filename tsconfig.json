@@ -3,7 +3,8 @@
     // map `@/*` -> `src/*` so both `tsc` and IDEs resolve imports like `@/Pages/...`
     "baseUrl": ".",
     "paths": {
-      "@/*": ["Src/*"]
+      "@/*": ["Src/*"],
+      "Src/*": ["Src/*"]
     }
   },
   "files": [],
