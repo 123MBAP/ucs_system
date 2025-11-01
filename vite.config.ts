@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'), // ✅ safer for Linux/Vercel builds
+      '@': path.resolve(__dirname, './Src'),
+      'Src': path.resolve(__dirname, './Src'),
     },
   },
   optimizeDeps: {
