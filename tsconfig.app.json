@@ -21,8 +21,9 @@
     /* Path aliases (ensure available to this build) */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["Src/*"],
-      "Src/*": ["Src/*"]
+      "@/*": ["src/*"],
+      "Src/*": ["src/*"],
+      "src/*": ["src/*"]
     },
 
     /* Linting */
@@ -32,5 +33,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["Src", "main.tsx", "App.tsx"]
+  "include": ["src", "main.tsx", "App.tsx"]
 }

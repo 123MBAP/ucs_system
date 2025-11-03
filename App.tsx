@@ -1,36 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import Sidebar from 'Src/Components/SideBar';
-import AddNewZone from 'Src/Pages/AddNewZone';
-import ChiefDashboard from 'Src/Pages/ChiefDashboard';
-import ClientDashboard from 'Src/Pages/ClientDashboard';
-import Clients from 'Src/Pages/Clients';
-import Dashboard from 'Src/Pages/Dashboard';
-import DriverDashboard from 'Src/Pages/DriverDashboard';
-import Login from 'Src/Pages/Login';
-import ManageWorkers from 'Src/Pages/ManageWorkers';
-import Workers from 'Src/Pages/Workers';
-import ManpowerDashboard from 'Src/Pages/ManpowerDashboard';
-import Payments from 'Src/Pages/Payments';
-import Profile from 'Src/Pages/Profile';
-import RegisterCar from 'Src/Pages/RegisterCar';
-import RegisterChiefOfZone from 'Src/Pages/RegisterChiefOfZone';
-import RegisterClient from 'Src/Pages/RegisterClient';
-import RegisterDriver from 'Src/Pages/RegisterDriver';
-import RegisterManpower from 'Src/Pages/RegisterManpower';
-import RegisterSupervisor from 'Src/Pages/RegisterSupervisor';
-import RegisterVehicle from 'Src/Pages/RegisterVehicle';
-import Reports from 'Src/Pages/Reports';
-import SupervisorDashboard from 'Src/Pages/SupervisorDashboard';
-import SupervisorServiceSchedule from 'Src/Pages/SupervisorServiceSchedule';
-import SupervisorServices from 'Src/Pages/SupervisorServices';
-import VehiclesDrivers from 'Src/Pages/VehiclesDrivers';
-import ZoneClients from 'Src/Pages/ZoneClients';
-import ZoneDetail from 'Src/Pages/ZoneDetail';
-import ZoneManpower from 'Src/Pages/ZoneManpower';
-import Zones from 'Src/Pages/Zones';
-import ZoneSupervision from 'Src/Pages/ZoneSupervision';
-import ChiefServicePlan from 'Src/Pages/ChiefServicePlan';
+import Sidebar from 'src/Components/SideBar';
+
+// Lazy-loaded route components (code-splitting)
+const AddNewZone = lazy(() => import('@/Pages/AddNewZone'));
+const ChiefDashboard = lazy(() => import('@/Pages/ChiefDashboard'));
+const ChiefServicePlan = lazy(() => import('@/Pages/ChiefServicePlan'));
+const ClientDashboard = lazy(() => import('@/Pages/ClientDashboard'));
+const Clients = lazy(() => import('@/Pages/Clients'));
+const Dashboard = lazy(() => import('@/Pages/Dashboard'));
+const DriverDashboard = lazy(() => import('@/Pages/DriverDashboard'));
+const Login = lazy(() => import('@/Pages/Login'));
+const ManageWorkers = lazy(() => import('@/Pages/ManageWorkers'));
+const ManpowerDashboard = lazy(() => import('@/Pages/ManpowerDashboard'));
+const Payments = lazy(() => import('@/Pages/Payments'));
+const Profile = lazy(() => import('@/Pages/Profile'));
+const RegisterCar = lazy(() => import('@/Pages/RegisterCar'));
+const RegisterChiefOfZone = lazy(() => import('@/Pages/RegisterChiefOfZone'));
+const RegisterClient = lazy(() => import('@/Pages/RegisterClient'));
+const RegisterDriver = lazy(() => import('@/Pages/RegisterDriver'));
+const RegisterManpower = lazy(() => import('@/Pages/RegisterManpower'));
+const RegisterSupervisor = lazy(() => import('@/Pages/RegisterSupervisor'));
+const RegisterVehicle = lazy(() => import('@/Pages/RegisterVehicle'));
+const Reports = lazy(() => import('@/Pages/Reports'));
+const SupervisorDashboard = lazy(() => import('@/Pages/SupervisorDashboard'));
+const SupervisorServiceSchedule = lazy(() => import('@/Pages/SupervisorServiceSchedule'));
+const SupervisorServices = lazy(() => import('@/Pages/SupervisorServices'));
+const VehiclesDrivers = lazy(() => import('@/Pages/VehiclesDrivers'));
+const Workers = lazy(() => import('@/Pages/Workers'));
+const ZoneClients = lazy(() => import('@/Pages/ZoneClients'));
+const ZoneDetail = lazy(() => import('@/Pages/ZoneDetail'));
+const ZoneManpower = lazy(() => import('@/Pages/ZoneManpower'));
+const Zones = lazy(() => import('@/Pages/Zones'));
+const ZoneSupervision = lazy(() => import('@/Pages/ZoneSupervision'));
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -113,38 +115,40 @@ function AppShell() {
           }
         >
           <div className="max-w-7xl mx-auto">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<RoleHome />} />
-              <Route path="/register-driver" element={<RegisterDriver />} />
-              <Route path="/register-car" element={<RegisterCar />} />
-              <Route path="/add-zone" element={<AddNewZone />} />
-              <Route path="/register-supervisor" element={<RegisterSupervisor />} />
-              <Route path="/register-chief" element={<RegisterChiefOfZone />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
-              <Route path="/supervisor/services" element={<SupervisorServices />} />
-              <Route path="/chief-dashboard" element={<ChiefDashboard />} />
-              <Route path="/chief-service-plan" element={<ChiefServicePlan />} />
-              <Route path="/client-dashboard" element={<ClientDashboard />} />
-              <Route path="/manpower-dashboard" element={<ManpowerDashboard />} />
-              <Route path="/driver-dashboard" element={<DriverDashboard />} />
-              <Route path="/zones" element={<Zones />} />
-              <Route path="/zones/:id" element={<ZoneDetail />} />
-              <Route path="/zones/:id/clients" element={<ZoneClients />} />
-              <Route path="/zones/:id/manpower" element={<ZoneManpower />} />
-              <Route path="/supervisor/zones/:id/supervision" element={<ZoneSupervision />} />
-              <Route path="/supervisor/zones/:id/schedule" element={<SupervisorServiceSchedule />} />
-              <Route path="/vehicles" element={<VehiclesDrivers />} />
-              <Route path="/register-vehicle" element={<RegisterVehicle />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/payments" element={<Payments />} />
-              <Route path="/manage-workers" element={<ManageWorkers />} />
-              <Route path="/workers" element={<Workers />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/register-manpower" element={<RegisterManpower />} />
-              <Route path="/register-client" element={<RegisterClient />} />
-            </Routes>
+            <Suspense fallback={<div className="p-6">Loading...</div>}>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<RoleHome />} />
+                <Route path="/register-driver" element={<RegisterDriver />} />
+                <Route path="/register-car" element={<RegisterCar />} />
+                <Route path="/add-zone" element={<AddNewZone />} />
+                <Route path="/register-supervisor" element={<RegisterSupervisor />} />
+                <Route path="/register-chief" element={<RegisterChiefOfZone />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
+                <Route path="/supervisor/services" element={<SupervisorServices />} />
+                <Route path="/chief-dashboard" element={<ChiefDashboard />} />
+                <Route path="/chief-service-plan" element={<ChiefServicePlan />} />
+                <Route path="/client-dashboard" element={<ClientDashboard />} />
+                <Route path="/manpower-dashboard" element={<ManpowerDashboard />} />
+                <Route path="/driver-dashboard" element={<DriverDashboard />} />
+                <Route path="/zones" element={<Zones />} />
+                <Route path="/zones/:id" element={<ZoneDetail />} />
+                <Route path="/zones/:id/clients" element={<ZoneClients />} />
+                <Route path="/zones/:id/manpower" element={<ZoneManpower />} />
+                <Route path="/supervisor/zones/:id/supervision" element={<ZoneSupervision />} />
+                <Route path="/supervisor/zones/:id/schedule" element={<SupervisorServiceSchedule />} />
+                <Route path="/vehicles" element={<VehiclesDrivers />} />
+                <Route path="/register-vehicle" element={<RegisterVehicle />} />
+                <Route path="/clients" element={<Clients />} />
+                <Route path="/payments" element={<Payments />} />
+                <Route path="/manage-workers" element={<ManageWorkers />} />
+                <Route path="/workers" element={<Workers />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/register-manpower" element={<RegisterManpower />} />
+                <Route path="/register-client" element={<RegisterClient />} />
+              </Routes>
+            </Suspense>
           </div>
         </main>
 

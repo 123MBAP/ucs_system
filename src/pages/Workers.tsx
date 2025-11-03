@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import LoadingSpinner from 'Src/Components/LoadingSpinner';
+import LoadingSpinner from '@/Components/LoadingSpinner';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
