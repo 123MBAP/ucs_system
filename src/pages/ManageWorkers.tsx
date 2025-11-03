@@ -446,37 +446,6 @@ const ManageWorkers = () => {
     </button>
   );
 
-  const AccentButton = ({ children, onClick, disabled = false, loading = false, className = '' }: { 
-    children: ReactNode; 
-    onClick?: () => void; 
-    disabled?: boolean;
-    loading?: boolean;
-    className?: string;
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={disabled || loading}
-      className={`px-4 py-2 rounded-lg font-medium text-white transition-colors flex items-center gap-2 ${className}`}
-      style={{ 
-        backgroundColor: disabled ? colors.textLight : colors.accent,
-        cursor: disabled ? 'not-allowed' : 'pointer'
-      }}
-      onMouseOver={(e) => {
-        if (!disabled && !loading) {
-          e.currentTarget.style.backgroundColor = colors.accentHover;
-        }
-      }}
-      onMouseOut={(e) => {
-        if (!disabled && !loading) {
-          e.currentTarget.style.backgroundColor = colors.accent;
-        }
-      }}
-    >
-      {loading && <LoadingSpinner size={16} className="border-white/60 border-t-white" />}
-      {children}
-    </button>
-  );
-
   const OutlineButton = ({ children, onClick, disabled = false, className = '' }: { 
     children: ReactNode; 
     onClick?: () => void; 

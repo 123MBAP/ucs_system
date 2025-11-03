@@ -60,18 +60,7 @@ const Dashboard = () => {
     daily: { day: string; amount: number }[];
   }>({ yearly: [], monthly: [], weekly: [], daily: [] });
 
-  // Build last N month labels like ['Jun','Jul', ...]
-  function buildLastMonths(n = 6) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const now = new Date();
-    const arr: { key: string; label: string; year: number; monthIdx: number }[] = [];
-    for (let i = n - 1; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      arr.push({ key, label: months[d.getMonth()], year: d.getFullYear(), monthIdx: d.getMonth() });
-    }
-    return arr;
-  }
+  //
 
   // Group completed payments into yearly, monthly (for selected year), weekly (for selected year+month) and daily sums
   function aggregatePayments(payments: any[], year: number, month1to12: number) {

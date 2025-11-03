@@ -28,7 +28,6 @@ type ScheduleEntry = {
   supervisor_decided_at?: string | null;
 };
 
-const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 export default function ChiefServicePlan() {
   const [selectedZoneId, setSelectedZoneId] = React.useState<number | null>(null);

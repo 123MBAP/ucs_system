@@ -18,6 +18,21 @@ type Detail = {
   supervisorVehicles?: Vehicle[];
 };
 
+// Color constants
+const colors = {
+  primary: '#D97706',
+  primaryHover: '#B45309',
+  accent: '#15803D',
+  accentHover: '#166534',
+  background: '#F9FAFB',
+  cardBg: '#FFFFFF',
+  border: '#E5E7EB',
+  text: '#1E1E1E',
+  textLight: '#6B7280',
+  error: '#DC2626',
+  success: '#15803D'
+};
+
 // Icon components
 const Icons = {
   Back: (props: SVGProps<SVGSVGElement>) => {
@@ -80,6 +95,93 @@ function weekdayName(n: number) {
   const d = new Date(2000, 0, n);
   return d.toLocaleString(undefined, { weekday: 'long' });
 }
+
+// UI Components
+const SectionHeader = ({ title, number }: { title: string; number: number }) => (
+  <div className="flex items-center gap-3 mb-6 pb-3 border-b" style={{ borderColor: colors.border }}>
+    <div 
+      className="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold text-sm"
+      style={{ backgroundColor: colors.primary }}
+    >
+      {number}
+    </div>
+    <h2 className="text-2xl font-bold" style={{ color: colors.text }}>{title}</h2>
+  </div>
+);
+
+const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <div 
+    className={`rounded-lg shadow-sm border p-6 ${className}`}
+    style={{ 
+      backgroundColor: colors.cardBg, 
+      borderColor: colors.border 
+    }}
+  >
+    {children}
+  </div>
+);
+
+const PrimaryButton = ({ children, onClick, disabled = false, loading = false, className = '' }: { 
+  children: React.ReactNode; 
+  onClick?: () => void; 
+  disabled?: boolean;
+  loading?: boolean;
+  className?: string;
+}) => (
+  <button
+    onClick={onClick}
+    disabled={disabled || loading}
+    className={`px-4 py-2 rounded-lg font-medium text-white transition-colors flex items-center gap-2 ${className}`}
+    style={{ 
+      backgroundColor: disabled ? colors.textLight : colors.primary,
+      cursor: disabled ? 'not-allowed' : 'pointer'
+    }}
+    onMouseOver={(e) => {
+      if (!disabled && !loading) {
+        e.currentTarget.style.backgroundColor = colors.primaryHover;
+      }
+    }}
+    onMouseOut={(e) => {
+      if (!disabled && !loading) {
+        e.currentTarget.style.backgroundColor = colors.primary;
+      }
+    }}
+  >
+    {children}
+  </button>
+);
+
+const AccentButton = ({ children, onClick, disabled = false, loading = false, className = '' }: { 
+  children: React.ReactNode; 
+  onClick?: () => void; 
+  disabled?: boolean;
+  loading?: boolean;
+  className?: string;
+}) => (
+  <button
+    onClick={onClick}
+    disabled={disabled || loading}
+    className={`px-4 py-2 rounded-lg font-medium text-white transition-colors flex items-center gap-2 ${className}`}
+    style={{ 
+      backgroundColor: disabled ? colors.textLight : colors.accent,
+      cursor: disabled ? 'not-allowed' : 'pointer'
+    }}
+    onMouseOver={(e) => {
+      if (!disabled && !loading) {
+        e.currentTarget.style.backgroundColor = colors.accentHover;
+      }
+    }}
+    onMouseOut={(e) => {
+      if (!disabled && !loading) {
+        e.currentTarget.style.backgroundColor = colors.accent;
+      }
+    }}
+  >
+    {children}
+  </button>
+);
+
+ 
 
 const ZoneSupervision = () => {
   const { id } = useParams();
@@ -184,13 +286,13 @@ const ZoneSupervision = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+      <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="animate-pulse">
-            <div className="h-8 bg-slate-200 rounded w-48 mb-6"></div>
+            <div className="h-8 rounded w-48 mb-6" style={{ backgroundColor: colors.border }}></div>
             <div className="grid gap-6">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-32 bg-slate-200 rounded-2xl"></div>
+                <div key={i} className="h-32 rounded-lg" style={{ backgroundColor: colors.border }}></div>
               ))}
             </div>
           </div>
@@ -200,277 +302,348 @@ const ZoneSupervision = () => {
   }
 
   if (error) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+    <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
       <div className="max-w-6xl mx-auto">
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
-          <div className="text-red-600 font-medium">{error}</div>
-        </div>
+        <Card>
+          <div className="text-center p-6 rounded-lg" style={{ backgroundColor: '#FEF2F2', borderColor: colors.error }}>
+            <div style={{ color: colors.error }} className="font-medium">{error}</div>
+          </div>
+        </Card>
       </div>
     </div>
   );
 
   if (!detail) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+    <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl p-6 text-center">
-          <div className="text-slate-600">Zone not found</div>
-        </div>
+        <Card>
+          <div className="text-center">
+            <div style={{ color: colors.textLight }}>Zone not found</div>
+          </div>
+        </Card>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => navigate(-1)}
-              className="flex items-center space-x-2 text-slate-600 hover:text-slate-800 transition-colors duration-200"
+              className="flex items-center space-x-2 transition-colors duration-200"
+              style={{ color: colors.textLight }}
             >
               <Icons.Back />
               <span className="font-medium">Back to Zones</span>
             </button>
-            <div className="w-px h-6 bg-slate-300"></div>
+            <div className="w-px h-6" style={{ backgroundColor: colors.border }}></div>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold" style={{ color: colors.text }}>
                 Zone Supervision
               </h1>
-              <p className="text-slate-600 mt-1">Manage {detail.zone.name} operations and assignments</p>
+              <p className="mt-1" style={{ color: colors.textLight }}>Manage {detail.zone.name} operations and assignments</p>
             </div>
           </div>
-          <button
+          <AccentButton
             onClick={() => navigate(`/supervisor/zones/${detail.zone.id}/schedule`)}
-            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+            className="px-6 py-3"
           >
             <Icons.Schedule />
             <span>Plan Service Schedule</span>
-          </button>
+          </AccentButton>
         </div>
 
-        {/* Supervisor Vehicles */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <div className="flex items-center space-x-2 mb-4">
-            <Icons.Vehicle />
-            <h2 className="text-xl font-bold text-slate-800">Supervisor Vehicles</h2>
-          </div>
-          <div className="text-slate-700">
-            {detail.supervisorVehicles && detail.supervisorVehicles.length ? (
-              <div className="flex flex-wrap gap-2">
-                {detail.supervisorVehicles.map(v => (
-                  <span key={v.id} className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium">
-                    {v.plate}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div className="text-slate-500 italic">No vehicles assigned to you yet</div>
-            )}
-          </div>
-        </div>
-
-        {/* Service Days */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Icons.Calendar />
-            <h2 className="text-xl font-bold text-slate-800">Service Days</h2>
-          </div>
-          <div className="flex flex-wrap gap-3 mb-6">
-            {Array.from({ length: 7 }).map((_, i) => {
-              const d = i + 1;
-              const on = editDays.includes(d);
-              return (
-                <button 
-                  key={d} 
-                  onClick={() => toggleDay(d)} 
-                  className={`px-4 py-3 rounded-xl border-2 font-medium transition-all duration-200 ${
-                    on 
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/25' 
-                      : 'bg-white text-slate-700 border-slate-300 hover:border-blue-300 hover:shadow-md'
-                  }`}
-                >
-                  {weekdayName(d)}
-                </button>
-              );
-            })}
-          </div>
-          <button 
-            onClick={saveDays}
-            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <Icons.Save />
-            <span>Save Service Days</span>
-          </button>
-        </div>
-
-        {/* Driver Assignments */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Icons.Driver />
-            <h2 className="text-xl font-bold text-slate-800">Driver Assignments</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {editDays.sort((a,b)=>a-b).map(d => (
-              <div key={d} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-slate-800 text-lg">{weekdayName(d)}</h3>
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                </div>
-                <select 
-                  className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={editDrivers[d] || ''} 
-                  onChange={e => setEditDrivers({ ...editDrivers, [d]: e.target.value })}
-                >
-                  <option value="">Select driver…</option>
-                  {detail.drivers.map(dr => (
-                    <option key={dr.id} value={dr.id}>
-                      {dr.username} {dr.vehicle_plate ? `(${dr.vehicle_plate})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <button 
-                  onClick={() => saveDriver(d)}
-                  className="w-full flex items-center justify-center space-x-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors duration-200"
-                >
-                  <Icons.Save />
-                  <span>Assign Driver</span>
-                </button>
-              </div>
-            ))}
-          </div>
-          {editDays.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
-              Select service days above to assign drivers
+        {/* SECTION 1: SUPERVISOR VEHICLES */}
+        <section>
+          <SectionHeader title="Supervisor Vehicles" number={1} />
+          <Card>
+            <div className="flex items-center space-x-2 mb-4">
+              <Icons.Vehicle style={{ color: colors.primary }} />
+              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Your Assigned Vehicles</h3>
             </div>
-          )}
-        </div>
+            <div>
+              {detail.supervisorVehicles && detail.supervisorVehicles.length ? (
+                <div className="flex flex-wrap gap-3">
+                  {detail.supervisorVehicles.map(v => (
+                    <span 
+                      key={v.id} 
+                      className="px-4 py-2 rounded-lg font-medium border"
+                      style={{ 
+                        backgroundColor: '#FEF7ED',
+                        borderColor: colors.primary,
+                        color: colors.primary
+                      }}
+                    >
+                      {v.plate}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: colors.textLight }} className="italic">
+                  No vehicles assigned to you yet
+                </div>
+              )}
+            </div>
+          </Card>
+        </section>
 
-        {/* Driver Vehicle Reassignment */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Icons.Vehicle />
-            <h2 className="text-xl font-bold text-slate-800">Driver Vehicle Reassignment</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {detail.vehicles.map(v => {
-              const currentDriver = detail.drivers.find(dr => dr.vehicle_id === v.id) || null;
-              return (
-                <div key={v.id} className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Icons.Vehicle className="w-4 h-4 text-blue-600" />
-                    <h3 className="font-semibold text-slate-800">Vehicle {v.plate}</h3>
-                  </div>
-                  
-                  <div className="space-y-3 mb-4">
-                    <div className="text-sm text-slate-600">
-                      <span className="font-medium">Current driver:</span>{' '}
-                      {currentDriver ? (
-                        <span className="text-slate-800">{currentDriver.username}</span>
-                      ) : (
-                        <span className="text-orange-600">None assigned</span>
-                      )}
+        {/* SECTION 2: SERVICE DAYS */}
+        <section>
+          <SectionHeader title="Service Days Configuration" number={2} />
+          <Card>
+            <div className="flex items-center space-x-2 mb-6">
+              <Icons.Calendar style={{ color: colors.primary }} />
+              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Active Service Days</h3>
+            </div>
+            
+            <div className="flex flex-wrap gap-3 mb-6">
+              {Array.from({ length: 7 }).map((_, i) => {
+                const d = i + 1;
+                const on = editDays.includes(d);
+                return (
+                  <button 
+                    key={d} 
+                    onClick={() => toggleDay(d)} 
+                    className={`px-4 py-3 rounded-lg border font-medium transition-all duration-200 ${
+                      on 
+                        ? 'text-white shadow-lg' 
+                        : 'border hover:shadow-md'
+                    }`}
+                    style={on ? {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary
+                    } : {
+                      backgroundColor: colors.cardBg,
+                      color: colors.text,
+                      borderColor: colors.border
+                    }}
+                  >
+                    {weekdayName(d)}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <AccentButton 
+              onClick={saveDays}
+              className="px-6 py-3"
+            >
+              <Icons.Save />
+              <span>Save Service Days</span>
+            </AccentButton>
+          </Card>
+        </section>
+
+        {/* SECTION 3: DRIVER ASSIGNMENTS */}
+        <section>
+          <SectionHeader title="Driver Assignments" number={3} />
+          <Card>
+            <div className="flex items-center space-x-2 mb-6">
+              <Icons.Driver style={{ color: colors.primary }} />
+              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Weekly Driver Schedule</h3>
+            </div>
+            
+            {editDays.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {editDays.sort((a,b)=>a-b).map(d => (
+                  <div key={d} className="rounded-lg p-4 border" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-lg" style={{ color: colors.text }}>{weekdayName(d)}</h4>
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.primary }}></div>
                     </div>
                     
-                    {Array.isArray(v.assigned_manpower_users) && (
-                      <div className="text-sm">
-                        <div className="font-medium text-slate-700 mb-1">Assigned Manpower:</div>
-                        {v.assigned_manpower_users.length ? (
-                          <div className="space-y-1">
-                            {v.assigned_manpower_users.map(u => (
-                              <div key={u.id} className="text-slate-600 bg-white px-2 py-1 rounded-lg">
-                                {u.username} (#{u.id})
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-slate-500 italic">None assigned</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <select
-                    className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={editVehicleDriver[v.id] || ''}
-                    onChange={e => setEditVehicleDriver({ ...editVehicleDriver, [v.id]: e.target.value })}
-                  >
-                    <option value="">Select driver…</option>
-                    {detail.drivers.map(dr => (
-                      <option key={dr.id} value={dr.id}>{dr.username}</option>
-                    ))}
-                  </select>
-                  
-                  <button 
-                    onClick={() => saveVehicleForVehicle(v.id)}
-                    className="w-full flex items-center justify-center space-x-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors duration-200"
-                  >
-                    <Icons.Save />
-                    <span>Assign Driver</span>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Manpower Management */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Icons.Manpower />
-            <h2 className="text-xl font-bold text-slate-800">Manpower Management</h2>
-          </div>
-
-          {/* Add Manpower */}
-          <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
-            <h3 className="font-semibold text-slate-800 mb-3">Add Manpower</h3>
-            <div className="flex gap-3">
-              <input 
-                className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter manpower user ID"
-                value={addingMp}
-                onChange={e => setAddingMp(e.target.value)}
-                type="number"
-              />
-              <button 
-                onClick={addManpower}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                <Icons.Add />
-                <span>Add</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Manpower List */}
-          <div>
-            <h3 className="font-semibold text-slate-800 mb-4">Assigned Manpower</h3>
-            {detail.manpower.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {detail.manpower.map(mp => (
-                  <div key={mp.id} className="flex items-center justify-between bg-white rounded-xl p-4 border border-slate-200">
-                    <div>
-                      <div className="font-medium text-slate-800">{mp.username}</div>
-                      <div className="text-sm text-slate-500">ID: #{mp.id}</div>
-                    </div>
-                    <button 
-                      onClick={() => removeManpower(mp.id)}
-                      className="flex items-center space-x-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-medium transition-colors duration-200"
+                    <select 
+                      className="w-full rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 border"
+                      style={{ 
+                        backgroundColor: colors.cardBg,
+                        borderColor: colors.border,
+                        color: colors.text
+                      }}
+                      value={editDrivers[d] || ''} 
+                      onChange={e => setEditDrivers({ ...editDrivers, [d]: e.target.value })}
                     >
-                      <Icons.Remove />
-                      <span className="text-sm">Remove</span>
-                    </button>
+                      <option value="">Select driver…</option>
+                      {detail.drivers.map(dr => (
+                        <option key={dr.id} value={dr.id}>
+                          {dr.username} {dr.vehicle_plate ? `(${dr.vehicle_plate})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    
+                    <PrimaryButton 
+                      onClick={() => saveDriver(d)}
+                      className="w-full justify-center py-3"
+                    >
+                      <Icons.Save />
+                      <span>Assign Driver</span>
+                    </PrimaryButton>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
-                <Icons.Manpower className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <div>No manpower assigned to this zone</div>
+              <div className="text-center py-8 rounded-lg border" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
+                <Icons.Calendar className="w-12 h-12 mx-auto mb-3" style={{ color: colors.textLight }} />
+                <div style={{ color: colors.textLight }}>
+                  Select service days above to assign drivers
+                </div>
               </div>
             )}
+          </Card>
+        </section>
+
+        {/* SECTION 4: VEHICLE MANAGEMENT */}
+        <section>
+          <SectionHeader title="Vehicle Management" number={4} />
+          <Card>
+            <div className="flex items-center space-x-2 mb-6">
+              <Icons.Vehicle style={{ color: colors.primary }} />
+              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Driver Vehicle Assignments</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {detail.vehicles.map(v => {
+                const currentDriver = detail.drivers.find(dr => dr.vehicle_id === v.id) || null;
+                return (
+                  <div key={v.id} className="rounded-lg p-4 border" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Icons.Vehicle className="w-4 h-4" style={{ color: colors.primary }} />
+                      <h4 className="font-semibold" style={{ color: colors.text }}>Vehicle {v.plate}</h4>
+                    </div>
+                    
+                    <div className="space-y-3 mb-4">
+                      <div className="text-sm">
+                        <span className="font-medium" style={{ color: colors.text }}>Current driver:</span>{' '}
+                        {currentDriver ? (
+                          <span style={{ color: colors.text }}>{currentDriver.username}</span>
+                        ) : (
+                          <span style={{ color: colors.error }}>None assigned</span>
+                        )}
+                      </div>
+                      
+                      {Array.isArray(v.assigned_manpower_users) && (
+                        <div className="text-sm">
+                          <div className="font-medium mb-1" style={{ color: colors.text }}>Assigned Manpower:</div>
+                          {v.assigned_manpower_users.length ? (
+                            <div className="space-y-1">
+                              {v.assigned_manpower_users.map(u => (
+                                <div key={u.id} className="px-2 py-1 rounded" style={{ backgroundColor: colors.cardBg, color: colors.text }}>
+                                  {u.username} (#{u.id})
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ color: colors.textLight }} className="italic">None assigned</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <select
+                      className="w-full rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 border"
+                      style={{ 
+                        backgroundColor: colors.cardBg,
+                        borderColor: colors.border,
+                        color: colors.text
+                      }}
+                      value={editVehicleDriver[v.id] || ''}
+                      onChange={e => setEditVehicleDriver({ ...editVehicleDriver, [v.id]: e.target.value })}
+                    >
+                      <option value="">Select driver…</option>
+                      {detail.drivers.map(dr => (
+                        <option key={dr.id} value={dr.id}>{dr.username}</option>
+                      ))}
+                    </select>
+                    
+                    <PrimaryButton 
+                      onClick={() => saveVehicleForVehicle(v.id)}
+                      className="w-full justify-center py-3"
+                    >
+                      <Icons.Save />
+                      <span>Assign Driver</span>
+                    </PrimaryButton>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </section>
+
+        {/* SECTION 5: MANPOWER MANAGEMENT */}
+        <section>
+          <SectionHeader title="Manpower Management" number={5} />
+          
+          <div className="space-y-6">
+            {/* Add Manpower */}
+            <Card>
+              <div className="flex items-center space-x-2 mb-4">
+                <Icons.Add style={{ color: colors.primary }} />
+                <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Add New Manpower</h3>
+              </div>
+              
+              <div className="flex gap-3">
+                <input 
+                  className="flex-1 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border"
+                  style={{ 
+                    backgroundColor: colors.cardBg,
+                    borderColor: colors.border,
+                    color: colors.text
+                  }}
+                  placeholder="Enter manpower user ID"
+                  value={addingMp}
+                  onChange={e => setAddingMp(e.target.value)}
+                  type="number"
+                />
+                <PrimaryButton 
+                  onClick={addManpower}
+                  className="px-6 py-3"
+                >
+                  <Icons.Add />
+                  <span>Add Manpower</span>
+                </PrimaryButton>
+              </div>
+            </Card>
+
+            {/* Manpower List */}
+            <Card>
+              <div className="flex items-center space-x-2 mb-6">
+                <Icons.Manpower style={{ color: colors.primary }} />
+                <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Assigned Manpower</h3>
+              </div>
+              
+              {detail.manpower.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {detail.manpower.map(mp => (
+                    <div key={mp.id} className="flex items-center justify-between rounded-lg p-4 border" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
+                      <div>
+                        <div className="font-medium" style={{ color: colors.text }}>{mp.username}</div>
+                        <div className="text-sm" style={{ color: colors.textLight }}>ID: #{mp.id}</div>
+                      </div>
+                      <button 
+                        onClick={() => removeManpower(mp.id)}
+                        className="flex items-center space-x-1 px-3 py-2 rounded-lg font-medium transition-colors duration-200"
+                        style={{ 
+                          backgroundColor: '#FEF2F2',
+                          color: colors.error
+                        }}
+                      >
+                        <Icons.Remove />
+                        <span className="text-sm">Remove</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 rounded-lg border" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
+                  <Icons.Manpower className="w-12 h-12 mx-auto mb-3" style={{ color: colors.textLight }} />
+                  <div style={{ color: colors.textLight }}>No manpower assigned to this zone</div>
+                </div>
+              )}
+            </Card>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

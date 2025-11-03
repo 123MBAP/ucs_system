@@ -12,6 +12,8 @@ import reportRouter from './backend/routes/report.js';
 import chiefRouter from './backend/routes/chief.js';
 import supervisorRouter from './backend/routes/supervisor.js';
 import manageWorkersRouter from './backend/routes/manageworkers.js';
+import manpowerRouter from './backend/routes/manpower.js';
+import profileRouter from './backend/routes/profile.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -36,7 +38,10 @@ const corsOptions = allowedOriginsEnv === '*'
     };
 app.use(cors(corsOptions));
 
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
+// Serve profile images
+app.use('/profiles', express.static(path.resolve(process.cwd(), 'profiles')));
 
 app.use('/api', loginRouter);
 app.use('/api/zones', zonesRouter);
@@ -47,6 +52,8 @@ app.use('/api/report', reportRouter);
 app.use('/api/chief', chiefRouter);
 app.use('/api/supervisor', supervisorRouter);
 app.use('/api/manageworkers', manageWorkersRouter);
+app.use('/api/manpower', manpowerRouter);
+app.use('/api/profile', profileRouter);
 
 app.get('/api/me', auth, (req, res) => {
   return res.json({ user: req.user });

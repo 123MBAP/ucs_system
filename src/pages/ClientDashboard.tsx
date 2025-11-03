@@ -2,10 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, Receipt, User, MessageSquare } from 'lucide-react';
 const apiBase = import.meta.env.VITE_API_URL as string;
 
-type Payments = {
-  currentMonth: number;
-};
-
 // Icon components
 const Icons = {
   Client: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
@@ -19,7 +15,7 @@ const Icons = {
 const ClientDashboard = () => {
   const clientName = 'John Client';
 
-  const [zoneId, setZoneId] = useState<number | null>(null);
+  // zoneId not needed in component state
   const [clientId, setClientId] = useState<number | null>(null);
   const [zoneServiceDays, setZoneServiceDays] = useState<number[]>([]);
   const [zoneSchedule, setZoneSchedule] = useState<Array<{
@@ -34,7 +30,7 @@ const ClientDashboard = () => {
     supervisor_decided_at?: string | null;
     complained_client_ids?: number[];
   }>>([]);
-  const [complaining, setComplaining] = useState<Record<number, boolean>>({});
+  const [_complaining, setComplaining] = useState<Record<number, boolean>>({});
   const weekdayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const zoneServiceDayNames = useMemo(() => zoneServiceDays
     .map(d => weekdayNames[(Number(d) || 1) - 1])
@@ -60,7 +56,7 @@ const ClientDashboard = () => {
         const meRes = await fetch(`${apiBase}/api/clients/me`, { headers: { Authorization: `Bearer ${token}` } });
         const me = await meRes.json();
         if (meRes.ok && me?.client?.zone_id) {
-          setZoneId(me.client.zone_id);
+          // zoneId not stored in state
           setClientId(me.client.id);
           if (me?.client?.monthly_amount != null) setMonthlyAmount(Number(me.client.monthly_amount));
           const sdRes = await fetch(`${apiBase}/api/zones/${me.client.zone_id}/service-days`, { headers: { Authorization: `Bearer ${token}` } });

@@ -46,8 +46,8 @@ router.post('/', auth, requireRole('manager', 'supervisor'), async (req, res) =>
 
     const insClient = await db.query(
       `INSERT INTO clients (username, name, role_id, zone_id, phone_number, monthly_amount, password)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, username, name, role_id, zone_id, phone_number, monthly_amount, created_at`,
+       VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7)
+       RETURNING id, username, name, role_id, zone_id, phone_number, monthly_amount, created_at, profile_image_url`,
       [username, nameJson, clientRoleId, zoneId, phone, monthlyAmount != null ? Number(monthlyAmount) : null, hashed]
     );
 
@@ -74,7 +74,7 @@ router.get('/by-zone/:id', auth, requireRole('manager', 'supervisor', 'chief'), 
       if (!chk.rows.length) return res.status(403).json({ error: 'Forbidden: zone not assigned to this chief' });
     }
     const { rows } = await db.query(
-      `SELECT id, username, name, zone_id, phone_number, monthly_amount, created_at
+      `SELECT id, username, name, zone_id, phone_number, monthly_amount, created_at, profile_image_url
        FROM clients
        WHERE zone_id = $1
        ORDER BY id DESC`,
@@ -145,10 +145,10 @@ router.patch('/:id', auth, requireRole('manager', 'supervisor'), async (req, res
     const upd = await db.query(
       `UPDATE clients
        SET username = COALESCE($1, username),
-           name = $2,
+           name = $2::jsonb,
            monthly_amount = COALESCE($3, monthly_amount)
        WHERE id = $4
-       RETURNING id, username, name, zone_id, phone_number, monthly_amount, created_at`,
+       RETURNING id, username, name, zone_id, phone_number, monthly_amount, created_at, profile_image_url`,
       [username ?? null, newName, (monthlyAmount != null ? Number(monthlyAmount) : null), clientId]
     );
     return res.json({ client: upd.rows[0] });

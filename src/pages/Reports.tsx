@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -62,6 +62,155 @@ const Reports = () => {
 
   // Chief filter (paid/remaining/all)
   const [chiefFilter, setChiefFilter] = useState<'all' | 'paid' | 'remaining'>('all');
+
+  // Print/PDF helpers
+  const zonesRef = useRef<HTMLDivElement | null>(null);
+  const chiefClientsRef = useRef<HTMLDivElement | null>(null);
+  const chiefPaymentsRef = useRef<HTMLDivElement | null>(null);
+  const clientPaymentsRef = useRef<HTMLDivElement | null>(null);
+
+  function printHtml(title: string, html: string) {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.open();
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
+      <style>
+        body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, 'Apple Color Emoji','Segoe UI Emoji'; padding: 24px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background: #f3f4f6; text-align: left; }
+        h1 { font-size: 18px; margin: 0 0 12px; }
+      </style>
+    </head><body>
+      <h1>${title}</h1>
+      ${html}
+      <script>window.onload = function(){ window.print(); setTimeout(()=>window.close(), 300); }<\/script>
+    </body></html>`);
+    w.document.close();
+  }
+
+  const exportZonesPdf = () => {
+    const section = zonesRef.current?.innerHTML || '';
+    const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+    const sup = supervisors.find(s => String(s.id) === supervisorId);
+    const zone = zones.find(z => String(z.id) === zoneId);
+    const zoneNamesFromRows = zoneRows.map(r => r.zone_name).filter(Boolean);
+    const zonesList = zone ? [zone.zone_name] : (zoneNamesFromRows.length ? zoneNamesFromRows : []);
+    const header = `
+      <div style="margin-bottom:16px">
+        <div style="font-size:20px;font-weight:700;">UCS Company Ltd.</div>
+        <div style="font-size:14px;color:#374151;">Zones Summary Report</div>
+        <div style="margin-top:8px;font-size:12px;color:#111827;">
+          <div><strong>Period:</strong> ${monthName} ${year}</div>
+          <div><strong>Filter:</strong> ${msFilter}</div>
+          <div><strong>Supervisor:</strong> ${sup ? sup.username : 'All'}</div>
+          <div><strong>Zones:</strong> ${zonesList.length ? zonesList.join(', ') : 'All'}</div>
+        </div>
+      </div>`;
+    printHtml(`Zones Summary ${year}-${month}`, header + section);
+  };
+
+  const exportChiefClientsPdf = () => {
+    const section = chiefClientsRef.current?.innerHTML || '';
+    const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+    const header = `
+      <div style=\"margin-bottom:16px\">
+        <div style=\"font-size:20px;font-weight:700;\">UCS Company Ltd.</div>
+        <div style=\"font-size:14px;color:#374151;\">Chief Clients Report</div>
+        <div style=\"margin-top:8px;font-size:12px;color:#111827;\">
+          <div><strong>Period:</strong> ${monthName} ${year}</div>
+          <div><strong>Filter:</strong> ${chiefFilter}</div>
+        </div>
+      </div>`;
+    printHtml(`Chief Clients ${year}-${month} (${chiefFilter})`, header + section);
+  };
+
+  const exportChiefPaymentsPdf = () => {
+    const section = chiefPaymentsRef.current?.innerHTML || '';
+    const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+    const header = `
+      <div style=\"margin-bottom:16px\">
+        <div style=\"font-size:20px;font-weight:700;\">UCS Company Ltd.</div>
+        <div style=\"font-size:14px;color:#374151;\">Chief Payments Report</div>
+        <div style=\"margin-top:8px;font-size:12px;color:#111827;\">
+          <div><strong>Period:</strong> ${monthName} ${year}</div>
+        </div>
+      </div>`;
+    printHtml(`Chief Payments ${year}-${month}`, header + section);
+  };
+
+  const exportClientPaymentsPdf = () => {
+    const section = clientPaymentsRef.current?.innerHTML || '';
+    const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+    const header = `
+      <div style=\"margin-bottom:16px\">
+        <div style=\"font-size:20px;font-weight:700;\">UCS Company Ltd.</div>
+        <div style=\"font-size:14px;color:#374151;\">My Payments Report</div>
+        <div style=\"margin-top:8px;font-size:12px;color:#111827;\">
+          <div><strong>Period:</strong> ${monthName} ${year}</div>
+        </div>
+      </div>`;
+    printHtml(`My Payments ${year}-${month}`, header + section);
+  };
+
+  // CSV helpers
+  function toCsvValue(v: any) {
+    if (v == null) return '';
+    const s = String(v);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function downloadCsv(filename: string, headers: string[], rows: (string | number | null)[][]) {
+    const headerLine = headers.map(toCsvValue).join(',');
+    const lines = rows.map(r => r.map(toCsvValue).join(','));
+    const csv = [headerLine, ...lines].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Exporters per view
+  const exportManagerSupervisorZones = () => {
+    const rows = zoneRows.map(r => [r.zone_id, r.zone_name, r.clients_count, r.amount_to_pay, r.amount_paid, r.amount_remaining]);
+    downloadCsv(`zones_summary_${year}-${month}.csv`, ['Zone ID', 'Zone', '# Clients', 'Amount To Pay', 'Amount Paid', 'Remaining'], rows);
+  };
+
+  const exportChiefClients = () => {
+    const rows = chiefRows.map(r => [r.client_id, r.client_username ?? '', r.amount_to_pay, r.amount_paid, r.amount_remaining]);
+    downloadCsv(`chief_clients_${year}-${month}_${chiefFilter}.csv`, ['Client ID', 'Client', 'To Pay', 'Paid', 'Remaining'], rows);
+  };
+
+  const exportChiefPayments = () => {
+    const rows = chiefPayments.map(p => [p.id, p.completed_at ?? '', p.client_username ?? (p.client_id ?? ''), p.amount, p.currency ?? '', p.status ?? '']);
+    downloadCsv(`chief_payments_${year}-${month}.csv`, ['Payment ID', 'Date', 'Client', 'Amount', 'Currency', 'Status'], rows);
+  };
+
+  const exportClientPayments = () => {
+    const rows = clientPayments.map(p => [p.id, p.completed_at ?? '', p.amount, p.currency ?? '', p.status ?? '']);
+    downloadCsv(`my_payments_${year}-${month}.csv`, ['Payment ID', 'Date', 'Amount', 'Currency', 'Status'], rows);
+  };
+
+  // Handlers to prevent mismatched zone/supervisor combinations for manager
+  const onChangeZone = (value: string) => {
+    setZoneId(value);
+    // If manager chose a specific zone, reset supervisor filter to All
+    if (role === 'manager' && value) {
+      setSupervisorId('');
+    }
+  };
+
+  const onChangeSupervisor = (value: string) => {
+    setSupervisorId(value);
+    // If manager chose a specific supervisor, reset zone filter to All
+    if (role === 'manager' && value) {
+      setZoneId('');
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -211,7 +360,7 @@ const Reports = () => {
           <>
             <div>
               <label className="block text-sm text-gray-700">Zone</label>
-              <select className="mt-1 border rounded px-2 py-2" value={zoneId} onChange={e => setZoneId(e.target.value)}>
+              <select className="mt-1 border rounded px-2 py-2" value={zoneId} onChange={e => onChangeZone(e.target.value)}>
                 <option value="">All Zones</option>
                 {zones.map(z => (
                   <option key={z.id} value={z.id}>{z.zone_name}</option>
@@ -219,7 +368,7 @@ const Reports = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-700">Filter</label>
+              <label className="block text-sm text-gray-700">Paid & Remaining</label>
               <select className="mt-1 border rounded px-2 py-2" value={msFilter} onChange={e => setMsFilter(e.target.value as any)}>
                 <option value="all">All</option>
                 <option value="paid">Paid</option>
@@ -229,7 +378,7 @@ const Reports = () => {
             {role === 'manager' && (
               <div>
                 <label className="block text-sm text-gray-700">Supervisor</label>
-                <select className="mt-1 border rounded px-2 py-2" value={supervisorId} onChange={e => setSupervisorId(e.target.value)}>
+                <select className="mt-1 border rounded px-2 py-2" value={supervisorId} onChange={e => onChangeSupervisor(e.target.value)}>
                   <option value="">All Supervisors</option>
                   {supervisors.map(s => (
                     <option key={s.id} value={s.id}>{s.username}</option>
@@ -237,6 +386,10 @@ const Reports = () => {
                 </select>
               </div>
             )}
+            <div className="self-end pb-1 flex items-center gap-2">
+              <button onClick={exportManagerSupervisorZones} className="px-3 py-2 rounded bg-amber-600 text-white">Download CSV</button>
+              <button onClick={exportZonesPdf} className="px-3 py-2 rounded bg-amber-700 text-white">Download PDF</button>
+            </div>
           </>
         )}
 
@@ -244,12 +397,16 @@ const Reports = () => {
           <div className="flex items-end gap-3">
             <div className="text-sm text-gray-600">Showing clients in your assigned zones</div>
             <div>
-              <label className="block text-sm text-gray-700">Filter</label>
+              <label className="block text-sm text-gray-700">Paid&Remaining</label>
               <select className="mt-1 border rounded px-2 py-2" value={chiefFilter} onChange={e => setChiefFilter(e.target.value as any)}>
                 <option value="all">All</option>
                 <option value="paid">Paid</option>
                 <option value="remaining">Remaining</option>
               </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={exportChiefClients} className="px-3 py-2 rounded bg-amber-600 text-white">Download Clients CSV</button>
+              <button onClick={exportChiefClientsPdf} className="px-3 py-2 rounded bg-amber-700 text-white">Download PDF</button>
             </div>
           </div>
         )}
@@ -266,7 +423,7 @@ const Reports = () => {
       ) : (
         <>
           {(role === 'manager' || role === 'supervisor') && (
-            <div className="bg-white rounded-lg shadow overflow-auto">
+            <div ref={zonesRef} className="bg-white rounded-lg shadow overflow-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -309,7 +466,7 @@ const Reports = () => {
           )}
 
           {role === 'chief' && (
-            <div className="bg-white rounded-lg shadow overflow-auto">
+            <div ref={chiefClientsRef} className="bg-white rounded-lg shadow overflow-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -339,8 +496,14 @@ const Reports = () => {
           )}
 
           {role === 'chief' && (
-            <div className="bg-white rounded-lg shadow overflow-auto mt-6">
-              <div className="px-4 py-3 font-semibold">Payments (filtered)</div>
+            <div ref={chiefPaymentsRef} className="bg-white rounded-lg shadow overflow-auto mt-6">
+              <div className="px-4 py-3 font-semibold flex items-center justify-between">
+                <span>Payments (filtered)</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={exportChiefPayments} className="px-3 py-1 rounded bg-amber-600 text-white">Download CSV</button>
+                  <button onClick={exportChiefPaymentsPdf} className="px-3 py-1 rounded bg-amber-700 text-white">Download PDF</button>
+                </div>
+              </div>
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -381,8 +544,14 @@ const Reports = () => {
           )}
 
           {role === 'client' && (
-            <div className="bg-white rounded-lg shadow overflow-auto">
-              <div className="px-4 py-3 font-semibold">My Payments (filtered)</div>
+            <div ref={clientPaymentsRef} className="bg-white rounded-lg shadow overflow-auto">
+              <div className="px-4 py-3 font-semibold flex items-center justify-between">
+                <span>My Payments (filtered)</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={exportClientPayments} className="px-3 py-1 rounded bg-amber-600 text-white">Download CSV</button>
+                  <button onClick={exportClientPaymentsPdf} className="px-3 py-1 rounded bg-amber-700 text-white">Download PDF</button>
+                </div>
+              </div>
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>

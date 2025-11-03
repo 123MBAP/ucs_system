@@ -20,6 +20,7 @@ type ClientRow = {
   phone_number: string;
   monthly_amount?: number | null;
   created_at: string;
+  profile_image_url?: string | null;
 };
 
 const Clients = () => {
@@ -68,7 +69,7 @@ const Clients = () => {
     if (!token) return;
     setLoading(true);
     setError(null);
-    const params = new URLSearchParams(location.search);
+    // query params not used here
     // Decide scope based on role
     if (role === 'chief') {
       fetch(`${apiBase}/api/chief/clients`, { headers: { Authorization: `Bearer ${token}` } })
@@ -221,6 +222,7 @@ const Clients = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
@@ -233,6 +235,13 @@ const Clients = () => {
                     const fullName = c.name ? `${c.name.first || ''} ${c.name.last || ''}`.trim() : '';
                     return (
                       <tr key={c.id}>
+                        <td className="px-3 py-2">
+                          {c.profile_image_url ? (
+                            <img src={c.profile_image_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-200"></div>
+                          )}
+                        </td>
                         <td className="px-3 py-2">{fullName || c.username}</td>
                         <td className="px-3 py-2">{c.username}</td>
                         <td className="px-3 py-2">{c.phone_number}</td>
@@ -259,6 +268,7 @@ const Clients = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">Sel</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
@@ -286,6 +296,13 @@ const Clients = () => {
                         <tr key={c.id}>
                           <td className="px-3 py-2">
                             <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelect(c.id)} />
+                          </td>
+                          <td className="px-3 py-2">
+                            {c.profile_image_url ? (
+                              <img src={c.profile_image_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gray-200"></div>
+                            )}
                           </td>
                           <td className="px-3 py-2">{fullName || c.username}</td>
                           <td className="px-3 py-2">{c.username}</td>
