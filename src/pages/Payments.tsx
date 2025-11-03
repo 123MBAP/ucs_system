@@ -136,101 +136,122 @@ const Payments = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-2xl font-bold">Payments</h2>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent">Payments</h1>
+          <p className="text-slate-600 mt-2">Initiate mobile money payments and track transactions</p>
+        </div>
+        <div className="flex items-center space-x-2 mt-4 sm:mt-0 text-sm text-slate-500">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <span>Service Available</span>
+        </div>
+      </div>
+
+      {/* Selected client notice */}
       {selectedClientName && (
-        <div className="rounded border border-amber-300 bg-amber-50 p-3 text-amber-900">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
           Paying for client: <span className="font-semibold">{selectedClientName}</span>
         </div>
       )}
-      {error && <div className="text-red-600">{error}</div>}
-      {loading && <div>Loading…</div>}
+      {/* Error and loading states */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          {error}
+        </div>
+      )}
+      {loading && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-slate-600">Loading…</div>
+      )}
 
-      <div className="bg-white border rounded shadow p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Initiate Payment</h3>
+      {/* Initiate Payment Card */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <h3 className="text-lg font-bold text-slate-800">Initiate Payment</h3>
           <div className="flex items-center gap-2">
-            <div className="px-3 py-1 rounded text-black font-semibold" style={{ backgroundColor: '#FFCB05' }}>MTN MoMo</div>
-            <span className="text-sm text-gray-600">You will pay using MTN Mobile Money</span>
+            <div className="px-3 py-1 rounded-xl text-black font-semibold" style={{ backgroundColor: '#FFCB05' }}>MTN MoMo</div>
+            <span className="text-sm text-slate-600">You will pay using MTN Mobile Money</span>
           </div>
         </div>
-        <form onSubmit={initiate} className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <form onSubmit={initiate} className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm text-gray-700">Amount</label>
-            <input type="number" min="0" step="0.01" className="mt-1 w-full border rounded px-2 py-2" value={amount} onChange={e => setAmount(e.target.value)} required />
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Amount</label>
+            <input type="number" min="0" step="0.01" className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" value={amount} onChange={e => setAmount(e.target.value)} required />
           </div>
           <div>
-            <label className="block text-sm text-gray-700">Phone</label>
-            <input className="mt-1 w-full border rounded px-2 py-2" value={phone} onChange={e => setPhone(e.target.value)} required />
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Phone</label>
+            <input className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" value={phone} onChange={e => setPhone(e.target.value)} required />
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <label className="block text-sm text-gray-700">Purpose</label>
+              <label className="block text-sm font-semibold text-slate-700">Purpose</label>
               <button type="button" onClick={() => setPurposeEdit(v => !v)} className="text-sm text-blue-600 underline">
                 {purposeEdit ? 'Done' : 'Edit'}
               </button>
             </div>
             <input
-              className="mt-1 w-full border rounded px-2 py-2"
+              className="mt-1 w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               value={purpose}
               onChange={e => setPurpose(e.target.value)}
               readOnly={!purposeEdit}
             />
           </div>
           <div className="md:col-span-1 flex items-end">
-            <button type="submit" className="w-full px-4 py-2 rounded font-semibold text-black" style={{ backgroundColor: '#FFCB05' }}>Initiate MTN MoMo Payment</button>
+            <button type="submit" className="w-full px-4 py-2 rounded-xl font-semibold text-black hover:brightness-95 transition-all duration-200 shadow-sm" style={{ backgroundColor: '#FFCB05' }}>Initiate MTN MoMo Payment</button>
           </div>
         </form>
       </div>
 
+      {/* Tables */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border rounded shadow p-4">
-          <h3 className="text-lg font-semibold mb-3">Pending Transactions</h3>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Pending Transactions</h3>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">#</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Client</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Phone</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-200">
                 {pending.map(p => (
-                  <tr key={p.id}>
+                  <tr key={p.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2">{p.id}</td>
                     <td className="px-3 py-2">{p.client_username || p.client_id}</td>
                     <td className="px-3 py-2">{p.amount} {p.currency}</td>
                     <td className="px-3 py-2">{p.phone_number}</td>
                     <td className="px-3 py-2 text-right">
-                      <button onClick={() => complete(p.id)} className="px-2 py-1 text-sm bg-green-600 text-white rounded">Mark Completed</button>
+                      <button onClick={() => complete(p.id)} className="px-2 py-1 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">Mark Completed</button>
                     </td>
                   </tr>
                 ))}
                 {!pending.length && (
-                  <tr><td className="px-3 py-3 text-gray-500" colSpan={5}>No pending transactions.</td></tr>
+                  <tr><td className="px-3 py-3 text-slate-500" colSpan={5}>No pending transactions.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
-        <div className="bg-white border rounded shadow p-4">
-          <h3 className="text-lg font-semibold mb-3">Completed Payments</h3>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Completed Payments</h3>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">#</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Client</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-200">
                 {completed.map(r => (
-                  <tr key={r.id}>
+                  <tr key={r.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2">{r.id}</td>
                     <td className="px-3 py-2">{r.client_username || r.client_id}</td>
                     <td className="px-3 py-2">{r.amount} {r.currency}</td>
@@ -238,7 +259,7 @@ const Payments = () => {
                   </tr>
                 ))}
                 {!completed.length && (
-                  <tr><td className="px-3 py-3 text-gray-500" colSpan={4}>No completed payments.</td></tr>
+                  <tr><td className="px-3 py-3 text-slate-500" colSpan={4}>No completed payments.</td></tr>
                 )}
               </tbody>
             </table>

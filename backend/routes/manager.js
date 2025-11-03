@@ -74,6 +74,24 @@ async function ensureSchema() {
         END IF;
       END $$;
     `);
+    // Salaries table to store salaries for workers (users): supervisors, drivers, manpower
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS salaries (
+        id SERIAL PRIMARY KEY,
+        user_id INT UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+      );
+    `);
+    // Basic user profiles to store names
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS user_profiles (
+        user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        first_name TEXT,
+        last_name TEXT,
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+      );
+    `);
   } catch (e) {
     console.error('ensureSchema(manager) error', e);
   }
@@ -82,6 +100,110 @@ async function ensureSchema() {
 router.use(async (req, res, next) => {
   await ensureSchema();
   next();
+});
+
+// Workers summary: supervisors (with zones + salary), chiefs (with zones), manpower (with salary), drivers (with salary), vehicles
+router.get('/workers-summary', auth, requireManager, async (req, res) => {
+  try {
+    // Supervisors
+    const supervisorsRes = await db.query(
+      `SELECT u.id, u.username,
+              up.first_name, up.last_name,
+              COALESCE(s.amount, 0)::numeric AS salary,
+              COALESCE(
+                (
+                  SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
+                  FROM zones z WHERE z.supervisor_id = u.id
+                ), '[]'::json
+              ) AS zones
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN user_profiles up ON up.user_id = u.id
+       LEFT JOIN salaries s ON s.user_id = u.id
+       WHERE r.role_name = 'supervisor'
+       ORDER BY u.username ASC`);
+
+    // Chiefs with zones
+    const chiefsRes = await db.query(
+      `SELECT u.id, u.username,
+              up.first_name, up.last_name,
+              COALESCE(
+                (
+                  SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
+                  FROM zones z WHERE z.assigned_chief = u.id
+                ), '[]'::json
+              ) AS zones
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN user_profiles up ON up.user_id = u.id
+       WHERE r.role_name = 'chief'
+       ORDER BY u.username ASC`);
+
+    // Manpower with salary
+    const manpowerRes = await db.query(
+      `SELECT u.id, u.username, up.first_name, up.last_name, COALESCE(s.amount,0)::numeric AS salary
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN user_profiles up ON up.user_id = u.id
+       LEFT JOIN salaries s ON s.user_id = u.id
+       WHERE r.role_name = 'manpower'
+       ORDER BY u.username ASC`);
+
+    // Drivers with salary
+    const driversRes = await db.query(
+      `SELECT u.id, u.username, up.first_name, up.last_name, COALESCE(s.amount,0)::numeric AS salary
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN user_profiles up ON up.user_id = u.id
+       LEFT JOIN salaries s ON s.user_id = u.id
+       WHERE r.role_name = 'driver'
+       ORDER BY u.username ASC`);
+
+    // Vehicles
+    let vehicles = [];
+    try {
+      const vres = await db.query(
+        `SELECT v.id, v.plate, v.make, v.model, v.supervisor_id
+         FROM vehicles v
+         ORDER BY v.plate ASC`
+      );
+      vehicles = vres.rows;
+    } catch {
+      vehicles = [];
+    }
+
+    return res.json({
+      supervisors: supervisorsRes.rows,
+      chiefs: chiefsRes.rows,
+      manpower: manpowerRes.rows,
+      drivers: driversRes.rows,
+      vehicles,
+    });
+  } catch (err) {
+    console.error('workers-summary error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Upsert salary
+router.post('/salaries', auth, requireManager, async (req, res) => {
+  try {
+    const { userId, amount } = req.body || {};
+    if (!Number.isFinite(Number(userId)) || !Number.isFinite(Number(amount))) {
+      return res.status(400).json({ error: 'userId and amount are required' });
+    }
+    const up = await db.query(
+      `INSERT INTO salaries (user_id, amount, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET amount = EXCLUDED.amount, updated_at = NOW()
+       RETURNING user_id, amount`,
+      [Number(userId), Number(amount)]
+    );
+    return res.json({ salary: up.rows[0] });
+  } catch (err) {
+    console.error('upsert salary error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Manager creates/registers a Chief of the Zone
@@ -209,6 +331,16 @@ router.patch('/supervisors/:id/zones/move', auth, requireManager, async (req, re
         );
         zone = ins.rows[0];
       }
+    }
+
+    // Upsert salary if provided
+    if (Number.isFinite(Number(salary))) {
+      await client.query(
+        `INSERT INTO salaries (user_id, amount, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET amount = EXCLUDED.amount, updated_at = NOW()`,
+        [mp.id, Number(salary)]
+      );
     }
 
     await client.query('COMMIT');
@@ -461,6 +593,14 @@ router.post('/manpower', auth, requireManager, async (req, res) => {
     );
     const mp = insUser.rows[0];
 
+    // Upsert profile name
+    await client.query(
+      `INSERT INTO user_profiles (user_id, first_name, last_name, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, updated_at = NOW()`,
+      [mp.id, firstName || null, lastName || null]
+    );
+
     // Optional: assign to a vehicle on creation
     if (Number.isFinite(Number(vehicleId))) {
       // Validate vehicle exists
@@ -516,7 +656,7 @@ router.post('/manpower', auth, requireManager, async (req, res) => {
 router.post('/supervisors', auth, requireManager, async (req, res) => {
   const client = await db.pool.connect();
   try {
-    const { username } = req.body || {};
+    const { username, salary, firstName, lastName } = req.body || {};
 
     if (!username || typeof username !== 'string') {
       return res.status(400).json({ error: 'username is required' });
@@ -544,6 +684,24 @@ router.post('/supervisors', auth, requireManager, async (req, res) => {
        RETURNING id, username`,
       [username, hash, supervisorRoleId]
     );
+    // Upsert optional profile name
+    if (firstName || lastName) {
+      await client.query(
+        `INSERT INTO user_profiles (user_id, first_name, last_name, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, updated_at = NOW()`,
+        [userIns.rows[0].id, firstName || null, lastName || null]
+      );
+    }
+    // Upsert salary if provided
+    if (Number.isFinite(Number(salary))) {
+      await client.query(
+        `INSERT INTO salaries (user_id, amount, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET amount = EXCLUDED.amount, updated_at = NOW()`,
+        [userIns.rows[0].id, Number(salary)]
+      );
+    }
     await client.query('COMMIT');
 
     const supervisor = userIns.rows[0];
@@ -565,7 +723,7 @@ router.post('/supervisors', auth, requireManager, async (req, res) => {
 router.post('/drivers', auth, requireManager, async (req, res) => {
   const client = await db.pool.connect();
   try {
-    const { firstName, lastName, car, zones, username } = req.body || {};
+    const { firstName, lastName, car, zones, username, salary } = req.body || {};
 
     if (!firstName || !lastName) {
       return res.status(400).json({ error: 'firstName and lastName are required' });
@@ -605,6 +763,22 @@ router.post('/drivers', auth, requireManager, async (req, res) => {
        RETURNING id, username`,
       [finalUsername, hash, driverRoleId]
     );
+    // Upsert profile name
+    await client.query(
+      `INSERT INTO user_profiles (user_id, first_name, last_name, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, updated_at = NOW()`,
+      [insUser.rows[0].id, firstName || null, lastName || null]
+    );
+    // Upsert salary if provided
+    if (Number.isFinite(Number(salary))) {
+      await client.query(
+        `INSERT INTO salaries (user_id, amount, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET amount = EXCLUDED.amount, updated_at = NOW()`,
+        [insUser.rows[0].id, Number(salary)]
+      );
+    }
 
     await client.query('COMMIT');
 
@@ -672,12 +846,49 @@ router.get('/dashboard', auth, requireManager, async (req, res) => {
     const drivers = driversRes.rows[0]?.count || 0;
     const manpowerTotal = manpowerRes.rows[0]?.count || 0;
 
+    // payments (from payments_completed)
+    let currentMonthPayments = 0;
+    let todayPayments = 0;
+    try {
+      const monthSum = await db.query(
+        `SELECT COALESCE(SUM(amount)::bigint, 0) AS total
+         FROM payments_completed
+         WHERE status = 'success'
+           AND date_trunc('month', completed_at) = date_trunc('month', NOW())`
+      );
+      currentMonthPayments = Number(monthSum.rows[0]?.total || 0);
+
+      const todaySum = await db.query(
+        `SELECT COALESCE(SUM(amount)::bigint, 0) AS total
+         FROM payments_completed
+         WHERE status = 'success'
+           AND DATE(completed_at) = CURRENT_DATE`
+      );
+      todayPayments = Number(todaySum.rows[0]?.total || 0);
+    } catch (e) {
+      // If schema differs (e.g., no completed_at or status), fallback to all rows
+      try {
+        const monthSumLegacy = await db.query(
+          `SELECT COALESCE(SUM(amount)::bigint, 0) AS total
+           FROM payments_completed
+           WHERE date_trunc('month', COALESCE(completed_at, created_at, NOW())) = date_trunc('month', NOW())`
+        );
+        currentMonthPayments = Number(monthSumLegacy.rows[0]?.total || 0);
+        const todaySumLegacy = await db.query(
+          `SELECT COALESCE(SUM(amount)::bigint, 0) AS total
+           FROM payments_completed
+           WHERE DATE(COALESCE(completed_at, created_at, NOW())) = CURRENT_DATE`
+        );
+        todayPayments = Number(todaySumLegacy.rows[0]?.total || 0);
+      } catch {}
+    }
+
     return res.json({
       zones: { total: zonesTotal, supervisors, chiefs },
       clients: { total: clientsTotal },
       manpower: { total: manpowerTotal },
       vehicles: { total: vehiclesTotal, drivers },
-      payments: { currentMonth: null, today: null }
+      payments: { currentMonth: currentMonthPayments, today: todayPayments }
     });
   } catch (err) {
     console.error('Dashboard fetch error:', err);

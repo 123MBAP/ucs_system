@@ -208,4 +208,70 @@ router.get('/my-summary', auth, requireRole('client'), async (req, res) => {
   }
 });
 
+// GET /api/report/payments?year=YYYY&month=MM
+// client: returns their completed payments with totals
+// chief: returns completed payments for clients in zones assigned to the chief with totals
+router.get('/payments', auth, requireRole('client', 'chief'), async (req, res) => {
+  try {
+    const role = req.user.role;
+    const userId = req.user.id;
+    const year = req.query.year != null && req.query.year !== '' ? Number(req.query.year) : null;
+    const month = req.query.month != null && req.query.month !== '' ? Number(req.query.month) : null;
+
+    if (year != null && (!Number.isFinite(year) || year < 2000 || year > 3000)) {
+      return res.status(400).json({ error: 'Invalid year' });
+    }
+    if (month != null && (!Number.isFinite(month) || month < 1 || month > 12)) {
+      return res.status(400).json({ error: 'Invalid month' });
+    }
+
+    let rows = [];
+
+    if (role === 'client') {
+      const where = ['pc.client_id = $1'];
+      const params = [userId];
+      let p = 2;
+      if (year != null) { where.push(`EXTRACT(YEAR FROM pc.completed_at) = $${p++}`); params.push(year); }
+      if (month != null) { where.push(`EXTRACT(MONTH FROM pc.completed_at) = $${p++}`); params.push(month); }
+      const sql = `
+        SELECT pc.id, pc.client_id, pc.amount, pc.currency, pc.status, pc.completed_at
+        FROM payments_completed pc
+        WHERE ${where.join(' AND ')}
+        ORDER BY pc.completed_at DESC, pc.id DESC`;
+      const r = await db.query(sql, params);
+      rows = r.rows;
+    } else if (role === 'chief') {
+      // payments for clients in zones assigned to this chief
+      const where = ['c.zone_id = ANY($1)'];
+      const zonesRes = await db.query('SELECT id FROM zones WHERE assigned_chief = $1', [userId]);
+      const zoneIds = zonesRes.rows.map(r => r.id);
+      if (!zoneIds.length) return res.json({ payments: [], totals: { count: 0, amount_sum: 0 } });
+      const params = [zoneIds];
+      let p = 2;
+      if (year != null) { where.push(`EXTRACT(YEAR FROM pc.completed_at) = $${p++}`); params.push(year); }
+      if (month != null) { where.push(`EXTRACT(MONTH FROM pc.completed_at) = $${p++}`); params.push(month); }
+      const sql = `
+        SELECT pc.id, pc.client_id, pc.amount, pc.currency, pc.status, pc.completed_at, c.username AS client_username, c.zone_id
+        FROM payments_completed pc
+        JOIN clients c ON c.id = pc.client_id
+        WHERE ${where.join(' AND ')}
+        ORDER BY pc.completed_at DESC, pc.id DESC`;
+      const r = await db.query(sql, params);
+      rows = r.rows;
+    }
+
+    const totals = rows.reduce((acc, r) => {
+      const amt = Number(r.amount) || 0;
+      acc.count += 1;
+      acc.amount_sum += amt;
+      return acc;
+    }, { count: 0, amount_sum: 0 });
+
+    return res.json({ payments: rows, totals });
+  } catch (err) {
+    console.error('Payments report error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

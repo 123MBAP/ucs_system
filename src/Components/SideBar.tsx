@@ -41,9 +41,11 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const menuItems: { name: string; icon: JSX.Element; to: string }[] = [
     { name: 'Dashboard', icon: <Icons.Dashboard />, to: '/' },
     { name: 'Manage Workers', icon: <Icons.Workers />, to: '/manage-workers' },
-    { name: 'Supervisor Dashboard', icon: <Icons.Supervisor />, to: '/supervisor' },
+    { name: 'Workers', icon: <Icons.Workers />, to: '/workers' },
+    { name: 'Supervisor Dashboard', icon: <Icons.Supervisor />, to: '/supervisor-dashboard' },
     { name: 'Services Supervision', icon: <Icons.Supervisor />, to: '/supervisor/services' },
     { name: 'Chief Dashboard', icon: <Icons.Chief />, to: '/chief-dashboard' },
+    { name: 'Clients', icon: <Icons.Client />, to: '/clients' },
     { name: 'Day of Service Plan', icon: <Icons.Folder />, to: '/chief-service-plan' },
     { name: 'Client Dashboard', icon: <Icons.Client />, to: '/client-dashboard' },
     { name: 'Manpower Dashboard', icon: <Icons.Manpower />, to: '/manpower-dashboard' },
@@ -70,6 +72,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     manager: new Set([
       '/',
       '/manage-workers',
+      '/workers',
       '/register-supervisor',
       '/register-driver',
       '/register-vehicle',
@@ -79,14 +82,16 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       '/reports',
       '/register-manpower',
       '/register-client',
+      '/clients',
       '/payments',
     ]),
     supervisor: new Set([
-      '/supervisor',
+      '/supervisor-dashboard',
       '/supervisor/services',
       '/register-client',
       '/profile',
       '/reports',
+      '/clients',
       '/payments',
     ]),
     client: new Set([
@@ -100,6 +105,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       '/chief-service-plan',
       '/profile',
       '/reports',
+      '/clients',
       '/payments',
     ]),
     manpower: new Set([
@@ -115,6 +121,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   };
 
   const allowed = userRole && roleAllowed[userRole] ? roleAllowed[userRole] : null;
+  const isSupervisor = userRole === 'supervisor';
+  const widthClass = isSupervisor ? 'w-72' : 'w-64';
   const visibleItems = allowed ? menuItems.filter(item => allowed.has(item.to)) : menuItems;
 
   // Register routes to group under a dropdown
@@ -129,42 +137,40 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   ]);
   const registerItems = visibleItems.filter(i => registerPaths.has(i.to));
   const otherItems = visibleItems.filter(i => !registerPaths.has(i.to));
-  const [regOpen, setRegOpen] = useState(false);
+   const [regOpen, setRegOpen] = useState(false);
 
   return (
     <>
-      {/* Overlay for mobile */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-60 z-20 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 z-20 lg:hidden backdrop-blur-sm"
           onClick={onClose}
         />
       )}
       
-      {/* Sidebar */}
       <div className={`
         fixed lg:static inset-y-0 left-0 z-30
-        w-72 bg-gradient-to-b from-slate-900 to-slate-800 text-white transform
+        ${widthClass} bg-gradient-to-b from-neutral-900 to-neutral-800 text-gray-200 transform
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 transition-all duration-300 ease-in-out
-        flex flex-col shadow-2xl border-r border-slate-700
+        flex flex-col shadow-2xl border-r border-neutral-700
       `}>
         {/* Logo */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700 bg-slate-900/50">
+        <div className="flex items-center justify-between p-5 border-b border-neutral-700 bg-neutral-900/70">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-9 h-9 bg-gradient-to-br from-amber-600 to-amber-500 rounded-xl flex items-center justify-center shadow-lg">
               <span className="font-bold text-white text-sm">UCS</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="text-base font-bold bg-gradient-to-r from-amber-400 to-amber-500 bg-clip-text text-transparent">
                 UCS Company
               </span>
-              <span className="text-xs text-slate-400">Management System</span>
+              <span className="text-xs text-gray-400">Management System</span>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="lg:hidden p-2 rounded-lg hover:bg-slate-800 transition-colors duration-200"
+            className="lg:hidden p-2 rounded-lg hover:bg-neutral-800 transition-colors duration-200"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -172,24 +178,22 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </button>
         </div>
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {/* Navigation */}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto text-sm">
           {otherItems.map((item, index) => (
             <NavLink
               to={item.to}
               key={index}
               className={({ isActive }) =>
-                `group flex items-center space-x-3 p-3 rounded-xl transition-all duration-200 font-medium ${
+                `group flex items-center space-x-3 p-2.5 rounded-xl transition-all duration-200 font-medium ${
                   isActive 
-                    ? 'bg-blue-600/20 text-blue-400 border-r-2 border-blue-400 shadow-lg' 
-                    : 'text-slate-300 hover:bg-slate-800/50 hover:text-white hover:translate-x-1'
+                    ? 'bg-amber-500/10 text-amber-400 border-r-2 border-amber-400 shadow-lg' 
+                    : 'text-gray-300 hover:bg-neutral-800/50 hover:text-white hover:translate-x-1'
                 }`
               }
               onClick={onClose}
             >
-              <div className={`transition-colors duration-200 ${
-                ({ isActive }: { isActive: boolean }) => isActive ? 'text-blue-400' : 'text-slate-400 group-hover:text-white'
-              }`}>
+              <div className="text-gray-400 group-hover:text-amber-400 transition-colors duration-200">
                 {item.icon}
               </div>
               <span className="font-medium tracking-wide">{item.name}</span>
@@ -197,23 +201,23 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           ))}
 
           {registerItems.length > 0 && (
-            <div className="mt-4">
+            <div className="mt-3">
               <button
                 onClick={() => setRegOpen(v => !v)}
-                className="w-full group flex items-center justify-between p-3 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition-all duration-200"
+                className="w-full group flex items-center justify-between p-2.5 rounded-xl text-gray-300 hover:bg-neutral-800/50 hover:text-white transition-all duration-200"
               >
                 <span className="flex items-center space-x-3">
-                  <div className="text-slate-400 group-hover:text-white transition-colors duration-200">
+                  <div className="text-gray-400 group-hover:text-amber-400 transition-colors duration-200">
                     <Icons.Folder />
                   </div>
                   <span className="font-medium tracking-wide">Manage Registrations</span>
                 </span>
-                <span className="text-slate-400 group-hover:text-white transition-transform duration-200">
+                <span className="text-gray-400 group-hover:text-amber-400 transition-transform duration-200">
                   {regOpen ? <Icons.ChevronDown /> : <Icons.ChevronRight />}
                 </span>
               </button>
               {regOpen && (
-                <div className="mt-1 ml-4 space-y-1 border-l border-slate-700 pl-2">
+                <div className="mt-1 ml-4 space-y-1 border-l border-neutral-700 pl-2 text-[13px]">
                   {registerItems.map((item, index) => (
                     <NavLink
                       to={item.to}
@@ -221,15 +225,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                       className={({ isActive }) =>
                         `group flex items-center space-x-3 p-2 rounded-lg transition-all duration-200 ${
                           isActive 
-                            ? 'bg-blue-600/20 text-blue-400 shadow-md' 
-                            : 'text-slate-400 hover:bg-slate-800/30 hover:text-white'
+                            ? 'bg-amber-500/10 text-amber-400 shadow-md' 
+                            : 'text-gray-400 hover:bg-neutral-800/30 hover:text-white'
                         }`
                       }
                       onClick={onClose}
                     >
-                      <div className={`transition-colors duration-200 ${
-                        ({ isActive }: { isActive: boolean }) => isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-white'
-                      }`}>
+                      <div className="text-gray-500 group-hover:text-amber-400 transition-colors duration-200">
                         {item.icon}
                       </div>
                       <span className="text-sm font-medium">{item.name}</span>
@@ -241,20 +243,20 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           )}
         </nav>
 
-        {/* User Profile */}
-        <div className="p-4 border-t border-slate-700 bg-slate-900/30">
-          <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-800/30">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center shadow-lg">
+        {/* Profile / Logout */}
+        <div className="p-3 border-t border-neutral-700 bg-neutral-900/40">
+          <div className="flex items-center space-x-3 p-2.5 rounded-xl bg-neutral-800/40">
+            <div className="w-9 h-9 bg-gradient-to-br from-amber-600 to-amber-400 rounded-full flex items-center justify-center shadow-lg">
               <span className="font-semibold text-white text-sm">AD</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">Admin User</p>
-              <p className="text-xs text-slate-400 truncate">admin@ucs.com</p>
+              <p className="text-[13px] font-semibold text-white truncate">Admin User</p>
+              <p className="text-xs text-gray-400 truncate">admin@ucs.com</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="mt-3 w-full group flex items-center justify-center space-x-2 bg-slate-800/50 hover:bg-red-600/20 text-slate-300 hover:text-red-400 border border-slate-700 hover:border-red-500/30 text-sm font-medium py-2.5 px-3 rounded-xl transition-all duration-200"
+            className="mt-3 w-full group flex items-center justify-center space-x-2 bg-neutral-800/50 hover:bg-red-600/20 text-gray-300 hover:text-red-400 border border-neutral-700 hover:border-red-500/30 text-sm font-medium py-2 px-3 rounded-xl transition-all duration-200"
           >
             <Icons.Logout />
             <span>Logout</span>

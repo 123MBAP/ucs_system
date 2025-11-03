@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Users, Briefcase, Wallet, Calculator, CheckCircle2, Hourglass, CalendarDays } from 'lucide-react';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -39,7 +40,9 @@ const ChiefDashboard = () => {
 
   useEffect(() => {
     load();
-    function onPaymentsUpdated() { load(); }
+    function onPaymentsUpdated() {
+      load();
+    }
     window.addEventListener('payments-updated', onPaymentsUpdated as any);
     return () => {
       window.removeEventListener('payments-updated', onPaymentsUpdated as any);
@@ -60,16 +63,21 @@ const ChiefDashboard = () => {
     <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Chief of Zone Dashboard</h1>
+          <h1 className="text-2xl font-bold text-[#1E1E1E]">Chief of Zone Dashboard</h1>
           <p className="text-sm text-gray-600 mt-1">Overview for chief and zone</p>
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-500">Chief</p>
-          <p className="text-lg font-semibold text-gray-900">{chiefName}</p>
+          <p className="text-lg font-semibold text-[#1E1E1E]">{chiefName}</p>
           <p className="text-sm text-gray-500 mt-2">Zone</p>
-          <p className="text-lg font-semibold text-gray-900">{zoneName}</p>
+          <p className="text-lg font-semibold text-[#1E1E1E]">{zoneName}</p>
           <div className="mt-2">
-            <button onClick={load} className="text-blue-600 underline text-sm">Refresh</button>
+            <button
+              onClick={load}
+              className="text-[#D97706] hover:text-[#B45309] underline text-sm transition-colors"
+            >
+              Refresh
+            </button>
           </div>
         </div>
       </div>
@@ -79,89 +87,135 @@ const ChiefDashboard = () => {
         <div>Loading…</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          {/* Number of Clients */}
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-amber-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Number of Clients</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{clientsTotal.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E] mt-2">{clientsTotal.toLocaleString()}</p>
                 <div className="mt-2">
-                  <Link to="/clients?scope=chief&filter=all" className="text-blue-600 underline text-sm">View</Link>
+                  <Link
+                    to="/clients?scope=chief&filter=all"
+                    className="text-[#D97706] hover:text-[#B45309] underline text-sm transition-colors"
+                  >
+                    View
+                  </Link>
                 </div>
               </div>
-              <div className="text-3xl">👥</div>
+              <div className="shrink-0 p-2 rounded-lg bg-amber-50 text-[#D97706]">
+                <Users className="h-8 w-8" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          {/* Total Amount To Be Paid */}
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-amber-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Amount To Be Paid</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{amountTotal.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E] mt-2">{amountTotal.toLocaleString()}</p>
               </div>
-              <div className="text-3xl">💼</div>
+              <div className="shrink-0 p-2 rounded-lg bg-amber-100 text-[#B45309]">
+                <Briefcase className="h-8 w-8" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          {/* Amount Paid */}
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-green-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Amount Paid</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{amountPaid.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E] mt-2">{amountPaid.toLocaleString()}</p>
                 <div className="mt-2">
-                  <Link to="/clients?scope=chief&filter=paid" className="text-blue-600 underline text-sm">View</Link>
+                  <Link
+                    to="/clients?scope=chief&filter=paid"
+                    className="text-[#15803D] hover:text-[#166534] underline text-sm transition-colors"
+                  >
+                    View
+                  </Link>
                 </div>
               </div>
-              <div className="text-3xl">💰</div>
+              <div className="shrink-0 p-2 rounded-lg bg-green-50 text-[#15803D]">
+                <Wallet className="h-8 w-8" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          {/* Remaining Amount */}
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Remaining Amount</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{amountRemaining.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E] mt-2">{amountRemaining.toLocaleString()}</p>
               </div>
-              <div className="text-3xl">🧮</div>
+              <div className="shrink-0 p-2 rounded-lg bg-amber-50 text-[#D97706]">
+                <Calculator className="h-8 w-8" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          {/* Clients Paid */}
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-green-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Clients Paid</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{clientsPaid.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E] mt-2">{clientsPaid.toLocaleString()}</p>
                 <div className="mt-2">
-                  <Link to="/clients?scope=chief&filter=paid" className="text-blue-600 underline text-sm">View</Link>
+                  <Link
+                    to="/clients?scope=chief&filter=paid"
+                    className="text-[#15803D] hover:text-[#166534] underline text-sm transition-colors"
+                  >
+                    View
+                  </Link>
                 </div>
               </div>
-              <div className="text-3xl">✅</div>
+              <div className="shrink-0 p-2 rounded-lg bg-green-50 text-[#15803D]">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          {/* Clients Remaining */}
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-amber-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Clients Remaining</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{clientsRemaining.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E] mt-2">{clientsRemaining.toLocaleString()}</p>
                 <div className="mt-2">
-                  <Link to="/clients?scope=chief&filter=remaining" className="text-blue-600 underline text-sm">View</Link>
+                  <Link
+                    to="/clients?scope=chief&filter=remaining"
+                    className="text-[#D97706] hover:text-[#B45309] underline text-sm transition-colors"
+                  >
+                    View
+                  </Link>
                 </div>
               </div>
-              <div className="text-3xl">⏳</div>
+              <div className="shrink-0 p-2 rounded-lg bg-amber-50 text-[#D97706]">
+                <Hourglass className="h-8 w-8" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          {/* Today's Payments */}
+          <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-green-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Today's Payments</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{todayPayments.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-[#1E1E1E] mt-2">{todayPayments.toLocaleString()}</p>
                 <p className="text-sm text-gray-500 mt-1">Payments received today</p>
                 <div className="mt-2">
-                  <Link to="/payments?scope=chief&filter=today" className="text-blue-600 underline text-sm">View</Link>
+                  <Link
+                    to="/payments?scope=chief&filter=today"
+                    className="text-[#15803D] hover:text-[#166534] underline text-sm transition-colors"
+                  >
+                    View
+                  </Link>
                 </div>
               </div>
-              <div className="text-3xl">📅</div>
+              <div className="shrink-0 p-2 rounded-lg bg-green-50 text-[#15803D]">
+                <CalendarDays className="h-8 w-8" />
+              </div>
             </div>
           </div>
         </div>

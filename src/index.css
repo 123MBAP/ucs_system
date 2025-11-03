@@ -14,3 +14,12 @@ html, body, #root {
 body {
 	background-color: var(--bg);
 }
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    @apply font-sans bg-zinc-50 text-zinc-900;
+  }
+}

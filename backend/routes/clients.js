@@ -158,4 +158,71 @@ router.patch('/:id', auth, requireRole('manager', 'supervisor'), async (req, res
   }
 });
 
+// Current authenticated client info
+router.get('/me', auth, requireRole('client'), async (req, res) => {
+  try {
+    const clientId = req.user.id;
+    const { rows } = await db.query(
+      `SELECT id, username, name, zone_id, phone_number, monthly_amount, created_at
+       FROM clients
+       WHERE id = $1`,
+      [clientId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Client not found' });
+    return res.json({ client: rows[0] });
+  } catch (err) {
+    console.error('Get current client error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Client files a complaint against a confirmed schedule entry within 24 hours
+// Body: { scheduleId, reason? }
+router.post('/complaints', auth, requireRole('client'), async (req, res) => {
+  try {
+    const clientId = req.user.id;
+    const { scheduleId, reason } = req.body || {};
+    const sid = Number(scheduleId);
+    if (!Number.isFinite(sid)) return res.status(400).json({ error: 'Invalid scheduleId' });
+
+    // Fetch client zone
+    const cr = await db.query('SELECT id, zone_id FROM clients WHERE id = $1', [clientId]);
+    if (!cr.rows.length) return res.status(404).json({ error: 'Client not found' });
+    const zoneId = cr.rows[0].zone_id;
+
+    // Validate schedule is confirmed, belongs to client's zone, and within 24 hours window
+    const sr = await db.query(
+      `SELECT id, zone_id, supervisor_status, supervisor_decided_at, complained_client_ids
+       FROM supervisor_service_schedule WHERE id = $1`,
+      [sid]
+    );
+    if (!sr.rows.length) return res.status(404).json({ error: 'Schedule not found' });
+    const s = sr.rows[0];
+    if (s.zone_id !== zoneId) return res.status(403).json({ error: 'Forbidden: schedule not in your zone' });
+    if (s.supervisor_status == null) return res.status(400).json({ error: 'Schedule not yet confirmed by supervisor' });
+    if (!s.supervisor_decided_at) return res.status(400).json({ error: 'Missing confirmation time' });
+
+    const decidedAt = new Date(s.supervisor_decided_at);
+    const cutoff = new Date(decidedAt.getTime() + 24 * 60 * 60 * 1000);
+    if (new Date() > cutoff) return res.status(400).json({ error: 'Complaint window expired' });
+
+    // Append clientId uniquely to complained_client_ids
+    const up = await db.query(
+      `UPDATE supervisor_service_schedule
+       SET complained_client_ids = (
+         SELECT ARRAY(SELECT DISTINCT e FROM unnest(COALESCE(complained_client_ids, '{}') || ARRAY[$1]::int[]) AS e)
+       )
+       WHERE id = $2
+       RETURNING id, complained_client_ids`,
+      [clientId, sid]
+    );
+
+    // Optionally store reason somewhere; for now we do not persist per-client reasons
+    return res.json({ schedule: up.rows[0] });
+  } catch (err) {
+    console.error('Client complaint error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

@@ -11,6 +11,7 @@ import paymentsRouter from './backend/routes/payments.js';
 import reportRouter from './backend/routes/report.js';
 import chiefRouter from './backend/routes/chief.js';
 import supervisorRouter from './backend/routes/supervisor.js';
+import manageWorkersRouter from './backend/routes/manageworkers.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -45,6 +46,7 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/report', reportRouter);
 app.use('/api/chief', chiefRouter);
 app.use('/api/supervisor', supervisorRouter);
+app.use('/api/manageworkers', manageWorkersRouter);
 
 app.get('/api/me', auth, (req, res) => {
   return res.json({ user: req.user });

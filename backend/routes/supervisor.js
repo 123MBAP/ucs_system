@@ -39,8 +39,13 @@ async function ensureTables() {
         service_start TIME NOT NULL,
         service_end TIME NOT NULL,
         assigned_manpower_ids INT[] NOT NULL DEFAULT '{}',
+        complained_client_ids INT[] NOT NULL DEFAULT '{}',
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+    `);
+    await db.query(`
+      ALTER TABLE supervisor_service_schedule
+      ADD COLUMN IF NOT EXISTS complained_client_ids INT[] DEFAULT '{}';
     `);
   } catch (e) {
     console.error('ensureTables error', e);

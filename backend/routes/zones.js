@@ -150,4 +150,67 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
+// Zone service days (any authenticated user)
+router.get('/:id/service-days', auth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: 'Invalid zone id' });
+    }
+
+    // Ensure table exists (in case supervisor routes haven't been hit to create it)
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS zone_service_days (
+        zone_id INTEGER PRIMARY KEY REFERENCES zones(id) ON DELETE CASCADE,
+        days SMALLINT[] NOT NULL DEFAULT '{}'
+      );
+    `);
+
+    const { rows } = await db.query('SELECT days FROM zone_service_days WHERE zone_id = $1', [id]);
+    const days = rows.length ? rows[0].days : [];
+    return res.json({ zone_id: id, serviceDays: days });
+  } catch (err) {
+    console.error('Zone service days error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Zone service schedule (any authenticated user)
+router.get('/:id/schedule', auth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: 'Invalid zone id' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT 
+         s.id,
+         s.zone_id,
+         s.supervisor_id,
+         s.vehicle_id,
+         v.plate AS vehicle_plate,
+         s.driver_id,
+         ud.username AS driver_username,
+         s.service_day,
+         s.service_start,
+         s.service_end,
+         s.supervisor_status,
+         s.supervisor_reason,
+         s.supervisor_decided_at,
+        COALESCE(s.complained_client_ids, '{}') AS complained_client_ids
+       FROM supervisor_service_schedule s
+       LEFT JOIN vehicles v ON v.id = s.vehicle_id
+       LEFT JOIN users ud ON ud.id = s.driver_id
+       WHERE s.zone_id = $1
+       ORDER BY s.service_day, s.service_start`,
+      [id]
+    );
+    return res.json({ schedule: rows });
+  } catch (err) {
+    console.error('Zone schedule error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

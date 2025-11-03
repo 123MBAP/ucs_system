@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { BarChart3, Receipt, User, MessageSquare } from 'lucide-react';
+const apiBase = import.meta.env.VITE_API_URL as string;
 
 type Payments = {
   currentMonth: number;
@@ -17,12 +19,29 @@ const Icons = {
 const ClientDashboard = () => {
   const clientName = 'John Client';
 
-  const payments: Payments = useMemo(
-    () => ({
-      currentMonth: 56890,
-    }),
-    []
-  );
+  const [zoneId, setZoneId] = useState<number | null>(null);
+  const [clientId, setClientId] = useState<number | null>(null);
+  const [zoneServiceDays, setZoneServiceDays] = useState<number[]>([]);
+  const [zoneSchedule, setZoneSchedule] = useState<Array<{
+    id: number;
+    service_day: number;
+    service_start: string;
+    service_end: string;
+    supervisor_status: string | null;
+    supervisor_reason?: string | null;
+    vehicle_plate?: string | null;
+    driver_username?: string | null;
+    supervisor_decided_at?: string | null;
+    complained_client_ids?: number[];
+  }>>([]);
+  const [complaining, setComplaining] = useState<Record<number, boolean>>({});
+  const weekdayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const zoneServiceDayNames = useMemo(() => zoneServiceDays
+    .map(d => weekdayNames[(Number(d) || 1) - 1])
+    .filter(Boolean), [zoneServiceDays]);
+
+  const [monthlyAmount, setMonthlyAmount] = useState<number | null>(null);
+  const [paidThisMonth, setPaidThisMonth] = useState<number>(0);
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -32,6 +51,89 @@ const ClientDashboard = () => {
     | { type: 'success'; message: string }
     | { type: 'error'; message: string }
   >({ type: 'idle' });
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token || !apiBase) return;
+    (async () => {
+      try {
+        const meRes = await fetch(`${apiBase}/api/clients/me`, { headers: { Authorization: `Bearer ${token}` } });
+        const me = await meRes.json();
+        if (meRes.ok && me?.client?.zone_id) {
+          setZoneId(me.client.zone_id);
+          setClientId(me.client.id);
+          if (me?.client?.monthly_amount != null) setMonthlyAmount(Number(me.client.monthly_amount));
+          const sdRes = await fetch(`${apiBase}/api/zones/${me.client.zone_id}/service-days`, { headers: { Authorization: `Bearer ${token}` } });
+          const sd = await sdRes.json();
+          if (sdRes.ok && Array.isArray(sd?.serviceDays)) {
+            setZoneServiceDays(sd.serviceDays.map((x: any) => Number(x)).filter((x: any) => x >= 1 && x <= 7));
+          }
+          const schRes = await fetch(`${apiBase}/api/zones/${me.client.zone_id}/schedule`, { headers: { Authorization: `Bearer ${token}` } });
+          const sch = await schRes.json();
+          if (schRes.ok && Array.isArray(sch?.schedule)) {
+            setZoneSchedule(sch.schedule);
+          }
+
+          // Fetch payments statements for this client and compute this month's total
+          const stmRes = await fetch(`${apiBase}/api/payments/statements`, { headers: { Authorization: `Bearer ${token}` } });
+          const stm = await stmRes.json();
+          if (stmRes.ok && Array.isArray(stm?.payments)) {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth();
+            const sum = stm.payments
+              .filter((p: any) => p?.client_id === me.client.id && p?.completed_at)
+              .map((p: any) => ({ amt: Number(p.amount) || 0, dt: new Date(p.completed_at) }))
+              .filter(({ dt }: any) => dt.getFullYear() === y && dt.getMonth() === m)
+              .reduce((acc: number, { amt }: any) => acc + amt, 0);
+            setPaidThisMonth(sum);
+          }
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const canComplain = (entry: { supervisor_status: string | null; supervisor_decided_at?: string | null; complained_client_ids?: number[] }) => {
+    if (!entry || entry.supervisor_status !== 'complete') return false;
+    if (!entry.supervisor_decided_at) return false;
+    const decidedAt = new Date(entry.supervisor_decided_at);
+    const cutoff = new Date(decidedAt.getTime() + 24 * 60 * 60 * 1000);
+    const within = new Date() <= cutoff;
+    const already = (entry.complained_client_ids || []).includes(clientId || -1);
+    return within && !already;
+  };
+
+  const visibleSchedule = useMemo(() => {
+    const now = new Date();
+    return zoneSchedule.filter((e) => {
+      if (e.supervisor_status !== 'complete') return true; // pending or not_complete stay visible
+      if (!e.supervisor_decided_at) return true;
+      const decidedAt = new Date(e.supervisor_decided_at);
+      const cutoff = new Date(decidedAt.getTime() + 24 * 60 * 60 * 1000);
+      const complained = (e.complained_client_ids || []).includes(clientId || -1);
+      // hide only if older than 24h and no complaint
+      return complained || now <= cutoff;
+    });
+  }, [zoneSchedule, clientId]);
+
+  const submitComplaint = async (scheduleId: number) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      setComplaining((p) => ({ ...p, [scheduleId]: true }));
+      const res = await fetch(`${apiBase}/api/clients/complaints`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ scheduleId })
+      });
+      const data = await res.json();
+      if (res.ok && data?.schedule?.complained_client_ids) {
+        setZoneSchedule((prev) => prev.map((x) => (x.id === scheduleId ? { ...x, complained_client_ids: data.schedule.complained_client_ids } : x)));
+      }
+    } finally {
+      setComplaining((p) => ({ ...p, [scheduleId]: false }));
+    }
+  };
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,25 +197,110 @@ const ClientDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Payment Stats Card */}
           <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center space-x-2 mb-2">
-                  <Icons.Payment />
-                  <span className="text-sm font-semibold text-slate-600">Current Month Payments</span>
+                  <span className="text-sm font-semibold text-slate-600">Service Day</span>
                 </div>
-                <p className="text-3xl font-bold text-slate-900">${payments.currentMonth.toLocaleString()}</p>
-                <p className="text-slate-600 mt-2">Total amount paid this month</p>
-                <div className="flex items-center space-x-2 mt-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-green-600 font-medium">Payment up to date</span>
+                <p className="text-slate-600">The day of service in your zone is:</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {zoneServiceDayNames.length ? zoneServiceDayNames.join(', ') : 'Not set'}
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* Amount To Pay (Monthly) */}
+          <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className="text-sm font-semibold text-slate-600">Amount To Pay</span>
                 </div>
+                <p className="text-3xl font-bold text-slate-900">{monthlyAmount != null ? `$${monthlyAmount.toLocaleString()}` : '—'}</p>
+                <p className="text-slate-600 mt-2">Your monthly amount</p>
+                {monthlyAmount != null && (
+                  <p className="text-slate-500 text-sm mt-1">Remaining this month: ${Math.max(0, monthlyAmount - paidThisMonth).toLocaleString()}</p>
+                )}
               </div>
               <div className="text-4xl opacity-20">
                 <Icons.Payment />
               </div>
             </div>
+          </div>
+          {/* Amount Paid This Month */}
+          <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center space-x-2 mb-2">
+                  <Icons.Payment />
+                  <span className="text-sm font-semibold text-slate-600">Amount Paid This Month</span>
+                </div>
+                <p className="text-3xl font-bold text-slate-900">${paidThisMonth.toLocaleString()}</p>
+                <p className="text-slate-600 mt-2">Total paid this month</p>
+                {monthlyAmount != null && (
+                  <div className="flex items-center space-x-2 mt-3">
+                    <div className={`w-2 h-2 rounded-full ${paidThisMonth >= monthlyAmount ? 'bg-green-500' : 'bg-amber-500'}`}></div>
+                    <span className={`text-sm font-medium ${paidThisMonth >= monthlyAmount ? 'text-green-600' : 'text-amber-600'}`}>
+                      {paidThisMonth >= monthlyAmount ? 'Payment up to date' : 'Payment pending'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="text-4xl opacity-20">
+                <Icons.Payment />
+              </div>
+            </div>
+          </div>
+
+          {/* Service Schedule Card */}
+          <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center space-x-2 mb-4">
+              <h2 className="text-xl font-bold text-slate-800">Service Schedule</h2>
+            </div>
+            {visibleSchedule.length === 0 ? (
+              <div className="text-slate-600">No scheduled services yet.</div>
+            ) : (
+              <div className="divide-y divide-slate-200">
+                {visibleSchedule.map((e) => {
+                  const dayName = weekdayNames[(Number(e.service_day) || 1) - 1] || '';
+                  const status = e.supervisor_status;
+                  const badge = status == null
+                    ? { text: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200' }
+                    : status === 'complete'
+                    ? { text: 'Completed', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+                    : { text: 'Not Completed', cls: 'bg-red-50 text-red-700 border-red-200' };
+                  return (
+                    <div key={e.id} className="py-4 flex items-start justify-between">
+                      <div>
+                        <div className="text-slate-900 font-semibold">{dayName}</div>
+                        <div className="text-slate-600 text-sm">{e.service_start?.slice(0,5)} - {e.service_end?.slice(0,5)}</div>
+                        <div className="text-slate-500 text-xs mt-1">
+                          {e.vehicle_plate ? `Vehicle: ${e.vehicle_plate}` : ''}
+                          {e.vehicle_plate && e.driver_username ? ' • ' : ''}
+                          {e.driver_username ? `Driver: ${e.driver_username}` : ''}
+                        </div>
+                        {status === 'not_complete' && e.supervisor_reason && (
+                          <div className="text-red-600 text-xs mt-1">Reason: {e.supervisor_reason}</div>
+                        )}
+                        {status === 'complete' && (e.complained_client_ids || []).includes(clientId || -1) && (
+                          <div className="text-amber-700 text-xs mt-1">Complaint submitted. Awaiting review.</div>
+                        )}
+                        {status === 'complete' && canComplain(e) && (
+                          <button
+                            className="text-xs text-red-600 font-medium mt-2"
+                            onClick={() => submitComplaint(e.id)}
+                          >
+                            My home not yet
+                          </button>
+                        )}
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-lg border ${badge.cls}`}>{badge.text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Payment Form Card */}
@@ -202,18 +389,20 @@ const ClientDashboard = () => {
           <h3 className="text-lg font-bold text-slate-800 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'View Payment History', icon: '📊', action: () => {} },
-              { label: 'Download Receipts', icon: '🧾', action: () => {} },
-              { label: 'Update Profile', icon: '👤', action: () => {} },
-              { label: 'Get Support', icon: '💬', action: () => {} },
-            ].map((action, index) => (
+              { label: 'View Payment History', Icon: BarChart3, onClick: () => {} , color: 'text-indigo-600 bg-indigo-50'},
+              { label: 'Download Receipts', Icon: Receipt, onClick: () => {} , color: 'text-emerald-600 bg-emerald-50'},
+              { label: 'Update Profile', Icon: User, onClick: () => {} , color: 'text-blue-600 bg-blue-50'},
+              { label: 'Get Support', Icon: MessageSquare, onClick: () => {} , color: 'text-orange-600 bg-orange-50'},
+            ].map(({ label, Icon, onClick, color }, index) => (
               <button
                 key={index}
-                onClick={action.action}
-                className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-blue-50 border border-slate-200 hover:border-blue-200 transition-all duration-200 group"
+                onClick={onClick}
+                className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-white border border-slate-200 hover:border-blue-200 transition-all duration-200 group hover:shadow-md"
               >
-                <span className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-200">{action.icon}</span>
-                <span className="text-sm font-medium text-slate-700 text-center group-hover:text-blue-600">{action.label}</span>
+                <span className={`mb-2 p-2 rounded-lg ${color}`}>
+                  <Icon className="h-6 w-6" />
+                </span>
+                <span className="text-sm font-medium text-slate-700 text-center group-hover:text-blue-600">{label}</span>
               </button>
             ))}
           </div>

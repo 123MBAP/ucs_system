@@ -21,6 +21,17 @@ type ZoneRow = {
 
 type SimpleZone = { id: number; zone_name: string };
 
+type PaymentRow = {
+  id: number;
+  client_id: number;
+  amount: number;
+  currency: string | null;
+  status: string | null;
+  completed_at: string | null;
+  client_username?: string | null;
+  zone_id?: number | null;
+};
+
 const Reports = () => {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,6 +42,8 @@ const Reports = () => {
 
   // Chief data
   const [chiefRows, setChiefRows] = useState<ChiefClientSummary[]>([]);
+  const [chiefPayments, setChiefPayments] = useState<PaymentRow[]>([]);
+  const [chiefPaymentsTotals, setChiefPaymentsTotals] = useState<{ count: number; amount_sum: number } | null>(null);
 
   // Manager/Supervisor data
   const [zones, setZones] = useState<SimpleZone[]>([]);
@@ -40,7 +53,8 @@ const Reports = () => {
   const [totals, setTotals] = useState<{ clients_count: number; amount_to_pay: number; amount_paid: number; amount_remaining: number } | null>(null);
 
   // Client data
-  const [mySummary, setMySummary] = useState<{ username: string; amount_to_pay: number; amount_paid: number; amount_remaining: number } | null>(null);
+  const [clientPayments, setClientPayments] = useState<PaymentRow[]>([]);
+  const [clientPaymentsTotals, setClientPaymentsTotals] = useState<{ count: number; amount_sum: number } | null>(null);
 
   // Manager-only supervisors list and selection
   const [supervisors, setSupervisors] = useState<Array<{ id: number; username: string }>>([]);
@@ -118,6 +132,19 @@ const Reports = () => {
         })
         .catch((e: any) => setError(e?.message || 'Failed to load summary'))
         .finally(() => setLoading(false));
+
+      // Load chief payments list with same year/month filters
+      const p = new URLSearchParams();
+      p.set('year', String(year));
+      p.set('month', String(month));
+      fetch(`${apiBase}/api/report/payments?${p.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(async r => {
+          const data = await r.json();
+          if (!r.ok) throw new Error(data?.error || 'Failed to load payments');
+          setChiefPayments(Array.isArray(data.payments) ? data.payments : []);
+          setChiefPaymentsTotals(data.totals || null);
+        })
+        .catch((e: any) => setError(e?.message || 'Failed to load payments'));
     } else if (role === 'manager' || role === 'supervisor') {
       const params = new URLSearchParams();
       params.set('year', String(year));
@@ -135,13 +162,18 @@ const Reports = () => {
         .catch((e: any) => setError(e?.message || 'Failed to load zones summary'))
         .finally(() => setLoading(false));
     } else if (role === 'client') {
-      fetch(`${apiBase}/api/report/my-summary?year=${year}&month=${month}`, { headers: { Authorization: `Bearer ${token}` } })
+      // Load client payments list with year/month filter
+      const p = new URLSearchParams();
+      p.set('year', String(year));
+      p.set('month', String(month));
+      fetch(`${apiBase}/api/report/payments?${p.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
         .then(async r => {
           const data = await r.json();
-          if (!r.ok) throw new Error(data?.error || 'Failed to load my summary');
-          setMySummary(data.client || null);
+          if (!r.ok) throw new Error(data?.error || 'Failed to load payments');
+          setClientPayments(Array.isArray(data.payments) ? data.payments : []);
+          setClientPaymentsTotals(data.totals || null);
         })
-        .catch((e: any) => setError(e?.message || 'Failed to load my summary'))
+        .catch((e: any) => setError(e?.message || 'Failed to load payments'))
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -306,25 +338,84 @@ const Reports = () => {
             </div>
           )}
 
-          {role === 'client' && mySummary && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+          {role === 'chief' && (
+            <div className="bg-white rounded-lg shadow overflow-auto mt-6">
+              <div className="px-4 py-3 font-semibold">Payments (filtered)</div>
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-4 py-3 text-left">Date</th>
                     <th className="px-4 py-3 text-left">Client</th>
-                    <th className="px-4 py-3 text-right">Amount To Pay</th>
-                    <th className="px-4 py-3 text-right">Amount Paid</th>
-                    <th className="px-4 py-3 text-right">Remaining</th>
+                    <th className="px-4 py-3 text-right">Amount</th>
+                    <th className="px-4 py-3 text-left">Currency</th>
+                    <th className="px-4 py-3 text-left">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-t">
-                    <td className="px-4 py-3">{mySummary.username}</td>
-                    <td className="px-4 py-3 text-right">{mySummary.amount_to_pay}</td>
-                    <td className="px-4 py-3 text-right">{mySummary.amount_paid}</td>
-                    <td className="px-4 py-3 text-right">{mySummary.amount_remaining}</td>
-                  </tr>
+                  {chiefPayments.map(p => (
+                    <tr key={p.id} className="border-t">
+                      <td className="px-4 py-3">{p.completed_at ? new Date(p.completed_at).toLocaleString() : '-'}</td>
+                      <td className="px-4 py-3">{p.client_username || p.client_id}</td>
+                      <td className="px-4 py-3 text-right">{p.amount}</td>
+                      <td className="px-4 py-3">{p.currency || ''}</td>
+                      <td className="px-4 py-3">{p.status || ''}</td>
+                    </tr>
+                  ))}
+                  {!chiefPayments.length && (
+                    <tr>
+                      <td className="px-4 py-6 text-gray-500" colSpan={5}>No payments found.</td>
+                    </tr>
+                  )}
                 </tbody>
+                {chiefPaymentsTotals && (
+                  <tfoot>
+                    <tr className="bg-gray-50 font-semibold border-t">
+                      <td className="px-4 py-3 text-right" colSpan={2}>Totals</td>
+                      <td className="px-4 py-3 text-right">{chiefPaymentsTotals.amount_sum}</td>
+                      <td className="px-4 py-3" colSpan={2}>Count: {chiefPaymentsTotals.count}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          )}
+
+          {role === 'client' && (
+            <div className="bg-white rounded-lg shadow overflow-auto">
+              <div className="px-4 py-3 font-semibold">My Payments (filtered)</div>
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Date</th>
+                    <th className="px-4 py-3 text-right">Amount</th>
+                    <th className="px-4 py-3 text-left">Currency</th>
+                    <th className="px-4 py-3 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clientPayments.map(p => (
+                    <tr key={p.id} className="border-t">
+                      <td className="px-4 py-3">{p.completed_at ? new Date(p.completed_at).toLocaleString() : '-'}</td>
+                      <td className="px-4 py-3 text-right">{p.amount}</td>
+                      <td className="px-4 py-3">{p.currency || ''}</td>
+                      <td className="px-4 py-3">{p.status || ''}</td>
+                    </tr>
+                  ))}
+                  {!clientPayments.length && (
+                    <tr>
+                      <td className="px-4 py-6 text-gray-500" colSpan={4}>No payments found.</td>
+                    </tr>
+                  )}
+                </tbody>
+                {clientPaymentsTotals && (
+                  <tfoot>
+                    <tr className="bg-gray-50 font-semibold border-t">
+                      <td className="px-4 py-3 text-right">Totals</td>
+                      <td className="px-4 py-3 text-right">{clientPaymentsTotals.amount_sum}</td>
+                      <td className="px-4 py-3" colSpan={2}>Count: {clientPaymentsTotals.count}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           )}

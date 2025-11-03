@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { User, MapPinned, Wallet } from 'lucide-react';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -37,20 +38,52 @@ const ManpowerDashboard = () => {
   }, []);
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Manpower Dashboard</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded shadow">
-          <div className="text-sm text-gray-500">Name</div>
-          <div className="text-xl font-semibold">{loading ? '…' : info.name || '-'}</div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-zinc-800 to-indigo-600 bg-clip-text text-transparent">Manpower Dashboard</h1>
+          <p className="text-zinc-600 mt-2">Your assignment and payroll overview</p>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <div className="text-sm text-gray-500">Assigned Zone</div>
-          <div className="text-xl font-semibold">{loading ? '…' : info.zone ?? 'Not assigned'}</div>
+        <div className="flex items-center space-x-2 mt-4 sm:mt-0 text-sm text-zinc-500">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <span>Profile Active</span>
         </div>
-        <div className="bg-white p-4 rounded shadow">
-          <div className="text-sm text-gray-500">Salary</div>
-          <div className="text-xl font-semibold">{loading ? '…' : (info.salary != null ? `$${info.salary}` : 'Not set')}</div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-zinc-600">Name</div>
+              <div className="text-2xl font-bold text-zinc-900 mt-1">{loading ? '…' : info.name || '-'}</div>
+            </div>
+            <div className="shrink-0 p-2 rounded-lg bg-indigo-50 text-indigo-600">
+              <User className="h-8 w-8" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-zinc-600">Assigned Zone</div>
+              <div className="text-2xl font-bold text-zinc-900 mt-1">{loading ? '…' : info.zone ?? 'Not assigned'}</div>
+            </div>
+            <div className="shrink-0 p-2 rounded-lg bg-amber-50 text-amber-600">
+              <MapPinned className="h-8 w-8" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-zinc-600">Salary</div>
+              <div className="text-2xl font-bold text-zinc-900 mt-1">{loading ? '…' : (info.salary != null ? `$${info.salary}` : 'Not set')}</div>
+            </div>
+            <div className="shrink-0 p-2 rounded-lg bg-emerald-50 text-emerald-600">
+              <Wallet className="h-8 w-8" />
+            </div>
+          </div>
         </div>
       </div>
     </div>

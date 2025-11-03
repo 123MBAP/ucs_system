@@ -99,53 +99,65 @@ const RegisterClient = () => {
   }
 
   return (
-    <div className="p-6 max-w-2xl">
-      <h2 className="text-2xl font-bold mb-4">Register Client</h2>
+    <div className="max-w-2xl space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-zinc-800 to-indigo-600 bg-clip-text text-transparent">Register Client</h1>
+        <p className="text-zinc-600 mt-1">Create a new client and assign them to a zone</p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="text-red-600">{error}</div>}
-        {success && <div className="text-green-600">{success}</div>}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">{error}</div>
+          )}
+          {success && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{success}</div>
+          )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">First Name</label>
-            <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-zinc-700 mb-1">First Name</label>
+              <input className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-zinc-700 mb-1">Last Name</label>
+              <input className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={lastName} onChange={e => setLastName(e.target.value)} required />
+            </div>
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700">Last Name</label>
-            <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={lastName} onChange={e => setLastName(e.target.value)} required />
+            <label className="block text-sm font-semibold text-zinc-700 mb-1">Username or Email</label>
+            <input className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={username} onChange={e => setUsername(e.target.value)} required />
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Username or Email</label>
-          <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={username} onChange={e => setUsername(e.target.value)} required />
-        </div>
+          <div>
+            <label className="block text-sm font-semibold text-zinc-700 mb-1">Phone Number</label>
+            <input className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={phone} onChange={e => setPhone(e.target.value)} required />
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-          <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={phone} onChange={e => setPhone(e.target.value)} required />
-        </div>
+          <div>
+            <label className="block text-sm font-semibold text-zinc-700 mb-1">Assign Zone</label>
+            <select value={selectedZone} onChange={e => setSelectedZone(e.target.value)} className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" required>
+              <option value="">-- Select zone --</option>
+              {zones.map(z => (
+                <option key={z.id} value={z.id}>{z.name}</option>
+              ))}
+            </select>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Assign Zone</label>
-          <select value={selectedZone} onChange={e => setSelectedZone(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
-            <option value="">-- Select zone --</option>
-            {zones.map(z => (
-              <option key={z.id} value={z.id}>{z.name}</option>
-            ))}
-          </select>
-        </div>
+          <div>
+            <label className="block text-sm font-semibold text-zinc-700 mb-1">Amount to Pay Per Month</label>
+            <input type="number" min="0" step="0.01" className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={monthlyAmount} onChange={e => setMonthlyAmount(e.target.value)} required />
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Amount to Pay Per Month</label>
-          <input type="number" min="0" step="0.01" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={monthlyAmount} onChange={e => setMonthlyAmount(e.target.value)} required />
-        </div>
-
-        <div>
-          <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded-md ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{loading ? 'Registering…' : 'Register Client'}</button>
-        </div>
-      </form>
+          <div className="pt-2">
+            <button type="submit" disabled={loading} className={`inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-semibold text-white shadow-sm transition-all ${loading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+              {loading ? 'Registering…' : 'Register Client'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
