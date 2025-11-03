@@ -2,6 +2,7 @@
   "compilerOptions": {
     // map `@/*` -> `src/*` so both `tsc` and IDEs resolve imports like `@/Pages/...`
     "baseUrl": ".",
+    "typeRoots": ["./types", "./src/types", "./node_modules/@types"],
     "paths": {
       "@/*": ["src/*"],
       "Src/*": ["src/*"],
