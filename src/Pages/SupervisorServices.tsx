@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -23,26 +23,187 @@ type ScheduleEntry = {
   supervisor_decided_at?: string | null;
 };
 
+// Color constants
+const colors = {
+  primary: '#D97706',
+  primaryLight: '#FBBF24',
+  primaryHover: '#B45309',
+  accent: '#15803D',
+  accentLight: '#22C55E',
+  accentHover: '#166534',
+  background: '#F9FAFB',
+  cardBg: '#FFFFFF',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  text: '#1E1E1E',
+  textLight: '#64748B',
+  textLighter: '#94A3B8',
+  error: '#DC2626',
+  errorLight: '#FEF2F2',
+  success: '#15803D',
+  successLight: '#F0FDF4',
+  warning: '#D97706',
+  warningLight: '#FFFBEB'
+};
+
+// Enhanced Icon components
+const Icons = {
+  Refresh: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  ),
+  Check: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    </svg>
+  ),
+  Close: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  ),
+  Clock: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  Calendar: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  ),
+  Vehicle: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+  ),
+  Driver: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
+  Filter: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+    </svg>
+  ),
+  Info: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
+};
+
+// UI Components
+const PrimaryButton = ({ children, onClick, disabled = false, loading = false, size = 'md', className = '' }: { 
+  children: React.ReactNode; 
+  onClick?: () => void; 
+  disabled?: boolean;
+  loading?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}) => {
+  const sizes = {
+    sm: 'px-4 py-2 text-sm',
+    md: 'px-6 py-3 text-base',
+    lg: 'px-8 py-4 text-lg'
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl active:scale-95 ${sizes[size]} ${className}`}
+      style={{ 
+        backgroundColor: disabled ? colors.textLighter : colors.primary,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1
+      }}
+      onMouseOver={(e) => {
+        if (!disabled && !loading) {
+          e.currentTarget.style.backgroundColor = colors.primaryHover;
+        }
+      }}
+      onMouseOut={(e) => {
+        if (!disabled && !loading) {
+          e.currentTarget.style.backgroundColor = colors.primary;
+        }
+      }}
+    >
+      {loading && (
+        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+      )}
+      {children}
+    </button>
+  );
+};
+
+const AccentButton = ({ children, onClick, disabled = false, size = 'md', className = '' }: { 
+  children: React.ReactNode; 
+  onClick?: () => void; 
+  disabled?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}) => {
+  const sizes = {
+    sm: 'px-4 py-2 text-sm',
+    md: 'px-6 py-3 text-base',
+    lg: 'px-8 py-4 text-lg'
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl active:scale-95 ${sizes[size]} ${className}`}
+      style={{ 
+        backgroundColor: disabled ? colors.textLighter : colors.accent,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1
+      }}
+      onMouseOver={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = colors.accentHover;
+        }
+      }}
+      onMouseOut={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = colors.accent;
+        }
+      }}
+    >
+      {children}
+    </button>
+  );
+};
+
+const Card = ({ children, className = '', padding = 'p-6' }: { children: React.ReactNode; className?: string; padding?: string }) => (
+  <div className={`rounded-2xl shadow-sm border transition-all duration-300 hover:shadow-md ${padding} ${className}`} style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+    {children}
+  </div>
+);
+
 export default function SupervisorServices() {
-  const [zones, setZones] = React.useState<Array<{id:number; name:string}>>([]);
-  const [schedule, setSchedule] = React.useState<ScheduleEntry[]>([]);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [zones, setZones] = useState<Array<{id:number; name:string}>>([]);
+  const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [year, setYear] = React.useState<string>(String(new Date().getFullYear())); // default: current year; '' means All
-  const [month, setMonth] = React.useState<string>(String(new Date().getMonth() + 1)); // default: current month; '' means All
-  const [zoneFilter, setZoneFilter] = React.useState<string>(''); // '' means All
-  const [completedLoading, setCompletedLoading] = React.useState(false);
-  const [completedError, setCompletedError] = React.useState<string | null>(null);
-  const [completed, setCompleted] = React.useState<any[]>([]);
-  const [selectedCompletedId, setSelectedCompletedId] = React.useState<number | null>(null);
+  const [year, setYear] = useState<string>(String(new Date().getFullYear()));
+  const [month, setMonth] = useState<string>(String(new Date().getMonth() + 1));
+  const [zoneFilter, setZoneFilter] = useState<string>('');
+  const [completedLoading, setCompletedLoading] = useState(false);
+  const [completedError, setCompletedError] = useState<string | null>(null);
+  const [completed, setCompleted] = useState<any[]>([]);
+  const [selectedCompletedId, setSelectedCompletedId] = useState<number | null>(null);
 
-  const [verifyOpen, setVerifyOpen] = React.useState(false);
-  const [verifyReason, setVerifyReason] = React.useState('');
-  const [verifySubmitting, setVerifySubmitting] = React.useState(false);
-  const [verifyEntryId, setVerifyEntryId] = React.useState<number | null>(null);
-  const [verifyStatus, setVerifyStatus] = React.useState<'complete' | 'not_complete'>('complete');
-  const [verifyingId, setVerifyingId] = React.useState<number | null>(null);
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [verifyReason, setVerifyReason] = useState('');
+  const [verifySubmitting, setVerifySubmitting] = useState(false);
+  const [verifyEntryId, setVerifyEntryId] = useState<number | null>(null);
+  const [verifyStatus, setVerifyStatus] = useState<'complete' | 'not_complete'>('complete');
+  const [verifyingId, setVerifyingId] = useState<number | null>(null);
 
   // Centralized loaders
   async function loadUnconfirmed() {
@@ -95,19 +256,19 @@ export default function SupervisorServices() {
   }
 
   // Load unconfirmed on mount
-  React.useEffect(() => {
+  useEffect(() => {
     loadUnconfirmed();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load supervisor completed services with filters
-  React.useEffect(() => {
+  useEffect(() => {
     loadCompleted();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, zoneFilter]);
 
   // Load zones for filter
-  React.useEffect(() => {
+  useEffect(() => {
     let active = true;
     (async () => {
       try {
@@ -190,178 +351,402 @@ export default function SupervisorServices() {
     }
   }
 
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'complete':
+        return (
+          <span className="px-3 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: colors.successLight, color: colors.success }}>
+            Completed
+          </span>
+        );
+      case 'not_complete':
+        return (
+          <span className="px-3 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: colors.errorLight, color: colors.error }}>
+            Not Completed
+          </span>
+        );
+      default:
+        return (
+          <span className="px-3 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: colors.warningLight, color: colors.warning }}>
+            Pending
+          </span>
+        );
+    }
+  };
+
   return (
-    <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
-      <div className="lg:col-span-2 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-slate-800">Services Supervision</h2>
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-slate-600">Unconfirmed services across your zones</div>
-            <button
+    <div className="min-h-screen p-4 lg:p-6" style={{ backgroundColor: colors.background }}>
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold" style={{ color: colors.text }}>
+              Services Supervision
+            </h1>
+            <p className="text-lg mt-2" style={{ color: colors.textLight }}>
+              Monitor and verify service completion across your zones
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-2xl font-bold" style={{ color: colors.primary }}>{schedule.length}</div>
+              <div className="text-sm" style={{ color: colors.textLight }}>Pending Verification</div>
+            </div>
+            <PrimaryButton 
               onClick={refreshAll}
-              className="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+              size="md"
+              className="flex items-center gap-2"
             >
-              Refresh
-            </button>
+              <Icons.Refresh className="w-4 h-4" />
+              <span>Refresh All</span>
+            </PrimaryButton>
           </div>
         </div>
 
-        {error && <div className="text-sm text-red-600">{error}</div>}
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Pending Services - Left Column */}
+          <div className="xl:col-span-2 space-y-6">
+            <Card padding="p-6 lg:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold" style={{ color: colors.text }}>
+                  Pending Verification
+                </h2>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ backgroundColor: colors.primaryLight }}>
+                  <Icons.Info className="w-4 h-4" style={{ color: colors.primary }} />
+                  <span className="text-sm font-semibold" style={{ color: colors.text }}>
+                    Awaiting your confirmation
+                  </span>
+                </div>
+              </div>
 
-        {loading ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">Loading…</div>
-        ) : schedule.length === 0 ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">No entries</div>
-        ) : (
-          <div className="space-y-4">
-            {schedule.map((row) => (
-              <div key={row.id} className="rounded-lg border border-slate-200 bg-white p-4">
-                <div className="text-xs text-slate-500">Created at: {new Date(row.created_at).toLocaleString()}</div>
+              {error && (
+                <div className="rounded-2xl p-4 mb-6 border animate-fadeIn" style={{ backgroundColor: colors.errorLight, borderColor: colors.error }}>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: colors.error }}></div>
+                    <span className="font-semibold" style={{ color: colors.error }}>{error}</span>
+                  </div>
+                </div>
+              )}
 
-                <div className="mt-2 space-y-1 text-sm">
-                  <div><span className="font-medium">Vehicle:</span> {row.vehicle_plate ?? '—'}</div>
-                  <div><span className="font-medium">Driver:</span> {row.driver_username ?? '—'}</div>
+              {loading ? (
+                <div className="text-center py-12 rounded-2xl" style={{ backgroundColor: colors.background }}>
+                  <div className="animate-pulse space-y-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="h-32 rounded-2xl" style={{ backgroundColor: colors.border }}></div>
+                    ))}
+                  </div>
+                </div>
+              ) : schedule.length === 0 ? (
+                <div className="text-center py-12 rounded-2xl border-2 border-dashed" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
+                  <Icons.Check className="w-16 h-16 mx-auto mb-4" style={{ color: colors.textLighter }} />
+                  <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>All caught up!</h3>
+                  <p className="text-lg" style={{ color: colors.textLighter }}>No services pending verification</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {schedule.map((row) => (
+                    <Card key={row.id} padding="p-6" className="group hover:scale-[1.02] transition-all duration-300">
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                        <div className="flex-1 space-y-4">
+                          {/* Header with status and time */}
+                          <div className="flex flex-wrap items-center gap-4">
+                            {getStatusBadge(row.chief_report_status ?? null)}
+                            <div className="flex items-center gap-2 text-sm" style={{ color: colors.textLight }}>
+                              <Icons.Calendar className="w-4 h-4" />
+                              <span>{new Date(row.created_at).toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          {/* Service Details */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: colors.background }}>
+                              <Icons.Vehicle className="w-5 h-5 flex-shrink-0" style={{ color: colors.primary }} />
+                              <div>
+                                <div className="font-semibold" style={{ color: colors.text }}>
+                                  {row.vehicle_plate ?? 'No vehicle assigned'}
+                                </div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>Vehicle</div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: colors.background }}>
+                              <Icons.Driver className="w-5 h-5 flex-shrink-0" style={{ color: colors.primary }} />
+                              <div>
+                                <div className="font-semibold" style={{ color: colors.text }}>
+                                  {row.driver_username ?? 'No driver assigned'}
+                                </div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>Driver</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Time Schedule */}
+                          <div className="flex items-center gap-4 p-3 rounded-xl" style={{ backgroundColor: colors.background }}>
+                            <Icons.Clock className="w-5 h-5 flex-shrink-0" style={{ color: colors.primary }} />
+                            <div className="flex items-center gap-4">
+                              <div>
+                                <div className="font-semibold" style={{ color: colors.text }}>
+                                  {row.service_start?.slice(0, 5)}
+                                </div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>Start Time</div>
+                              </div>
+                              <div className="w-px h-8" style={{ backgroundColor: colors.border }}></div>
+                              <div>
+                                <div className="font-semibold" style={{ color: colors.text }}>
+                                  {row.service_end?.slice(0, 5)}
+                                </div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>End Time</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Chief Note if exists */}
+                          {row.chief_report_reason && (
+                            <div className="p-3 rounded-xl border" style={{ backgroundColor: colors.warningLight, borderColor: colors.warning }}>
+                              <div className="text-sm font-semibold mb-1" style={{ color: colors.warning }}>Chief's Note:</div>
+                              <div className="text-sm" style={{ color: colors.text }}>{row.chief_report_reason}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col gap-3 min-w-[200px]">
+                          {row.chief_report_status ? (
+                            <>
+                              <AccentButton 
+                                onClick={() => verifyCompleteImmediately(row.id)}
+                                disabled={verifyingId === row.id}
+                                size="sm"
+                                className="w-full"
+                              >
+                                <Icons.Check className="w-4 h-4" />
+                                <span>Confirm Complete</span>
+                              </AccentButton>
+                              <button
+                                onClick={() => openVerifyNotComplete(row.id)}
+                                disabled={verifyingId === row.id}
+                                className="w-full px-4 py-2 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-60"
+                                style={{ backgroundColor: colors.error }}
+                              >
+                                <Icons.Close className="w-4 h-4" />
+                                <span>Mark Incomplete</span>
+                              </button>
+                            </>
+                          ) : (
+                            <div className="p-4 rounded-xl text-center border" style={{ backgroundColor: colors.warningLight, borderColor: colors.warning }}>
+                              <Icons.Clock className="w-6 h-6 mx-auto mb-2" style={{ color: colors.warning }} />
+                              <div className="text-sm font-semibold" style={{ color: colors.warning }}>Waiting for Chief Report</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Confirmed Services - Right Column */}
+          <div className="space-y-6">
+            <Card padding="p-6 lg:p-8" className="sticky top-4">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold" style={{ color: colors.text }}>Confirmed Services</h3>
+                <Icons.Filter className="w-5 h-5" style={{ color: colors.primary }} />
+              </div>
+
+              {/* Filter Controls */}
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Zone</label>
+                  <select
+                    className="w-full rounded-xl px-4 py-3 border focus:outline-none focus:ring-2 transition-all duration-300"
+                    style={{ 
+                      backgroundColor: colors.cardBg,
+                      borderColor: colors.border,
+                      color: colors.text
+                    }}
+                    value={zoneFilter}
+                    onChange={(e) => setZoneFilter(e.target.value)}
+                  >
+                    <option value="">All Zones</option>
+                    {zones.map(z => (
+                      <option key={z.id} value={String(z.id)}>{z.name}</option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="mt-3 space-y-1 text-sm">
-                  <div>The service will start at: {row.service_start?.slice(0, 5)}</div>
-                  <div>The service will end at: {row.service_end?.slice(0, 5)}</div>
-                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Year</label>
+                    <select
+                      className="w-full rounded-xl px-3 py-3 border focus:outline-none focus:ring-2 transition-all duration-300"
+                      style={{ 
+                        backgroundColor: colors.cardBg,
+                        borderColor: colors.border,
+                        color: colors.text
+                      }}
+                      value={year}
+                      onChange={(e) => setYear(e.target.value)}
+                    >
+                      <option value="">All Years</option>
+                      {Array.from({ length: 7 }).map((_, i) => {
+                        const y = new Date().getFullYear() - i;
+                        return <option key={y} value={String(y)}>{y}</option>;
+                      })}
+                    </select>
+                  </div>
 
-                {row.chief_report_status ? (
-                  <div className="mt-4 flex items-center gap-2">
-                    <button
-                      onClick={() => verifyCompleteImmediately(row.id)}
-                      disabled={verifyingId === row.id}
-                      className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-white text-sm hover:bg-emerald-700 disabled:opacity-60"
+                  <div>
+                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Month</label>
+                    <select
+                      className="w-full rounded-xl px-3 py-3 border focus:outline-none focus:ring-2 transition-all duration-300"
+                      style={{ 
+                        backgroundColor: colors.cardBg,
+                        borderColor: colors.border,
+                        color: colors.text
+                      }}
+                      value={month}
+                      onChange={(e) => setMonth(e.target.value)}
                     >
-                      Confirm completion
-                    </button>
-                    <button
-                      onClick={() => openVerifyNotComplete(row.id)}
-                      disabled={verifyingId === row.id}
-                      className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-white text-sm hover:bg-red-700 disabled:opacity-60"
-                    >
-                      Mark not completed
-                    </button>
-                    {row.chief_report_reason ? (
-                      <span className="ml-2 text-xs text-slate-500">Chief note: {row.chief_report_reason}</span>
-                    ) : null}
+                      <option value="">All Months</option>
+                      {Array.from({ length: 12 }).map((_, i) => {
+                        const m = i + 1;
+                        return <option key={m} value={String(m)}>{m.toString().padStart(2, '0')}</option>;
+                      })}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {completedError && (
+                <div className="rounded-xl p-3 mb-4 border" style={{ backgroundColor: colors.errorLight, borderColor: colors.error }}>
+                  <div className="text-sm font-semibold" style={{ color: colors.error }}>{completedError}</div>
+                </div>
+              )}
+
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {completedLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-pulse space-y-3">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="h-16 rounded-xl" style={{ backgroundColor: colors.border }}></div>
+                      ))}
+                    </div>
+                  </div>
+                ) : completed.length === 0 ? (
+                  <div className="text-center py-8 rounded-xl border-2 border-dashed" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
+                    <Icons.Calendar className="w-8 h-8 mx-auto mb-2" style={{ color: colors.textLighter }} />
+                    <div className="text-sm" style={{ color: colors.textLight }}>No confirmed services</div>
                   </div>
                 ) : (
-                  <div className="mt-4 inline-flex items-center gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700 border border-slate-200">
-                    Waiting for chief report
-                  </div>
+                  completed.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => setSelectedCompletedId(prev => prev === c.id ? null : c.id)}
+                      className={`cursor-pointer rounded-xl border p-4 transition-all duration-300 hover:shadow-md ${
+                        selectedCompletedId === c.id ? 'ring-2 ring-[#D97706]' : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: colors.cardBg, 
+                        borderColor: selectedCompletedId === c.id ? colors.primary : colors.border
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-semibold" style={{ color: colors.text }}>
+                          {c.vehicle_plate ?? '—'} • {c.driver_username ?? '—'}
+                        </div>
+                        {getStatusBadge(c.supervisor_status ?? null)}
+                      </div>
+                      <div className="text-sm" style={{ color: colors.textLight }}>
+                        {new Date(c.supervisor_decided_at || c.created_at).toLocaleString()}
+                      </div>
+                      
+                      {selectedCompletedId === c.id && (
+                        <div className="mt-3 pt-3 border-t space-y-2" style={{ borderColor: colors.border }}>
+                          <div className="text-sm" style={{ color: colors.text }}>
+                            <span className="font-semibold">Time:</span> {String(c.service_start).slice(0,5)} - {String(c.service_end).slice(0,5)}
+                          </div>
+                          {c.supervisor_reason && (
+                            <div className="text-sm" style={{ color: colors.text }}>
+                              <span className="font-semibold">Note:</span> {c.supervisor_reason}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))
                 )}
               </div>
-            ))}
+            </Card>
+          </div>
+        </div>
+
+        {/* Verification Modal */}
+        {verifyOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 animate-fadeIn" onClick={() => (!verifySubmitting ? setVerifyOpen(false) : null)} />
+            <div className="relative z-10 w-full max-w-md rounded-2xl border bg-white p-6 shadow-2xl animate-scaleIn" style={{ borderColor: colors.border }}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-3 h-3 rounded-full ${verifyStatus === 'complete' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                <h3 className="text-xl font-bold" style={{ color: colors.text }}>
+                  {verifyStatus === 'complete' ? 'Confirm Completion' : 'Mark as Not Completed'}
+                </h3>
+              </div>
+              
+              <p className="text-sm mb-4" style={{ color: colors.textLight }}>
+                {verifyStatus === 'complete' 
+                  ? 'Add an optional note about this completion'
+                  : 'Please provide a reason for marking this service as not completed'}
+              </p>
+              
+              <textarea
+                value={verifyReason}
+                onChange={(e) => setVerifyReason(e.target.value)}
+                className="w-full h-32 rounded-xl border p-4 text-sm focus:outline-none focus:ring-2 focus:border-[#D97706] focus:ring-[#D97706] transition-all duration-300 resize-none"
+                style={{ 
+                  backgroundColor: colors.cardBg,
+                  borderColor: colors.border,
+                  color: colors.text,
+                }}
+                placeholder={verifyStatus === 'complete' ? 'Optional completion note...' : 'Reason for marking as not completed...'}
+                disabled={verifySubmitting}
+              />
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => (!verifySubmitting ? setVerifyOpen(false) : null)}
+                  className="flex-1 px-4 py-3 rounded-xl font-semibold border transition-all duration-300 hover:shadow-md active:scale-95 disabled:opacity-60"
+                  style={{ 
+                    backgroundColor: colors.cardBg,
+                    borderColor: colors.border,
+                    color: colors.text
+                  }}
+                  disabled={verifySubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitVerify}
+                  className={`flex-1 px-4 py-3 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-60 ${
+                    verifyStatus === 'complete' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                  disabled={verifySubmitting}
+                >
+                  {verifySubmitting ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <Icons.Check className="w-4 h-4" />
+                  )}
+                  <span>Submit</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      <div className="lg:col-span-1">
-        <div className="rounded-lg border border-slate-200 bg-white p-4 lg:sticky lg:top-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800">Confirmed services</h3>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <select
-              className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm"
-              value={zoneFilter}
-              onChange={(e) => setZoneFilter(e.target.value)}
-            >
-              <option value="">All zones</option>
-              {zones.map(z => (
-                <option key={z.id} value={String(z.id)}>{z.name}</option>
-              ))}
-            </select>
-            <select
-              className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm"
-              value={year}
-              onChange={(e) => setYear(e.target.value)}
-            >
-              <option value="">All years</option>
-              {Array.from({ length: 7 }).map((_, i) => {
-                const y = new Date().getFullYear() - i;
-                return <option key={y} value={String(y)}>{y}</option>;
-              })}
-            </select>
-            <select
-              className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-            >
-              <option value="">All months</option>
-              {Array.from({ length: 12 }).map((_, i) => {
-                const m = i + 1;
-                return <option key={m} value={String(m)}>{m.toString().padStart(2, '0')}</option>;
-              })}
-            </select>
-          </div>
-
-          {completedError && (
-            <div className="mt-2 text-xs text-red-600">{completedError}</div>
-          )}
-
-          <div className="mt-3 space-y-2">
-            {completedLoading ? (
-              <div className="text-sm text-slate-500">Loading…</div>
-            ) : completed.length === 0 ? (
-              <div className="text-sm text-slate-500">No confirmed services</div>
-            ) : (
-              completed.map((c) => (
-                <div
-                  key={c.id}
-                  onClick={() => setSelectedCompletedId((prev: number | null) => prev === c.id ? null : c.id)}
-                  className="cursor-pointer w-full text-left rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50"
-                >
-                  <div className="text-sm font-medium text-slate-800">{c.vehicle_plate ?? '—'} • {c.driver_username ?? '—'}</div>
-                  <div className="text-xs text-slate-500">{new Date(c.supervisor_decided_at || c.created_at).toLocaleString()}</div>
-                  {selectedCompletedId === c.id && (
-                    <div className="mt-2 text-xs text-slate-700 space-y-1">
-                      <div>Start: {String(c.service_start).slice(0,5)} • End: {String(c.service_end).slice(0,5)}</div>
-                      {c.supervisor_reason ? <div>Supervisor note: {c.supervisor_reason}</div> : null}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {verifyOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => (!verifySubmitting ? setVerifyOpen(false) : null)} />
-          <div className="relative z-10 w-full max-w-md rounded-lg border border-slate-200 bg-white p-4 shadow-lg">
-            <div className="text-base font-semibold text-slate-800">{verifyStatus === 'complete' ? 'Confirm completion' : 'Mark not completed'}</div>
-            <div className="mt-2 text-sm text-slate-600">{verifyStatus === 'complete' ? 'Optional note' : 'Provide a reason (optional)'}</div>
-            <textarea
-              value={verifyReason}
-              onChange={(e) => setVerifyReason(e.target.value)}
-              className="mt-3 h-28 w-full resize-none rounded-md border border-slate-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-              placeholder={verifyStatus === 'complete' ? 'Note (optional)' : 'Reason (optional)'}
-              disabled={verifySubmitting}
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={() => (!verifySubmitting ? setVerifyOpen(false) : null)}
-                className="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-                disabled={verifySubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitVerify}
-                className={`inline-flex items-center rounded-md px-3 py-1.5 text-white text-sm disabled:opacity-60 ${verifyStatus === 'complete' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
-                disabled={verifySubmitting}
-              >
-                Submit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

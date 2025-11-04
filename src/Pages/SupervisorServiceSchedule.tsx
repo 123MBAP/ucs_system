@@ -20,169 +20,166 @@ type ScheduleEntry = {
   created_at: string;
 };
 
-// Color constants
+// Enhanced Color Scheme
 const colors = {
   primary: '#D97706',
+  primaryLight: '#FBBF24',
   primaryHover: '#B45309',
   accent: '#15803D',
+  accentLight: '#22C55E',
   accentHover: '#166534',
-  background: '#F9FAFB',
+  background: '#F8FAFC',
   cardBg: '#FFFFFF',
-  border: '#E5E7EB',
-  text: '#1E1E1E',
-  textLight: '#6B7280',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  text: '#0F172A',
+  textLight: '#64748B',
+  textLighter: '#94A3B8',
   error: '#DC2626',
-  success: '#15803D'
+  errorLight: '#FEF2F2',
+  success: '#15803D',
+  warning: '#D97706'
 };
 
-// Icon components
+// Enhanced Icon components with better sizing
 const Icons = {
   Back: (props: SVGProps<SVGSVGElement>) => (
-    <svg
-      {...props}
-      className={props.className ?? 'w-4 h-4'}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
     </svg>
   ),
   Calendar: (props: SVGProps<SVGSVGElement>) => (
-    <svg
-      {...props}
-      className={props.className ?? 'w-5 h-5'}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
   ),
   Vehicle: (props: SVGProps<SVGSVGElement>) => (
-    <svg
-      {...props}
-      className={props.className ?? 'w-5 h-5'}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
   ),
   Driver: (props: SVGProps<SVGSVGElement>) => (
-    <svg
-      {...props}
-      className={props.className ?? 'w-5 h-5'}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   ),
   Time: (props: SVGProps<SVGSVGElement>) => (
-    <svg
-      {...props}
-      className={props.className ?? 'w-5 h-5'}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   Manpower: (props: SVGProps<SVGSVGElement>) => (
-    <svg
-      {...props}
-      className={props.className ?? 'w-5 h-5'}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
     </svg>
   ),
   Delete: (props: SVGProps<SVGSVGElement>) => (
-    <svg
-      {...props}
-      className={props.className ?? 'w-4 h-4'}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
   ),
   Add: (props: SVGProps<SVGSVGElement>) => (
-    <svg
-      {...props}
-      className={props.className ?? 'w-4 h-4'}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
     </svg>
   ),
+  Filter: (props: SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+    </svg>
+  ),
+  Search: (props: SVGProps<SVGSVGElement>) => (
+    <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  )
 };
 
-// UI Components
-const SectionHeader = ({ title, number }: { title: string; number: number }) => (
-  <div className="flex items-center gap-3 mb-6 pb-3 border-b" style={{ borderColor: colors.border }}>
-    <div 
-      className="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold text-sm"
-      style={{ backgroundColor: colors.primary }}
-    >
-      {number}
+// Enhanced UI Components
+const SectionHeader = ({ title, number, subtitle }: { title: string; number: number; subtitle?: string }) => (
+  <div className="mb-8">
+    <div className="flex items-center gap-4 mb-3">
+      <div className="flex items-center justify-center w-10 h-10 rounded-xl text-white font-bold text-lg shadow-lg" style={{ backgroundColor: colors.primary }}>
+        {number}
+      </div>
+      <div>
+        <h2 className="text-2xl lg:text-3xl font-bold" style={{ color: colors.text }}>{title}</h2>
+        {subtitle && <p className="text-sm mt-1" style={{ color: colors.textLight }}>{subtitle}</p>}
+      </div>
     </div>
-    <h2 className="text-2xl font-bold" style={{ color: colors.text }}>{title}</h2>
+    <div className="h-px w-full" style={{ backgroundColor: colors.borderLight }}></div>
   </div>
 );
 
-const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <div 
-    className={`rounded-lg shadow-sm border p-6 ${className}`}
-    style={{ 
-      backgroundColor: colors.cardBg, 
-      borderColor: colors.border 
-    }}
-  >
+const Card = ({ children, className = '', padding = 'p-6' }: { children: React.ReactNode; className?: string; padding?: string }) => (
+  <div className={`rounded-2xl shadow-sm border transition-all duration-300 hover:shadow-md ${padding} ${className}`} style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
     {children}
   </div>
 );
 
-const PrimaryButton = ({ children, onClick, disabled = false, loading = false, className = '' }: { 
+const PrimaryButton = ({ children, onClick, disabled = false, loading = false, size = 'md', className = '' }: { 
   children: React.ReactNode; 
   onClick?: () => void; 
   disabled?: boolean;
   loading?: boolean;
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
-}) => (
+}) => {
+  const sizes = {
+    sm: 'px-4 py-2 text-sm',
+    md: 'px-6 py-3 text-base',
+    lg: 'px-8 py-4 text-lg'
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl active:scale-95 ${sizes[size]} ${className}`}
+      style={{ 
+        backgroundColor: disabled ? colors.textLighter : colors.primary,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1
+      }}
+      onMouseOver={(e) => {
+        if (!disabled && !loading) {
+          e.currentTarget.style.backgroundColor = colors.primaryHover;
+        }
+      }}
+      onMouseOut={(e) => {
+        if (!disabled && !loading) {
+          e.currentTarget.style.backgroundColor = colors.primary;
+        }
+      }}
+    >
+      {loading && (
+        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+      )}
+      {children}
+    </button>
+  );
+};
+
+const FilterChip = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
   <button
     onClick={onClick}
-    disabled={disabled || loading}
-    className={`px-4 py-2 rounded-lg font-medium text-white transition-colors flex items-center gap-2 ${className}`}
-    style={{ 
-      backgroundColor: disabled ? colors.textLight : colors.primary,
-      cursor: disabled ? 'not-allowed' : 'pointer'
-    }}
-    onMouseOver={(e) => {
-      if (!disabled && !loading) {
-        e.currentTarget.style.backgroundColor = colors.primaryHover;
+    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
+      active ? 'text-white shadow-md' : 'hover:shadow-sm'
+    }`}
+    style={
+      active ? {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary
+      } : {
+        backgroundColor: colors.cardBg,
+        color: colors.textLight,
+        borderColor: colors.border
       }
-    }}
-    onMouseOut={(e) => {
-      if (!disabled && !loading) {
-        e.currentTarget.style.backgroundColor = colors.primary;
-      }
-    }}
+    }
   >
-    {children}
+    {label}
   </button>
 );
-
- 
 
 export default function SupervisorServiceSchedule() {
   const { id } = useParams();
@@ -206,8 +203,13 @@ export default function SupervisorServiceSchedule() {
   const [vehicleId, setVehicleId] = useState<string>('');
   const [driverId, setDriverId] = useState<string>('');
   const [start, setStart] = useState<string>('08:00');
-  const [end, setEnd] = useState<string>('12:00');
+  const [end, setEnd] = useState<string>('17:00');
   const [selectedManpower, setSelectedManpower] = useState<number[]>([]);
+
+  // Enhanced filtering and search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterDay, setFilterDay] = useState<number | 'all'>('all');
+  const [filterVehicle] = useState<number | 'all'>('all');
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
@@ -272,6 +274,7 @@ export default function SupervisorServiceSchedule() {
       return;
     }
     setSchedule(prev => [...prev, data.entry]);
+    // Reset form but keep day mode and times
     setVehicleId('');
     setDriverId('');
     setSelectedManpower([]);
@@ -309,15 +312,32 @@ export default function SupervisorServiceSchedule() {
     return m;
   }, [drivers]);
 
+  // Enhanced filtering logic
+  const filteredSchedule = useMemo(() => {
+    return schedule
+      .filter(entry => {
+        const matchesSearch = searchTerm === '' || 
+          dayName(entry.service_day).toLowerCase().includes(searchTerm.toLowerCase()) ||
+          vehiclePlateById.get(entry.vehicle_id)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (entry.driver_id && driverNameById.get(entry.driver_id)?.toLowerCase().includes(searchTerm.toLowerCase()));
+        
+        const matchesDay = filterDay === 'all' || entry.service_day === filterDay;
+        const matchesVehicle = filterVehicle === 'all' || entry.vehicle_id === filterVehicle;
+        
+        return matchesSearch && matchesDay && matchesVehicle;
+      })
+      .sort((a, b) => a.service_day - b.service_day || a.service_start.localeCompare(b.service_start));
+  }, [schedule, searchTerm, filterDay, filterVehicle, vehiclePlateById, driverNameById]);
+
   if (loading) {
     return (
-      <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
-        <div className="max-w-6xl mx-auto space-y-6">
+      <div className="min-h-screen p-4 lg:p-6" style={{ backgroundColor: colors.background }}>
+        <div className="max-w-7xl mx-auto space-y-6">
           <div className="animate-pulse">
-            <div className="h-8 rounded w-48 mb-6" style={{ backgroundColor: colors.border }}></div>
+            <div className="h-8 rounded-2xl w-64 mb-6" style={{ backgroundColor: colors.border }}></div>
             <div className="grid gap-6">
-              <div className="h-64 rounded-lg" style={{ backgroundColor: colors.border }}></div>
-              <div className="h-96 rounded-lg" style={{ backgroundColor: colors.border }}></div>
+              <div className="h-64 rounded-2xl" style={{ backgroundColor: colors.border }}></div>
+              <div className="h-96 rounded-2xl" style={{ backgroundColor: colors.border }}></div>
             </div>
           </div>
         </div>
@@ -326,126 +346,150 @@ export default function SupervisorServiceSchedule() {
   }
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen p-4 lg:p-6" style={{ backgroundColor: colors.background }}>
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Enhanced Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => navigate(-1)}
-              className="flex items-center space-x-2 transition-colors duration-200"
-              style={{ color: colors.textLight }}
+              className="flex items-center space-x-2 transition-all duration-300 hover:scale-105 active:scale-95 p-3 rounded-2xl"
+              style={{ backgroundColor: colors.cardBg, color: colors.textLight }}
             >
-              <Icons.Back />
-              <span className="font-medium">Back to Zone</span>
+              <Icons.Back className="w-5 h-5" />
+              <span className="font-semibold">Back</span>
             </button>
-            <div className="w-px h-6" style={{ backgroundColor: colors.border }}></div>
+            <div className="w-px h-8" style={{ backgroundColor: colors.border }}></div>
             <div>
-              <h1 className="text-3xl font-bold" style={{ color: colors.text }}>
+              <h1 className="text-3xl lg:text-4xl font-bold" style={{ color: colors.text }}>
                 Service Schedule
               </h1>
-              <p className="mt-1" style={{ color: colors.textLight }}>Plan and manage services for {zoneName}</p>
+              <p className="text-lg mt-2" style={{ color: colors.textLight }}>Managing services for <span style={{ color: colors.primary, fontWeight: '600' }}>{zoneName}</span></p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="text-right">
+              <div className="text-2xl font-bold" style={{ color: colors.primary }}>{schedule.length}</div>
+              <div className="text-sm" style={{ color: colors.textLight }}>Total Services</div>
             </div>
           </div>
         </div>
 
-        {/* Error Alert */}
+        {/* Enhanced Error Alert */}
         {error && (
-          <div className="rounded-lg p-4 border" style={{ backgroundColor: '#FEF2F2', borderColor: colors.error }}>
-            <div className="flex items-center space-x-2" style={{ color: colors.error }}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="font-medium">{error}</span>
+          <div className="rounded-2xl p-4 border animate-fadeIn" style={{ backgroundColor: colors.errorLight, borderColor: colors.error }}>
+            <div className="flex items-center space-x-3">
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: colors.error }}></div>
+              <span className="font-semibold" style={{ color: colors.error }}>{error}</span>
             </div>
           </div>
         )}
 
-        {/* SECTION 1: ADD NEW SERVICE */}
+        {/* SECTION 1: ADD NEW SERVICE - Enhanced Layout */}
         <section>
-          <SectionHeader title="Add New Service Entry" number={1} />
-          <Card>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SectionHeader 
+            title="Schedule New Service" 
+            number={1}
+            subtitle="Plan and organize service entries for your zone"
+          />
+          <Card padding="p-6 lg:p-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
               {/* Left Column - Day & Time */}
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold mb-3" style={{ color: colors.text }}>Service Day</label>
-                  <div className="flex space-x-4 mb-4">
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="dayMode" 
-                        value="saved" 
-                        checked={dayMode === 'saved'} 
-                        onChange={() => setDayMode('saved')}
-                        style={{ accentColor: colors.primary }}
-                      />
-                      <span className="text-sm font-medium" style={{ color: colors.text }}>Regular Days</span>
-                    </label>
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="dayMode" 
-                        value="special" 
-                        checked={dayMode === 'special'} 
-                        onChange={() => setDayMode('special')}
-                        style={{ accentColor: colors.primary }}
-                      />
-                      <span className="text-sm font-medium" style={{ color: colors.text }}>Special Days</span>
-                    </label>
+                  <label className="block text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.text }}>
+                    <Icons.Calendar className="w-5 h-5" style={{ color: colors.primary }} />
+                    Service Day Selection
+                  </label>
+                  
+                  <div className="flex flex-wrap gap-3 mb-6">
+                    <button
+                      onClick={() => setDayMode('saved')}
+                      className={`flex-1 min-w-[140px] p-4 rounded-xl border-2 text-center transition-all duration-300 ${
+                        dayMode === 'saved' ? 'border-white shadow-lg scale-105' : 'border-transparent hover:border-gray-200'
+                      }`}
+                      style={dayMode === 'saved' ? {
+                        backgroundColor: colors.primary,
+                        color: 'white'
+                      } : {
+                        backgroundColor: colors.background,
+                        color: colors.text
+                      }}
+                    >
+                      <div className="font-semibold">Regular Days</div>
+                      <div className="text-sm opacity-90 mt-1">Saved Schedule</div>
+                    </button>
+                    <button
+                      onClick={() => setDayMode('special')}
+                      className={`flex-1 min-w-[140px] p-4 rounded-xl border-2 text-center transition-all duration-300 ${
+                        dayMode === 'special' ? 'border-white shadow-lg scale-105' : 'border-transparent hover:border-gray-200'
+                      }`}
+                      style={dayMode === 'special' ? {
+                        backgroundColor: colors.accent,
+                        color: 'white'
+                      } : {
+                        backgroundColor: colors.background,
+                        color: colors.text
+                      }}
+                    >
+                      <div className="font-semibold">Special Days</div>
+                      <div className="text-sm opacity-90 mt-1">One-time Events</div>
+                    </button>
                   </div>
                   
-                  {dayMode === 'saved' ? (
-                    <select 
-                      value={serviceDaySaved} 
-                      onChange={e => setServiceDaySaved(e.target.value)} 
-                      className="w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border"
-                      style={{ 
-                        backgroundColor: colors.cardBg,
-                        borderColor: colors.border,
-                        color: colors.text
-                      }}
-                    >
-                      {!savedDays.length && <option value="">No regular days set</option>}
-                      {savedDays.map(d => (
-                        <option key={d} value={d}>{dayName(d)}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <select 
-                      value={serviceDaySpecial} 
-                      onChange={e => setServiceDaySpecial(e.target.value)} 
-                      className="w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border"
-                      style={{ 
-                        backgroundColor: colors.cardBg,
-                        borderColor: colors.border,
-                        color: colors.text
-                      }}
-                    >
-                      {nonSavedDays.length ? (
-                        nonSavedDays.map(d => (
+                  <select 
+                    value={dayMode === 'saved' ? serviceDaySaved : serviceDaySpecial} 
+                    onChange={e => dayMode === 'saved' ? setServiceDaySaved(e.target.value) : setServiceDaySpecial(e.target.value)} 
+                    className="w-full rounded-xl px-4 py-4 text-lg focus:outline-none focus:ring-4 border transition-all duration-300"
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.primary;
+                      e.currentTarget.style.boxShadow = `0 0 0 4px ${colors.primary}33`;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    style={{ 
+                      backgroundColor: colors.cardBg,
+                      borderColor: colors.border,
+                      color: colors.text
+                    }}
+                  >
+                    {dayMode === 'saved' ? (
+                      <>
+                        {!savedDays.length && <option value="">No regular days configured</option>}
+                        {savedDays.map(d => (
                           <option key={d} value={d}>{dayName(d)}</option>
-                        ))
-                      ) : (
-                        allDays.map(d => (
-                          <option key={d} value={d}>{dayName(d)}</option>
-                        ))
-                      )}
-                    </select>
-                  )}
+                        ))}
+                      </>
+                    ) : (
+                      <>
+                        {nonSavedDays.length ? (
+                          nonSavedDays.map(d => (
+                            <option key={d} value={d}>{dayName(d)}</option>
+                          ))
+                        ) : (
+                          allDays.map(d => (
+                            <option key={d} value={d}>{dayName(d)}</option>
+                          ))
+                        )}
+                      </>
+                    )}
+                  </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>
-                      <Icons.Time className="inline w-4 h-4 mr-2" style={{ color: colors.primary }} />
+                    <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}>
+                      <Icons.Time className="w-4 h-4" style={{ color: colors.primary }} />
                       Start Time
                     </label>
                     <input 
                       type="time" 
                       value={start} 
                       onChange={e => setStart(e.target.value)} 
-                      className="w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border"
+                      className="w-full rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-4 border transition-all duration-300"
                       style={{ 
                         backgroundColor: colors.cardBg,
                         borderColor: colors.border,
@@ -454,15 +498,15 @@ export default function SupervisorServiceSchedule() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>
-                      <Icons.Time className="inline w-4 h-4 mr-2" style={{ color: colors.primary }} />
+                    <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}>
+                      <Icons.Time className="w-4 h-4" style={{ color: colors.primary }} />
                       End Time
                     </label>
                     <input 
                       type="time" 
                       value={end} 
                       onChange={e => setEnd(e.target.value)} 
-                      className="w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border"
+                      className="w-full rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-4 border transition-all duration-300"
                       style={{ 
                         backgroundColor: colors.cardBg,
                         borderColor: colors.border,
@@ -475,44 +519,44 @@ export default function SupervisorServiceSchedule() {
 
               {/* Right Column - Vehicles & Manpower */}
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>
-                      <Icons.Vehicle className="inline w-4 h-4 mr-2" style={{ color: colors.primary }} />
-                      Vehicle
+                    <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}>
+                      <Icons.Vehicle className="w-4 h-4" style={{ color: colors.primary }} />
+                      Select Vehicle
                     </label>
                     <select 
                       value={vehicleId} 
                       onChange={e => setVehicleId(e.target.value)} 
-                      className="w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border"
+                      className="w-full rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-4 border transition-all duration-300"
                       style={{ 
                         backgroundColor: colors.cardBg,
                         borderColor: colors.border,
                         color: colors.text
                       }}
                     >
-                      <option value="">Select vehicle…</option>
+                      <option value="">Choose a vehicle...</option>
                       {vehicles.map(v => (
-                        <option key={v.id} value={v.id}>{v.plate}</option>
+                        <option key={v.id} value={v.id}>{v.plate} - Vehicle</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>
-                      <Icons.Driver className="inline w-4 h-4 mr-2" style={{ color: colors.primary }} />
-                      Driver
+                    <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}>
+                      <Icons.Driver className="w-4 h-4" style={{ color: colors.primary }} />
+                      Assign Driver
                     </label>
                     <select 
                       value={driverId} 
                       onChange={e => setDriverId(e.target.value)} 
-                      className="w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border"
+                      className="w-full rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-4 border transition-all duration-300"
                       style={{ 
                         backgroundColor: colors.cardBg,
                         borderColor: colors.border,
                         color: colors.text
                       }}
                     >
-                      <option value="">Select driver…</option>
+                      <option value="">Optional - Select driver</option>
                       {drivers.map(d => (
                         <option key={d.id} value={d.id}>{d.username}</option>
                       ))}
@@ -521,20 +565,25 @@ export default function SupervisorServiceSchedule() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold mb-3" style={{ color: colors.text }}>
-                    <Icons.Manpower className="inline w-4 h-4 mr-2" style={{ color: colors.primary }} />
-                    Assign Manpower
+                  <label className="block text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: colors.text }}>
+                    <Icons.Manpower className="w-4 h-4" style={{ color: colors.primary }} />
+                    Assign Manpower Team
+                    {selectedManpower.length > 0 && (
+                      <span className="text-xs px-2 py-1 rounded-full ml-2" style={{ backgroundColor: colors.primary, color: 'white' }}>
+                        {selectedManpower.length} selected
+                      </span>
+                    )}
                   </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-3 max-h-32 overflow-y-auto p-2 rounded-xl" style={{ backgroundColor: colors.background }}>
                     {manpower.map(m => (
                       <button
                         key={m.id}
                         type="button"
                         onClick={() => toggleManpower(m.id)}
-                        className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                        className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-all duration-300 hover:scale-105 active:scale-95 ${
                           selectedManpower.includes(m.id) 
                             ? 'text-white shadow-lg' 
-                            : 'border hover:shadow-md'
+                            : 'hover:shadow-md'
                         }`}
                         style={selectedManpower.includes(m.id) ? {
                           backgroundColor: colors.primary,
@@ -553,103 +602,166 @@ export default function SupervisorServiceSchedule() {
               </div>
             </div>
 
-            <div className="flex justify-end mt-6">
+            <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-8 pt-6 border-t" style={{ borderColor: colors.borderLight }}>
+              <div className="text-sm" style={{ color: colors.textLight }}>
+                {selectedManpower.length} manpower • {vehicleId ? 'Vehicle selected' : 'No vehicle'} • {driverId ? 'Driver assigned' : 'No driver'}
+              </div>
               <PrimaryButton 
                 onClick={addEntry}
-                className="px-6 py-3"
+                size="lg"
+                className="w-full sm:w-auto"
               >
-                <Icons.Add />
-                <span>Add Service Entry</span>
+                <Icons.Add className="w-5 h-5" />
+                <span>Create Service Entry</span>
               </PrimaryButton>
             </div>
           </Card>
         </section>
 
-        {/* SECTION 2: SCHEDULED SERVICES */}
+        {/* SECTION 2: SCHEDULED SERVICES - Enhanced with Filtering */}
         <section>
-          <SectionHeader title="Scheduled Services" number={2} />
-          <Card>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Current Schedule</h3>
-              <span 
-                className="text-sm px-3 py-1 rounded-full"
-                style={{ backgroundColor: colors.background, color: colors.textLight }}
-              >
-                {schedule.length} entr{schedule.length === 1 ? 'y' : 'ies'}
-              </span>
+          <SectionHeader 
+            title="Scheduled Services" 
+            number={2}
+            subtitle="Manage and monitor all scheduled services"
+          />
+          
+          {/* Enhanced Filter Bar */}
+          <Card padding="p-4 lg:p-6" className="mb-6">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+              <div className="flex items-center gap-3 w-full lg:w-auto">
+                <div className="relative flex-1 lg:flex-initial">
+                  <Icons.Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: colors.textLight }} />
+                  <input
+                    type="text"
+                    placeholder="Search services..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full lg:w-64 pl-10 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-300"
+                    style={{ 
+                      backgroundColor: colors.cardBg,
+                      borderColor: colors.border,
+                      color: colors.text
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+                <FilterChip 
+                  label="All Days" 
+                  active={filterDay === 'all'} 
+                  onClick={() => setFilterDay('all')} 
+                />
+                {[...new Set(schedule.map(s => s.service_day))].sort().map(day => (
+                  <FilterChip 
+                    key={day}
+                    label={dayName(day)} 
+                    active={filterDay === day} 
+                    onClick={() => setFilterDay(day)} 
+                  />
+                ))}
+              </div>
+              
+              <div className="text-sm font-semibold px-3 py-2 rounded-xl" style={{ backgroundColor: colors.primary, color: 'white' }}>
+                {filteredSchedule.length} of {schedule.length}
+              </div>
             </div>
+          </Card>
 
+          <Card padding="p-6 lg:p-8">
             {!schedule.length ? (
-              <div className="text-center py-12 rounded-lg border" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
-                <Icons.Calendar className="w-16 h-16 mx-auto mb-4" style={{ color: colors.textLight }} />
-                <h3 className="text-lg font-semibold mb-2" style={{ color: colors.textLight }}>No services scheduled</h3>
-                <p style={{ color: colors.textLight }}>Add your first service entry to get started</p>
+              <div className="text-center py-12 lg:py-16 rounded-2xl border-2 border-dashed" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
+                <Icons.Calendar className="w-16 h-16 mx-auto mb-4" style={{ color: colors.textLighter }} />
+                <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>No services scheduled yet</h3>
+                <p className="text-lg mb-6" style={{ color: colors.textLighter }}>Create your first service entry to get started</p>
+                <PrimaryButton 
+                  onClick={() => document.getElementById('schedule-form')?.scrollIntoView({ behavior: 'smooth' })}
+                  size="md"
+                >
+                  <Icons.Add className="w-5 h-5" />
+                  <span>Schedule First Service</span>
+                </PrimaryButton>
+              </div>
+            ) : !filteredSchedule.length ? (
+              <div className="text-center py-12 rounded-2xl" style={{ backgroundColor: colors.background }}>
+                <Icons.Search className="w-16 h-16 mx-auto mb-4" style={{ color: colors.textLighter }} />
+                <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>No matching services</h3>
+                <p style={{ color: colors.textLighter }}>Try adjusting your search or filters</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {schedule
-                  .slice()
-                  .sort((a, b) => a.service_day - b.service_day || a.service_start.localeCompare(b.service_start))
-                  .map(e => (
+              <div className="grid gap-4">
+                {filteredSchedule.map(e => (
                   <div 
                     key={e.id} 
-                    className="rounded-lg border p-4 transition-shadow duration-200 hover:shadow-md"
+                    className="rounded-2xl border p-5 lg:p-6 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] group"
                     style={{ 
                       backgroundColor: colors.cardBg, 
-                      borderColor: colors.border 
+                      borderColor: colors.borderLight 
                     }}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-4 mb-3">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colors.primary }}></div>
-                            <span className="font-semibold" style={{ color: colors.text }}>{dayName(e.service_day)}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: colors.primary }}></div>
+                            <span className="text-xl font-bold" style={{ color: colors.text }}>{dayName(e.service_day)}</span>
                           </div>
-                          <div className="flex items-center space-x-1 text-sm" style={{ color: colors.textLight }}>
-                            <Icons.Time className="w-4 h-4" />
-                            <span>{e.service_start.substring(0,5)} - {e.service_end.substring(0,5)}</span>
+                          <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: colors.background }}>
+                            <Icons.Time className="w-4 h-4" style={{ color: colors.primary }} />
+                            <span className="font-semibold" style={{ color: colors.text }}>
+                              {e.service_start.substring(0,5)} - {e.service_end.substring(0,5)}
+                            </span>
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div className="flex items-center space-x-2">
-                            <Icons.Vehicle className="w-4 h-4" style={{ color: colors.textLight }} />
-                            <span style={{ color: colors.text }}>
-                              {vehiclePlateById.get(e.vehicle_id) || `Vehicle #${e.vehicle_id}`}
-                            </span>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-base">
+                          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: colors.background }}>
+                            <Icons.Vehicle className="w-5 h-5 flex-shrink-0" style={{ color: colors.primary }} />
+                            <div>
+                              <div className="font-semibold" style={{ color: colors.text }}>
+                                {vehiclePlateById.get(e.vehicle_id) || `Vehicle #${e.vehicle_id}`}
+                              </div>
+                              <div className="text-sm" style={{ color: colors.textLight }}>Vehicle</div>
+                            </div>
                           </div>
                           
                           {e.driver_id && (
-                            <div className="flex items-center space-x-2">
-                              <Icons.Driver className="w-4 h-4" style={{ color: colors.textLight }} />
-                              <span style={{ color: colors.text }}>
-                                {driverNameById.get(e.driver_id) || `Driver #${e.driver_id}`}
-                              </span>
+                            <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: colors.background }}>
+                              <Icons.Driver className="w-5 h-5 flex-shrink-0" style={{ color: colors.primary }} />
+                              <div>
+                                <div className="font-semibold" style={{ color: colors.text }}>
+                                  {driverNameById.get(e.driver_id) || `Driver #${e.driver_id}`}
+                                </div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>Driver</div>
+                              </div>
                             </div>
                           )}
                           
-                          <div className="flex items-center space-x-2">
-                            <Icons.Manpower className="w-4 h-4" style={{ color: colors.textLight }} />
-                            <span style={{ color: colors.text }}>
-                              {e.assigned_manpower_ids?.length
-                                ? `${e.assigned_manpower_ids.length} manpower assigned`
-                                : 'No manpower assigned'}
-                            </span>
+                          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: colors.background }}>
+                            <Icons.Manpower className="w-5 h-5 flex-shrink-0" style={{ color: colors.primary }} />
+                            <div>
+                              <div className="font-semibold" style={{ color: colors.text }}>
+                                {e.assigned_manpower_ids?.length
+                                  ? `${e.assigned_manpower_ids.length} team members`
+                                  : 'No team assigned'}
+                              </div>
+                              <div className="text-sm" style={{ color: colors.textLight }}>Manpower</div>
+                            </div>
                           </div>
                         </div>
                       </div>
                       
                       <button 
                         onClick={() => deleteEntry(e.id)}
-                        className="flex items-center space-x-1 px-3 py-2 rounded-lg font-medium transition-colors duration-200 ml-4"
+                        className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105 active:scale-95 group-hover:op-100 lg:opacity-70"
                         style={{ 
-                          backgroundColor: '#FEF2F2',
+                          backgroundColor: colors.errorLight,
                           color: colors.error
                         }}
                       >
-                        <Icons.Delete />
-                        <span className="text-sm">Delete</span>
+                        <Icons.Delete className="w-4 h-4" />
+                        <span>Remove</span>
                       </button>
                     </div>
                   </div>

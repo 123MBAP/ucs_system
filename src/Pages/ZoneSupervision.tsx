@@ -98,7 +98,7 @@ function weekdayName(n: number) {
 
 // UI Components
 const SectionHeader = ({ title, number }: { title: string; number: number }) => (
-  <div className="flex items-center gap-3 mb-6 pb-3 border-b" style={{ borderColor: colors.border }}>
+  <div className="flex items-center gap-3 mb-4 md:mb-6 pb-3 border-b" style={{ borderColor: colors.border }}>
     <div 
       className="flex items-center justify-center w-8 h-8 rounded-full text-white font-bold text-sm"
       style={{ backgroundColor: colors.primary }}
@@ -111,7 +111,7 @@ const SectionHeader = ({ title, number }: { title: string; number: number }) => 
 
 const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
   <div 
-    className={`rounded-lg shadow-sm border p-6 ${className}`}
+    className={`rounded-lg shadow-sm border p-4 sm:p-5 md:p-6 ${className}`}
     style={{ 
       backgroundColor: colors.cardBg, 
       borderColor: colors.border 
@@ -286,8 +286,8 @@ const ZoneSupervision = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
-        <div className="max-w-6xl mx-auto space-y-6">
+      <div className="min-h-screen p-0 sm:p-2 md:p-4" style={{ backgroundColor: colors.background }}>
+        <div className="max-w-none md:max-w-6xl mx-auto space-y-6">
           <div className="animate-pulse">
             <div className="h-8 rounded w-48 mb-6" style={{ backgroundColor: colors.border }}></div>
             <div className="grid gap-6">
@@ -302,8 +302,8 @@ const ZoneSupervision = () => {
   }
 
   if (error) return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen p-0 sm:p-2 md:p-4" style={{ backgroundColor: colors.background }}>
+      <div className="max-w-none md:max-w-6xl mx-auto">
         <Card>
           <div className="text-center p-6 rounded-lg" style={{ backgroundColor: '#FEF2F2', borderColor: colors.error }}>
             <div style={{ color: colors.error }} className="font-medium">{error}</div>
@@ -314,8 +314,8 @@ const ZoneSupervision = () => {
   );
 
   if (!detail) return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen p-0 sm:p-2 md:p-4" style={{ backgroundColor: colors.background }}>
+      <div className="max-w-none md:max-w-6xl mx-auto">
         <Card>
           <div className="text-center">
             <div style={{ color: colors.textLight }}>Zone not found</div>
@@ -326,8 +326,8 @@ const ZoneSupervision = () => {
   );
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: colors.background }}>
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen p-0 sm:p-2 md:p-4" style={{ backgroundColor: colors.background }}>
+      <div className="max-w-none md:max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -349,11 +349,23 @@ const ZoneSupervision = () => {
           </div>
           <AccentButton
             onClick={() => navigate(`/supervisor/zones/${detail.zone.id}/schedule`)}
-            className="px-6 py-3"
+            className="hidden md:flex px-6 py-3"
           >
             <Icons.Schedule />
             <span>Plan Service Schedule</span>
           </AccentButton>
+        </div>
+        {/* Mobile: Plan Schedule Button in its own card */}
+        <div className="md:hidden">
+          <Card>
+            <AccentButton 
+              onClick={() => navigate(`/supervisor/zones/${detail.zone.id}/schedule`)}
+              className="w-full justify-center py-3"
+            >
+              <Icons.Schedule />
+              <span>Plan Service Schedule</span>
+            </AccentButton>
+          </Card>
         </div>
 
         {/* SECTION 1: SUPERVISOR VEHICLES */}
@@ -582,10 +594,9 @@ const ZoneSupervision = () => {
                 <Icons.Add style={{ color: colors.primary }} />
                 <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Add New Manpower</h3>
               </div>
-              
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input 
-                  className="flex-1 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border"
+                  className="flex-1 w-full rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border"
                   style={{ 
                     backgroundColor: colors.cardBg,
                     borderColor: colors.border,
@@ -598,7 +609,7 @@ const ZoneSupervision = () => {
                 />
                 <PrimaryButton 
                   onClick={addManpower}
-                  className="px-6 py-3"
+                  className="w-full sm:w-auto justify-center px-6 py-3"
                 >
                   <Icons.Add />
                   <span>Add Manpower</span>

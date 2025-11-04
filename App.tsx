@@ -1,6 +1,7 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Sidebar from 'src/Components/SideBar';
+import { LanguageProvider, useI18n } from 'src/lib/i18n';
 
 // Lazy-loaded route components (code-splitting)
 const AddNewZone = lazy(() => import('src/Pages/AddNewZone'));
@@ -40,6 +41,18 @@ function AppShell() {
   const location = useLocation();
   const onLoginPage = location.pathname === '/login';
   const shellBg = onLoginPage ? '' : 'bg-gradient-to-br from-zinc-50 to-amber-50';
+  const { t, lang, setLang } = useI18n();
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!langRef.current) return;
+      if (!langRef.current.contains(e.target as Node)) setLangOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
 
   React.useEffect(() => {
     const syncAuth = () => setIsLoggedIn(Boolean(localStorage.getItem('token')));
@@ -52,16 +65,16 @@ function AppShell() {
   }, []);
 
   return (
-    <div className={`flex h-screen ${shellBg}`}>
+    <div className={`flex h-screen w-full overflow-x-hidden ${shellBg}`}>
       {isLoggedIn && !onLoginPage && (
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         {isLoggedIn && !onLoginPage && (
           <header className="bg-white/90 backdrop-blur-md shadow-sm z-10 border-b border-amber-200">
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between p-4 min-w-0">
               <div className="flex items-center space-x-4">
                 <button
                   onClick={() => setSidebarOpen(true)}
@@ -71,25 +84,64 @@ function AppShell() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-                <div className="flex flex-col">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-700 to-amber-500 bg-clip-text text-transparent">
-                    UCS Management System
+                <div className="flex flex-col min-w-0">
+                  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-amber-700 to-amber-500 bg-clip-text text-transparent whitespace-nowrap truncate">
+                    {t('app.title')}
                   </h1>
-                  <p className="text-sm text-amber-700/70">Streamlined operations management</p>
+                  <p className="text-sm text-amber-700/70 hidden sm:block">{t('app.subtitle')}</p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-4">
                 {/* Notifications */}
-                <button className="relative p-2 rounded-xl hover:bg-amber-50 transition-colors duration-200 group">
+                <button className="hidden md:inline-flex relative p-2 rounded-xl hover:bg-amber-50 transition-colors duration-200 group">
                   <svg className="w-6 h-6 text-amber-700 group-hover:text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM10.24 8.56a5.97 5.97 0 01-4.66-7.4 1 1 0 00-.68-1.2A1 1 0 004 1a6 6 0 006.24 7.56z" />
                   </svg>
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
 
+                {/* Language Switcher (compact) */}
+                <div ref={langRef} className="relative">
+                  <button
+                    onClick={() => setLangOpen(v => !v)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-sm border border-amber-200 text-amber-700/80 hover:bg-amber-50 min-w-[56px] justify-center"
+                    aria-haspopup="listbox"
+                    aria-expanded={langOpen}
+                    aria-label="Change language"
+                  >
+                    <span className="text-base leading-none">{lang === 'rw' ? '🇷🇼' : '🇬🇧'}</span>
+                    <span className="font-semibold">{lang === 'rw' ? 'RW' : 'EN'}</span>
+                    <svg className="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {langOpen && (
+                    <div className="absolute right-0 mt-1 w-28 bg-white border border-amber-200 rounded-lg shadow-lg overflow-hidden z-20">
+                      <button
+                        onClick={() => { setLang('en'); setLangOpen(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-amber-50 ${lang === 'en' ? 'bg-amber-50 text-amber-800' : 'text-amber-800/80'}`}
+                        role="option"
+                        aria-selected={lang === 'en'}
+                      >
+                        <span>🇬🇧</span>
+                        <span>English</span>
+                      </button>
+                      <button
+                        onClick={() => { setLang('rw'); setLangOpen(false); }}
+                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-amber-50 ${lang === 'rw' ? 'bg-amber-50 text-amber-800' : 'text-amber-800/80'}`}
+                        role="option"
+                        aria-selected={lang === 'rw'}
+                      >
+                        <span>🇷🇼</span>
+                        <span>Kinyarwanda</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {/* User Profile */}
-                <div className="flex items-center space-x-3 p-2 rounded-xl hover:bg-amber-50 transition-colors duration-200 cursor-pointer">
+                <div className="hidden md:flex items-center space-x-3 p-2 rounded-xl hover:bg-amber-50 transition-colors duration-200 cursor-pointer">
                   <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-amber-400 rounded-full flex items-center justify-center shadow-lg">
                     <span className="font-semibold text-white text-sm">AD</span>
                   </div>
@@ -110,11 +162,11 @@ function AppShell() {
         <main
           className={
             onLoginPage
-              ? 'flex-1 overflow-y-auto'
-              : 'flex-1 overflow-y-auto p-6 bg-gradient-to-b from-white to-amber-50/30'
+              ? 'flex-1'
+              : 'flex-1 p-0 sm:p-2 md:p-4 bg-gradient-to-b from-white to-amber-50/30'
           }
         >
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-none md:max-w-7xl mx-auto w-full min-w-0">
             <Suspense fallback={<div className="p-6">Loading...</div>}>
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -164,14 +216,14 @@ function AppShell() {
                   <span className="w-1 h-1 bg-amber-300 rounded-full"></span>
                   <span className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>System Online</span>
+                    <span>{t('app.systemOnline')}</span>
                   </span>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
-                <button className="hover:text-amber-700 transition-colors duration-200">Help</button>
-                <button className="hover:text-amber-700 transition-colors duration-200">Privacy</button>
-                <button className="hover:text-amber-700 transition-colors duration-200">Terms</button>
+                <button className="hover:text-amber-700 transition-colors duration-200">{t('nav.help')}</button>
+                <button className="hover:text-amber-700 transition-colors duration-200">{t('nav.privacy')}</button>
+                <button className="hover:text-amber-700 transition-colors duration-200">{t('nav.terms')}</button>
               </div>
             </div>
           </footer>
@@ -183,9 +235,11 @@ function AppShell() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppShell />
-    </BrowserRouter>
+    <LanguageProvider>
+      <BrowserRouter>
+        <AppShell />
+      </BrowserRouter>
+    </LanguageProvider>
   );
 }
 

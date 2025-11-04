@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useI18n } from 'src/lib/i18n';
+import LoadingSpinner from 'src/Components/LoadingSpinner';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -40,6 +42,8 @@ const Icons = {
 };
 
 const SupervisorDashboard = () => {
+  const { t, lang } = useI18n();
+  const navigate = useNavigate();
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +51,9 @@ const SupervisorDashboard = () => {
   const [chartType, setChartType] = useState<'yearly' | 'monthly' | 'weekly' | 'daily'>('monthly');
   const [chartData, setChartData] = useState<{ amount: number }[]>([] as any);
   const [chartLoading, setChartLoading] = useState(false);
+  const [chartError, setChartError] = useState<string | null>(null);
+  const [rawPayments, setRawPayments] = useState<any[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
   const [series, setSeries] = useState<{
     yearly: { year: string; amount: number }[];
     monthly: { month: string; amount: number }[];
@@ -54,9 +61,18 @@ const SupervisorDashboard = () => {
     daily: { day: string; amount: number }[];
   }>({ yearly: [], monthly: [], weekly: [], daily: [] });
 
+  // Payment filters
+  const [filterZoneId, setFilterZoneId] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
+  // Zones display controls
+  const [onlyWithChief, setOnlyWithChief] = useState(false);
+  const zonesGridRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) { navigate('/login', { replace: true }); return; }
     setLoading(true);
     setError(null);
     fetch(`${apiBase}/api/supervisor/zones`, { headers: { Authorization: `Bearer ${token}` } })
@@ -68,6 +84,8 @@ const SupervisorDashboard = () => {
       .catch((e: any) => setError(e?.message || 'Failed to load zones'))
       .finally(() => setLoading(false));
   }, []);
+
+  const nf = useMemo(() => new Intl.NumberFormat(lang === 'rw' ? undefined : undefined, { maximumFractionDigits: 0 }), [lang]);
 
   // Build last N month labels
   function buildLastMonths(n = 6) {
@@ -138,21 +156,46 @@ const SupervisorDashboard = () => {
       try {
         setChartLoading(true);
         const token = localStorage.getItem('token');
-        if (!token) { setSeries({ yearly: [], monthly: [], weekly: [], daily: [] }); return; }
+        if (!token) { if (!cancelled) { setSeries({ yearly: [], monthly: [], weekly: [], daily: [] }); setRawPayments([]); } return; }
+        setChartError(null);
         const res = await fetch(`${apiBase}/api/payments/completed`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         const rows = Array.isArray(data?.payments) ? data.payments : [];
-        const s = aggregatePayments(rows);
-        if (!cancelled) setSeries(s);
-      } catch {
-        if (!cancelled) setSeries({ yearly: [], monthly: [], weekly: [], daily: [] });
+        if (!cancelled) setRawPayments(rows);
+      } catch (e: any) {
+        if (!cancelled) { setChartError(e?.message || t('supervisor.error.generic')); setRawPayments([]); setSeries({ yearly: [], monthly: [], weekly: [], daily: [] }); }
       } finally {
         if (!cancelled) setChartLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadKey]);
+
+  // Apply filters to payments and compute series
+  const filteredPayments = useMemo(() => {
+    return rawPayments.filter((p: any) => {
+      if (filterZoneId && String(p?.zone_id ?? '') !== String(filterZoneId)) return false;
+      const dateStr = p?.completed_at || p?.created_at || p?.updated_at || p?.inserted_at;
+      if (startDate) {
+        const s = new Date(startDate);
+        const d = new Date(dateStr || 0);
+        if (d < s) return false;
+      }
+      if (endDate) {
+        const e = new Date(endDate);
+        e.setHours(23,59,59,999);
+        const d = new Date(dateStr || 0);
+        if (d > e) return false;
+      }
+      return true;
+    });
+  }, [rawPayments, filterZoneId, startDate, endDate]);
+
+  useEffect(() => {
+    const s = aggregatePayments(filteredPayments);
+    setSeries(s);
+  }, [filteredPayments]);
 
   useEffect(() => {
     const map: any = { yearly: series.yearly, monthly: series.monthly, weekly: series.weekly, daily: series.daily };
@@ -164,33 +207,32 @@ const SupervisorDashboard = () => {
   const avgClientsPerZone = zones.length > 0 ? Math.round(totalClients / zones.length) : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-stone-800 to-amber-600 bg-clip-text text-transparent">
-            Zone Supervision
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-stone-800 to-amber-600 bg-clip-text text-transparent truncate">
+            {t('supervisor.title')}
           </h1>
-          <p className="text-stone-600 mt-2">Manage your assigned zones and oversee operations</p>
+          <p className="text-stone-600 mt-2 truncate">{t('supervisor.subtitle')}</p>
         </div>
 
-        <div className="flex items-center space-x-4 mt-4 sm:mt-0">
+        <div className="flex items-center space-x-4 mt-4 sm:mt-0 min-w-0">
           <div className="flex items-center space-x-2 text-sm text-stone-500">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span>All Systems Operational</span>
+            <span className="truncate">{t('supervisor.systemsOk')}</span>
           </div>
         </div>
       </div>
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Zones */}
-        <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+        <div onClick={() => zonesGridRef.current?.scrollIntoView({ behavior: 'smooth' })} className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-stone-600 mb-2">Total Zones</p>
-              <p className="text-3xl font-bold text-stone-900">{loading ? '...' : zones.length}</p>
-              <p className="text-sm text-stone-500 mt-1">Assigned to you</p>
+              <p className="text-sm font-semibold text-stone-600 mb-2">{t('supervisor.stats.totalZones')}</p>
+              <p className="text-3xl font-bold text-stone-900">{loading ? '...' : nf.format(zones.length)}</p>
+              <p className="text-sm text-stone-500 mt-1">{t('supervisor.stats.assignedToYou')}</p>
             </div>
             <div className="p-4 rounded-xl bg-gradient-to-br from-amber-600 to-orange-500 shadow-lg">
               <Icons.Zone />
@@ -202,12 +244,12 @@ const SupervisorDashboard = () => {
         <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-stone-600 mb-2">Active Chiefs</p>
-              <p className="text-3xl font-bold text-stone-900">{loading ? '...' : zonesWithChief}</p>
+              <p className="text-sm font-semibold text-stone-600 mb-2">{t('supervisor.stats.activeChiefs')}</p>
+              <p className="text-3xl font-bold text-stone-900">{loading ? '...' : nf.format(zonesWithChief)}</p>
               <div className="flex items-center mt-1">
                 <div className="inline-flex items-center px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
                   <Icons.TrendUp />
-                  <span className="ml-1">Active</span>
+                  <span className="ml-1">{t('supervisor.stats.active')}</span>
                 </div>
               </div>
             </div>
@@ -221,9 +263,9 @@ const SupervisorDashboard = () => {
         <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-stone-600 mb-2">Total Clients</p>
-              <p className="text-3xl font-bold text-stone-900">{loading ? '...' : totalClients.toLocaleString()}</p>
-              <p className="text-sm text-stone-500 mt-1">Across all zones</p>
+              <p className="text-sm font-semibold text-stone-600 mb-2">{t('supervisor.stats.totalClients')}</p>
+              <p className="text-3xl font-bold text-stone-900">{loading ? '...' : nf.format(totalClients)}</p>
+              <p className="text-sm text-stone-500 mt-1">{t('supervisor.stats.acrossZones')}</p>
             </div>
             <div className="p-4 rounded-xl bg-gradient-to-br from-lime-600 to-green-500 shadow-lg">
               <Icons.Clients />
@@ -235,9 +277,9 @@ const SupervisorDashboard = () => {
         <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-stone-600 mb-2">Avg per Zone</p>
-              <p className="text-3xl font-bold text-stone-900">{loading ? '...' : avgClientsPerZone}</p>
-              <p className="text-sm text-stone-500 mt-1">Clients per zone</p>
+              <p className="text-sm font-semibold text-stone-600 mb-2">{t('supervisor.stats.avgPerZone')}</p>
+              <p className="text-3xl font-bold text-stone-900">{loading ? '...' : nf.format(avgClientsPerZone)}</p>
+              <p className="text-sm text-stone-500 mt-1">{t('supervisor.stats.clientsPerZone')}</p>
             </div>
             <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500 shadow-lg">
               <Icons.Clients />
@@ -247,13 +289,22 @@ const SupervisorDashboard = () => {
       </div>
 
       {/* Payment Trends */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <div>
-            <h2 className="text-lg font-semibold text-stone-800">Payment Trends</h2>
-            <p className="text-xs text-stone-500 mt-1">Completed payments overview</p>
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 overflow-x-auto">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 min-w-0">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-stone-800">{t('supervisor.trends.title')}</h2>
+            <p className="text-xs text-stone-500 mt-1">{t('supervisor.trends.subtitle')}</p>
           </div>
           <div className="flex flex-wrap gap-2 mt-3 md:mt-0">
+            {/* Filters: zone and date range */}
+            <select className="px-2 py-1.5 rounded-md text-xs bg-stone-100 text-stone-700" value={filterZoneId} onChange={e => setFilterZoneId(e.target.value)}>
+              <option value="">{t('supervisor.filters.allZones')}</option>
+              {zones.map(z => (
+                <option key={z.id} value={z.id}>{z.zone_name}</option>
+              ))}
+            </select>
+            <input type="date" className="px-2 py-1.5 rounded-md text-xs bg-stone-100 text-stone-700" value={startDate} onChange={e => setStartDate(e.target.value)} aria-label={t('supervisor.filters.startDate')} />
+            <input type="date" className="px-2 py-1.5 rounded-md text-xs bg-stone-100 text-stone-700" value={endDate} onChange={e => setEndDate(e.target.value)} aria-label={t('supervisor.filters.endDate')} />
             {(['yearly','monthly','weekly','daily'] as const).map(key => (
               <button
                 key={key}
@@ -262,17 +313,22 @@ const SupervisorDashboard = () => {
                   chartType === key ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                 }`}
               >
-                {key === 'yearly' ? 'Year' : key === 'monthly' ? 'Monthly' : key === 'weekly' ? 'Weekly' : 'Daily'}
+                {key === 'yearly' ? t('supervisor.trends.year') : key === 'monthly' ? t('supervisor.trends.monthly') : key === 'weekly' ? t('supervisor.trends.weekly') : t('supervisor.trends.daily')}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="h-64 relative">
+        <div className="h-64 relative min-w-[480px] md:min-w-0">
           {chartLoading ? (
-            <div className="h-full flex items-center justify-center text-stone-500 text-sm">Loading payments...</div>
+            <div className="h-full flex items-center justify-center text-stone-500 text-sm"><LoadingSpinner /></div>
+          ) : chartError ? (
+            <div className="h-full flex flex-col items-center justify-center text-stone-600 text-sm gap-2">
+              <div>{chartError}</div>
+              <button onClick={() => setReloadKey(v => v + 1)} className="px-3 py-1.5 rounded-md bg-amber-600 text-white">{t('supervisor.retry')}</button>
+            </div>
           ) : (chartData as any[]).length === 0 ? (
-            <div className="h-full flex items-center justify-center text-stone-500 text-sm">No payments to display</div>
+            <div className="h-full flex items-center justify-center text-stone-500 text-sm">{t('supervisor.trends.empty')}</div>
           ) : (
             (() => {
               const amounts = (chartData as any[]).map((d: any) => Number(d.amount) || 0);
@@ -291,7 +347,7 @@ const SupervisorDashboard = () => {
                       return (
                         <div key={i} className="absolute left-0 w-full" style={{ top: `${pct}%` }}>
                           <div className="-translate-y-1/2 flex items-center">
-                            <span className="text-[10px] text-stone-500 w-8 text-right pr-1">{t.toLocaleString()}</span>
+                            <span className="text-[10px] text-stone-500 w-8 text-right pr-1">{nf.format(t)}</span>
                           </div>
                         </div>
                       );
@@ -299,7 +355,7 @@ const SupervisorDashboard = () => {
                   </div>
 
                   {/* Plot area */}
-                  <div className="flex-1 relative">
+                  <div className="flex-1 relative min-w-0">
                     {/* Gridlines */}
                     {ticks.map((t, i) => {
                       const pct = 100 - (t / niceMax) * 100;
@@ -334,7 +390,7 @@ const SupervisorDashboard = () => {
                             <div key={index} className="flex-1 flex flex-col items-center group">
                               <div className="text-center mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 <div className="bg-stone-800 text-white text-xs px-2 py-1 rounded-md shadow">
-                                  ${Number(item.amount).toLocaleString()}
+                                  {nf.format(Number(item.amount))}
                                 </div>
                               </div>
                               <div
@@ -351,8 +407,8 @@ const SupervisorDashboard = () => {
                     <div className="absolute left-0 right-0 bottom-0">
                       <div className="flex justify-between items-center">
                         {(chartData as any[]).map((item: any, index: number) => (
-                          <div key={index} className="flex-1 text-center">
-                            <p className="text-[11px] font-medium text-stone-600">
+                          <div key={index} className="flex-1 text-center truncate">
+                            <p className="text-[11px] font-medium text-stone-600 break-words">
                               {'year' in item ? item.year : 'month' in item ? item.month : 'week' in item ? item.week : item.day}
                             </p>
                           </div>
@@ -368,16 +424,21 @@ const SupervisorDashboard = () => {
       </div>
 
       {/* Zones Grid */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <div>
+      <div ref={zonesGridRef} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 min-w-0">
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-stone-800">Your Zones</h2>
-            <p className="text-stone-600 mt-1">Manage and supervise your assigned zones</p>
+            <p className="text-stone-600 mt-1 truncate">Manage and supervise your assigned zones</p>
           </div>
-          <div className="flex items-center space-x-2 mt-4 md:mt-0">
+          <div className="flex items-center space-x-3 mt-4 md:mt-0">
+            <label className="inline-flex items-center gap-2 text-sm text-stone-600">
+              <input type="checkbox" className="rounded" checked={onlyWithChief} onChange={e => setOnlyWithChief(e.target.checked)} />
+              {t('supervisor.filters.onlyWithChief')}
+            </label>
             <span className="text-sm text-stone-500">
-              {zones.length} zone{zones.length !== 1 ? 's' : ''} assigned
+              {nf.format(zones.length)} zone{zones.length !== 1 ? 's' : ''} assigned
             </span>
+            <button onClick={() => zonesGridRef.current?.scrollIntoView({ behavior: 'smooth' })} className="px-3 py-1.5 rounded-md bg-stone-100 text-stone-700 hover:bg-stone-200 text-sm">{t('supervisor.quick.viewZones')}</button>
           </div>
         </div>
 
@@ -417,12 +478,12 @@ const SupervisorDashboard = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {zones.map(zone => (
-              <div key={zone.id} className="group bg-white rounded-xl border border-amber-100 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Zone</span>
-                    <h3 className="text-xl font-bold text-stone-800">{zone.zone_name}</h3>
+            {zones.filter(z => !onlyWithChief || !!z.chief_username).map(zone => (
+              <div key={zone.id} className="group bg-white rounded-xl border border-amber-100 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                <div className="flex items-center justify-between mb-4 min-w-0">
+                  <div className="min-w-0">
+                    <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">{t('supervisor.zone')}</span>
+                    <h3 className="text-xl font-bold text-stone-800 break-words truncate">{zone.zone_name}</h3>
                   </div>
                   <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl flex items-center justify-center shadow-lg">
                     <Icons.Zone />
@@ -430,21 +491,21 @@ const SupervisorDashboard = () => {
                 </div>
 
                 <div className="space-y-3 mb-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center space-x-2 text-stone-600">
                       <Icons.Chief />
-                      <span className="font-medium">Zone Chief</span>
+                      <span className="font-medium">{t('supervisor.zoneChief')}</span>
                     </div>
-                    <span className={`font-semibold ${zone.chief_username ? 'text-stone-800' : 'text-amber-600'}`}>
-                      {zone.chief_username || 'Unassigned'}
+                    <span className={`font-semibold ${zone.chief_username ? 'text-stone-800' : 'text-amber-600'} truncate`}>
+                      {zone.chief_username || t('supervisor.unassigned')}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 text-stone-600">
                       <Icons.Clients />
-                      <span className="font-medium">Active Clients</span>
+                      <span className="font-medium">{t('supervisor.activeClients')}</span>
                     </div>
-                    <span className="text-lg font-bold text-stone-800">{zone.client_count}</span>
+                    <span className="text-lg font-bold text-stone-800">{nf.format(zone.client_count)}</span>
                   </div>
                 </div>
 
@@ -452,21 +513,19 @@ const SupervisorDashboard = () => {
                   to={`/supervisor/zones/${zone.id}/supervision`}
                   className="flex items-center justify-center space-x-2 w-full py-3 bg-stone-50 hover:bg-amber-50 text-stone-700 hover:text-amber-700 rounded-xl font-semibold transition-all duration-200 border border-stone-200 hover:border-amber-200 group-hover:shadow-md"
                 >
-                  <span>Manage Zone</span>
+                  <span>{t('supervisor.manageZone')}</span>
                   <Icons.Arrow />
                 </Link>
               </div>
             ))}
 
-            {!zones.length && !loading && (
+            {!zones.filter(z => !onlyWithChief || !!z.chief_username).length && !loading && (
               <div className="col-span-full text-center py-12">
                 <div className="w-20 h-20 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Icons.Zone />
                 </div>
-                <h3 className="text-xl font-semibold text-stone-700 mb-2">No zones assigned</h3>
-                <p className="text-stone-500 max-w-md mx-auto">
-                  You haven't been assigned to any zones yet. Please contact your administrator to get started with zone supervision.
-                </p>
+                <h3 className="text-xl font-semibold text-stone-700 mb-2">{t('supervisor.noZones.title')}</h3>
+                <p className="text-stone-500 max-w-md mx-auto">{t('supervisor.noZones.desc')}</p>
               </div>
             )}
           </div>

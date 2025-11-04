@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useI18n } from 'src/lib/i18n';
+import LoadingSpinner from 'src/Components/LoadingSpinner';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -33,6 +36,8 @@ type PaymentRow = {
 };
 
 const Reports = () => {
+  const { t, lang } = useI18n();
+  const navigate = useNavigate();
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +61,11 @@ const Reports = () => {
   const [clientPayments, setClientPayments] = useState<PaymentRow[]>([]);
   const [clientPaymentsTotals, setClientPaymentsTotals] = useState<{ count: number; amount_sum: number } | null>(null);
 
+  // Additional filters
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'failed' | 'pending'>('all');
+
   // Manager-only supervisors list and selection
   const [supervisors, setSupervisors] = useState<Array<{ id: number; username: string }>>([]);
   const [supervisorId, setSupervisorId] = useState<string>('');
@@ -68,6 +78,9 @@ const Reports = () => {
   const chiefClientsRef = useRef<HTMLDivElement | null>(null);
   const chiefPaymentsRef = useRef<HTMLDivElement | null>(null);
   const clientPaymentsRef = useRef<HTMLDivElement | null>(null);
+
+  // Number formatter
+  const nf = useMemo(() => new Intl.NumberFormat(lang === 'rw' ? undefined : undefined, { maximumFractionDigits: 0 }), [lang]);
 
   function printHtml(title: string, html: string) {
     const w = window.open('', '_blank');
@@ -98,59 +111,59 @@ const Reports = () => {
     const zonesList = zone ? [zone.zone_name] : (zoneNamesFromRows.length ? zoneNamesFromRows : []);
     const header = `
       <div style="margin-bottom:16px">
-        <div style="font-size:20px;font-weight:700;">UCS Company Ltd.</div>
-        <div style="font-size:14px;color:#374151;">Zones Summary Report</div>
+        <div style="font-size:20px;font-weight:700;">${t('reports.company')}</div>
+        <div style="font-size:14px;color:#374151;">${t('reports.export.zonesTitle')}</div>
         <div style="margin-top:8px;font-size:12px;color:#111827;">
-          <div><strong>Period:</strong> ${monthName} ${year}</div>
-          <div><strong>Filter:</strong> ${msFilter}</div>
-          <div><strong>Supervisor:</strong> ${sup ? sup.username : 'All'}</div>
-          <div><strong>Zones:</strong> ${zonesList.length ? zonesList.join(', ') : 'All'}</div>
+          <div><strong>${t('reports.period')}:</strong> ${monthName} ${year}</div>
+          <div><strong>${t('reports.filter')}:</strong> ${msFilter}</div>
+          <div><strong>${t('reports.supervisor')}:</strong> ${sup ? sup.username : t('reports.filters.all')}</div>
+          <div><strong>${t('reports.zones')}:</strong> ${zonesList.length ? zonesList.join(', ') : t('reports.filters.all')}</div>
         </div>
       </div>`;
-    printHtml(`Zones Summary ${year}-${month}`, header + section);
+    printHtml(`${t('reports.export.zonesTitle')} ${year}-${month}`, header + section);
   };
 
   const exportChiefClientsPdf = () => {
     const section = chiefClientsRef.current?.innerHTML || '';
     const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
     const header = `
-      <div style=\"margin-bottom:16px\">
-        <div style=\"font-size:20px;font-weight:700;\">UCS Company Ltd.</div>
-        <div style=\"font-size:14px;color:#374151;\">Chief Clients Report</div>
-        <div style=\"margin-top:8px;font-size:12px;color:#111827;\">
-          <div><strong>Period:</strong> ${monthName} ${year}</div>
-          <div><strong>Filter:</strong> ${chiefFilter}</div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:20px;font-weight:700;">${t('reports.company')}</div>
+        <div style="font-size:14px;color:#374151;">${t('reports.export.chiefClientsTitle')}</div>
+        <div style="margin-top:8px;font-size:12px;color:#111827;">
+          <div><strong>${t('reports.period')}:</strong> ${monthName} ${year}</div>
+          <div><strong>${t('reports.filter')}:</strong> ${chiefFilter}</div>
         </div>
       </div>`;
-    printHtml(`Chief Clients ${year}-${month} (${chiefFilter})`, header + section);
+    printHtml(`${t('reports.export.chiefClientsTitle')} ${year}-${month} (${chiefFilter})`, header + section);
   };
 
   const exportChiefPaymentsPdf = () => {
     const section = chiefPaymentsRef.current?.innerHTML || '';
     const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
     const header = `
-      <div style=\"margin-bottom:16px\">
-        <div style=\"font-size:20px;font-weight:700;\">UCS Company Ltd.</div>
-        <div style=\"font-size:14px;color:#374151;\">Chief Payments Report</div>
-        <div style=\"margin-top:8px;font-size:12px;color:#111827;\">
-          <div><strong>Period:</strong> ${monthName} ${year}</div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:20px;font-weight:700;">${t('reports.company')}</div>
+        <div style="font-size:14px;color:#374151;">${t('reports.export.chiefPaymentsTitle')}</div>
+        <div style="margin-top:8px;font-size:12px;color:#111827;">
+          <div><strong>${t('reports.period')}:</strong> ${monthName} ${year}</div>
         </div>
       </div>`;
-    printHtml(`Chief Payments ${year}-${month}`, header + section);
+    printHtml(`${t('reports.export.chiefPaymentsTitle')} ${year}-${month}`, header + section);
   };
 
   const exportClientPaymentsPdf = () => {
     const section = clientPaymentsRef.current?.innerHTML || '';
     const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
     const header = `
-      <div style=\"margin-bottom:16px\">
-        <div style=\"font-size:20px;font-weight:700;\">UCS Company Ltd.</div>
-        <div style=\"font-size:14px;color:#374151;\">My Payments Report</div>
-        <div style=\"margin-top:8px;font-size:12px;color:#111827;\">
-          <div><strong>Period:</strong> ${monthName} ${year}</div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:20px;font-weight:700;">${t('reports.company')}</div>
+        <div style="font-size:14px;color:#374151;">${t('reports.export.clientPaymentsTitle')}</div>
+        <div style="margin-top:8px;font-size:12px;color:#111827;">
+          <div><strong>${t('reports.period')}:</strong> ${monthName} ${year}</div>
         </div>
       </div>`;
-    printHtml(`My Payments ${year}-${month}`, header + section);
+    printHtml(`${t('reports.export.clientPaymentsTitle')} ${year}-${month}`, header + section);
   };
 
   // CSV helpers
@@ -176,23 +189,27 @@ const Reports = () => {
 
   // Exporters per view
   const exportManagerSupervisorZones = () => {
+    const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
     const rows = zoneRows.map(r => [r.zone_id, r.zone_name, r.clients_count, r.amount_to_pay, r.amount_paid, r.amount_remaining]);
-    downloadCsv(`zones_summary_${year}-${month}.csv`, ['Zone ID', 'Zone', '# Clients', 'Amount To Pay', 'Amount Paid', 'Remaining'], rows);
+    downloadCsv(`zones_summary_${year}-${month}_${msFilter || 'all'}_${ts}.csv`, ['Zone ID', t('reports.columns.zone'), t('reports.columns.clients'), t('reports.columns.toPay'), t('reports.columns.paid'), t('reports.columns.remaining')], rows);
   };
 
   const exportChiefClients = () => {
+    const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
     const rows = chiefRows.map(r => [r.client_id, r.client_username ?? '', r.amount_to_pay, r.amount_paid, r.amount_remaining]);
-    downloadCsv(`chief_clients_${year}-${month}_${chiefFilter}.csv`, ['Client ID', 'Client', 'To Pay', 'Paid', 'Remaining'], rows);
+    downloadCsv(`chief_clients_${year}-${month}_${chiefFilter}_${ts}.csv`, ['Client ID', t('reports.client'), t('reports.columns.toPay'), t('reports.columns.paid'), t('reports.columns.remaining')], rows);
   };
 
   const exportChiefPayments = () => {
-    const rows = chiefPayments.map(p => [p.id, p.completed_at ?? '', p.client_username ?? (p.client_id ?? ''), p.amount, p.currency ?? '', p.status ?? '']);
-    downloadCsv(`chief_payments_${year}-${month}.csv`, ['Payment ID', 'Date', 'Client', 'Amount', 'Currency', 'Status'], rows);
+    const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+    const rows = chiefPaymentsFiltered.map(p => [p.id, p.completed_at ?? '', p.client_username ?? (p.client_id ?? ''), p.amount, p.currency ?? '', p.status ?? '']);
+    downloadCsv(`chief_payments_${year}-${month}_${statusFilter}_${ts}.csv`, ['Payment ID', t('reports.date'), t('reports.client'), t('reports.amount'), t('reports.currency'), t('reports.status')], rows);
   };
 
   const exportClientPayments = () => {
-    const rows = clientPayments.map(p => [p.id, p.completed_at ?? '', p.amount, p.currency ?? '', p.status ?? '']);
-    downloadCsv(`my_payments_${year}-${month}.csv`, ['Payment ID', 'Date', 'Amount', 'Currency', 'Status'], rows);
+    const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+    const rows = clientPaymentsFiltered.map(p => [p.id, p.completed_at ?? '', p.amount, p.currency ?? '', p.status ?? '']);
+    downloadCsv(`my_payments_${year}-${month}_${statusFilter}_${ts}.csv`, ['Payment ID', t('reports.date'), t('reports.amount'), t('reports.currency'), t('reports.status')], rows);
   };
 
   // Handlers to prevent mismatched zone/supervisor combinations for manager
@@ -214,7 +231,10 @@ const Reports = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) {
+      navigate('/login', { replace: true });
+      return;
+    }
     setLoading(true);
     setError(null);
     fetch(`${apiBase}/api/me`, { headers: { Authorization: `Bearer ${token}` } })
@@ -329,14 +349,42 @@ const Reports = () => {
     }
   }, [role, year, month, msFilter, zoneId, supervisorId, chiefFilter]);
 
+  // Client-side filtered payments by date/status
+  const inRange = (iso: string | null) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    if (startDate) {
+      const s = new Date(startDate);
+      if (d < s) return false;
+    }
+    if (endDate) {
+      const e = new Date(endDate);
+      e.setHours(23, 59, 59, 999);
+      if (d > e) return false;
+    }
+    return true;
+  };
+
+  const byStatus = (s: string | null | undefined) =>
+    statusFilter === 'all' ? true : (s || '').toLowerCase() === statusFilter;
+
+  const chiefPaymentsFiltered = useMemo(
+    () => chiefPayments.filter(p => inRange(p.completed_at) && byStatus(p.status)),
+    [chiefPayments, startDate, endDate, statusFilter]
+  );
+  const clientPaymentsFiltered = useMemo(
+    () => clientPayments.filter(p => inRange(p.completed_at) && byStatus(p.status)),
+    [clientPayments, startDate, endDate, statusFilter]
+  );
+
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Reports</h2>
+      <h2 className="text-2xl font-bold mb-4">{t('reports.title')}</h2>
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-sm text-gray-700">Year</label>
+          <label className="block text-sm text-gray-700">{t('reports.filters.year')}</label>
           <select className="mt-1 border rounded px-2 py-2" value={year} onChange={e => setYear(Number(e.target.value))}>
             {Array.from({ length: 6 }).map((_, i) => {
               const y = new Date().getFullYear() - i;
@@ -345,7 +393,7 @@ const Reports = () => {
           </select>
         </div>
         <div>
-          <label className="block text-sm text-gray-700">Month</label>
+          <label className="block text-sm text-gray-700">{t('reports.filters.month')}</label>
           <select className="mt-1 border rounded px-2 py-2" value={month} onChange={e => setMonth(Number(e.target.value))}>
             {Array.from({ length: 12 }).map((_, i) => {
               const m = i + 1;
@@ -359,27 +407,27 @@ const Reports = () => {
         {(role === 'manager' || role === 'supervisor') && (
           <>
             <div>
-              <label className="block text-sm text-gray-700">Zone</label>
+              <label className="block text-sm text-gray-700">{t('reports.filters.zone')}</label>
               <select className="mt-1 border rounded px-2 py-2" value={zoneId} onChange={e => onChangeZone(e.target.value)}>
-                <option value="">All Zones</option>
+                <option value="">{t('reports.allZones')}</option>
                 {zones.map(z => (
                   <option key={z.id} value={z.id}>{z.zone_name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-700">Paid & Remaining</label>
+              <label className="block text-sm text-gray-700">{t('reports.filters.paidRemaining')}</label>
               <select className="mt-1 border rounded px-2 py-2" value={msFilter} onChange={e => setMsFilter(e.target.value as any)}>
-                <option value="all">All</option>
-                <option value="paid">Paid</option>
-                <option value="remaining">Remaining</option>
+                <option value="all">{t('reports.filters.all')}</option>
+                <option value="paid">{t('reports.filters.paid')}</option>
+                <option value="remaining">{t('reports.filters.remaining')}</option>
               </select>
             </div>
             {role === 'manager' && (
               <div>
-                <label className="block text-sm text-gray-700">Supervisor</label>
+                <label className="block text-sm text-gray-700">{t('reports.filters.supervisor')}</label>
                 <select className="mt-1 border rounded px-2 py-2" value={supervisorId} onChange={e => onChangeSupervisor(e.target.value)}>
-                  <option value="">All Supervisors</option>
+                  <option value="">{t('reports.allSupervisors')}</option>
                   {supervisors.map(s => (
                     <option key={s.id} value={s.id}>{s.username}</option>
                   ))}
@@ -387,39 +435,57 @@ const Reports = () => {
               </div>
             )}
             <div className="self-end pb-1 flex items-center gap-2">
-              <button onClick={exportManagerSupervisorZones} className="px-3 py-2 rounded bg-amber-600 text-white">Download CSV</button>
-              <button onClick={exportZonesPdf} className="px-3 py-2 rounded bg-amber-700 text-white">Download PDF</button>
+              <button onClick={exportManagerSupervisorZones} className="px-3 py-2 rounded bg-amber-600 text-white">{t('reports.downloadCsv')}</button>
+              <button onClick={exportZonesPdf} className="px-3 py-2 rounded bg-amber-700 text-white">{t('reports.downloadPdf')}</button>
             </div>
           </>
         )}
 
         {role === 'chief' && (
           <div className="flex items-end gap-3">
-            <div className="text-sm text-gray-600">Showing clients in your assigned zones</div>
+            <div className="text-sm text-gray-600">{t('reports.chief.showingClients')}</div>
             <div>
-              <label className="block text-sm text-gray-700">Paid&Remaining</label>
+              <label className="block text-sm text-gray-700">{t('reports.filters.paidRemaining')}</label>
               <select className="mt-1 border rounded px-2 py-2" value={chiefFilter} onChange={e => setChiefFilter(e.target.value as any)}>
-                <option value="all">All</option>
-                <option value="paid">Paid</option>
-                <option value="remaining">Remaining</option>
+                <option value="all">{t('reports.filters.all')}</option>
+                <option value="paid">{t('reports.filters.paid')}</option>
+                <option value="remaining">{t('reports.filters.remaining')}</option>
+              </select>
+            </div>
+            {/* Extra filters */}
+            <div>
+              <label className="block text-sm text-gray-700">{t('reports.filters.startDate')}</label>
+              <input type="date" className="mt-1 border rounded px-2 py-2" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700">{t('reports.filters.endDate')}</label>
+              <input type="date" className="mt-1 border rounded px-2 py-2" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700">{t('reports.filters.status')}</label>
+              <select className="mt-1 border rounded px-2 py-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)}>
+                <option value="all">{t('reports.status.all')}</option>
+                <option value="success">{t('reports.status.success')}</option>
+                <option value="failed">{t('reports.status.failed')}</option>
+                <option value="pending">{t('reports.status.pending')}</option>
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={exportChiefClients} className="px-3 py-2 rounded bg-amber-600 text-white">Download Clients CSV</button>
-              <button onClick={exportChiefClientsPdf} className="px-3 py-2 rounded bg-amber-700 text-white">Download PDF</button>
+              <button onClick={exportChiefClients} className="px-3 py-2 rounded bg-amber-600 text-white">{t('reports.downloadCsv')}</button>
+              <button onClick={exportChiefClientsPdf} className="px-3 py-2 rounded bg-amber-700 text-white">{t('reports.downloadPdf')}</button>
             </div>
           </div>
         )}
 
         {role === 'client' && (
-          <div className="text-sm text-gray-600">Showing your monthly summary</div>
+          <div className="text-sm text-gray-600">{t('reports.client.showingSummary')}</div>
         )}
       </div>
 
       {error && <div className="text-red-600 mb-3">{error}</div>}
 
       {loading ? (
-        <div>Loading…</div>
+        <div className="py-8 flex items-center justify-center"><LoadingSpinner /></div>
       ) : (
         <>
           {(role === 'manager' || role === 'supervisor') && (
@@ -427,37 +493,37 @@ const Reports = () => {
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left">Zone</th>
-                    <th className="px-4 py-3 text-right"># Clients</th>
-                    <th className="px-4 py-3 text-right">Amount To Pay</th>
-                    <th className="px-4 py-3 text-right">Amount Paid</th>
-                    <th className="px-4 py-3 text-right">Remaining</th>
+                    <th className="px-4 py-3 text-left">{t('reports.columns.zone')}</th>
+                    <th className="px-4 py-3 text-right">{t('reports.columns.clients')}</th>
+                    <th className="px-4 py-3 text-right">{t('reports.columns.toPay')}</th>
+                    <th className="px-4 py-3 text-right">{t('reports.columns.paid')}</th>
+                    <th className="px-4 py-3 text-right">{t('reports.columns.remaining')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {zoneRows.map(r => (
                     <tr key={r.zone_id} className="border-t">
-                      <td className="px-4 py-3">{r.zone_name}</td>
-                      <td className="px-4 py-3 text-right">{r.clients_count}</td>
-                      <td className="px-4 py-3 text-right">{r.amount_to_pay}</td>
-                      <td className="px-4 py-3 text-right">{r.amount_paid}</td>
-                      <td className="px-4 py-3 text-right">{r.amount_remaining}</td>
+                      <td className="px-4 py-3"><NavLink className="text-amber-700 hover:underline" to={`/zones/${r.zone_id}`}>{r.zone_name}</NavLink></td>
+                      <td className="px-4 py-3 text-right">{nf.format(r.clients_count)}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(r.amount_to_pay)}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(r.amount_paid)}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(r.amount_remaining)}</td>
                     </tr>
                   ))}
                   {!zoneRows.length && (
                     <tr>
-                      <td className="px-4 py-6 text-gray-500" colSpan={5}>No data found.</td>
+                      <td className="px-4 py-6 text-gray-500" colSpan={5}>{t('reports.noData')}</td>
                     </tr>
                   )}
                 </tbody>
                 {totals && (
                   <tfoot>
                     <tr className="bg-gray-50 font-semibold border-t">
-                      <td className="px-4 py-3 text-right">Totals</td>
-                      <td className="px-4 py-3 text-right">{totals.clients_count}</td>
-                      <td className="px-4 py-3 text-right">{totals.amount_to_pay}</td>
-                      <td className="px-4 py-3 text-right">{totals.amount_paid}</td>
-                      <td className="px-4 py-3 text-right">{totals.amount_remaining}</td>
+                      <td className="px-4 py-3 text-right">{t('reports.totals')}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(totals.clients_count)}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(totals.amount_to_pay)}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(totals.amount_paid)}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(totals.amount_remaining)}</td>
                     </tr>
                   </tfoot>
                 )}
@@ -470,24 +536,24 @@ const Reports = () => {
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left">Client</th>
-                    <th className="px-4 py-3 text-right">Amount To Pay</th>
-                    <th className="px-4 py-3 text-right">Amount Paid</th>
-                    <th className="px-4 py-3 text-right">Remaining</th>
+                    <th className="px-4 py-3 text-left">{t('reports.client')}</th>
+                    <th className="px-4 py-3 text-right">{t('reports.columns.toPay')}</th>
+                    <th className="px-4 py-3 text-right">{t('reports.columns.paid')}</th>
+                    <th className="px-4 py-3 text-right">{t('reports.columns.remaining')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {chiefRows.map(r => (
                     <tr key={r.client_id} className="border-t">
                       <td className="px-4 py-3">{r.client_username || r.client_id}</td>
-                      <td className="px-4 py-3 text-right">{r.amount_to_pay}</td>
-                      <td className="px-4 py-3 text-right">{r.amount_paid}</td>
-                      <td className="px-4 py-3 text-right">{r.amount_remaining}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(r.amount_to_pay)}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(r.amount_paid)}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(r.amount_remaining)}</td>
                     </tr>
                   ))}
                   {!chiefRows.length && (
                     <tr>
-                      <td className="px-4 py-6 text-gray-500" colSpan={4}>No clients found.</td>
+                      <td className="px-4 py-6 text-gray-500" colSpan={4}>{t('reports.noData')}</td>
                     </tr>
                   )}
                 </tbody>
@@ -498,44 +564,44 @@ const Reports = () => {
           {role === 'chief' && (
             <div ref={chiefPaymentsRef} className="bg-white rounded-lg shadow overflow-auto mt-6">
               <div className="px-4 py-3 font-semibold flex items-center justify-between">
-                <span>Payments (filtered)</span>
+                <span>{t('reports.payments.heading')}</span>
                 <div className="flex items-center gap-2">
-                  <button onClick={exportChiefPayments} className="px-3 py-1 rounded bg-amber-600 text-white">Download CSV</button>
-                  <button onClick={exportChiefPaymentsPdf} className="px-3 py-1 rounded bg-amber-700 text-white">Download PDF</button>
+                  <button onClick={exportChiefPayments} className="px-3 py-1 rounded bg-amber-600 text-white">{t('reports.downloadCsv')}</button>
+                  <button onClick={exportChiefPaymentsPdf} className="px-3 py-1 rounded bg-amber-700 text-white">{t('reports.downloadPdf')}</button>
                 </div>
               </div>
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left">Date</th>
-                    <th className="px-4 py-3 text-left">Client</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                    <th className="px-4 py-3 text-left">Currency</th>
-                    <th className="px-4 py-3 text-left">Status</th>
+                    <th className="px-4 py-3 text-left">{t('reports.date')}</th>
+                    <th className="px-4 py-3 text-left">{t('reports.client')}</th>
+                    <th className="px-4 py-3 text-right">{t('reports.amount')}</th>
+                    <th className="px-4 py-3 text-left">{t('reports.currency')}</th>
+                    <th className="px-4 py-3 text-left">{t('reports.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {chiefPayments.map(p => (
+                  {chiefPaymentsFiltered.map(p => (
                     <tr key={p.id} className="border-t">
                       <td className="px-4 py-3">{p.completed_at ? new Date(p.completed_at).toLocaleString() : '-'}</td>
                       <td className="px-4 py-3">{p.client_username || p.client_id}</td>
-                      <td className="px-4 py-3 text-right">{p.amount}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(p.amount)}</td>
                       <td className="px-4 py-3">{p.currency || ''}</td>
                       <td className="px-4 py-3">{p.status || ''}</td>
                     </tr>
                   ))}
-                  {!chiefPayments.length && (
+                  {!chiefPaymentsFiltered.length && (
                     <tr>
-                      <td className="px-4 py-6 text-gray-500" colSpan={5}>No payments found.</td>
+                      <td className="px-4 py-6 text-gray-500" colSpan={5}>{t('reports.noData')}</td>
                     </tr>
                   )}
                 </tbody>
                 {chiefPaymentsTotals && (
                   <tfoot>
                     <tr className="bg-gray-50 font-semibold border-t">
-                      <td className="px-4 py-3 text-right" colSpan={2}>Totals</td>
-                      <td className="px-4 py-3 text-right">{chiefPaymentsTotals.amount_sum}</td>
-                      <td className="px-4 py-3" colSpan={2}>Count: {chiefPaymentsTotals.count}</td>
+                      <td className="px-4 py-3 text-right" colSpan={2}>{t('reports.totals')}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(chiefPaymentsTotals.amount_sum)}</td>
+                      <td className="px-4 py-3" colSpan={2}>{t('reports.count')}: {nf.format(chiefPaymentsTotals.count)}</td>
                     </tr>
                   </tfoot>
                 )}
@@ -546,42 +612,42 @@ const Reports = () => {
           {role === 'client' && (
             <div ref={clientPaymentsRef} className="bg-white rounded-lg shadow overflow-auto">
               <div className="px-4 py-3 font-semibold flex items-center justify-between">
-                <span>My Payments (filtered)</span>
+                <span>{t('reports.myPayments.heading')}</span>
                 <div className="flex items-center gap-2">
-                  <button onClick={exportClientPayments} className="px-3 py-1 rounded bg-amber-600 text-white">Download CSV</button>
-                  <button onClick={exportClientPaymentsPdf} className="px-3 py-1 rounded bg-amber-700 text-white">Download PDF</button>
+                  <button onClick={exportClientPayments} className="px-3 py-1 rounded bg-amber-600 text-white">{t('reports.downloadCsv')}</button>
+                  <button onClick={exportClientPaymentsPdf} className="px-3 py-1 rounded bg-amber-700 text-white">{t('reports.downloadPdf')}</button>
                 </div>
               </div>
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left">Date</th>
-                    <th className="px-4 py-3 text-right">Amount</th>
-                    <th className="px-4 py-3 text-left">Currency</th>
-                    <th className="px-4 py-3 text-left">Status</th>
+                    <th className="px-4 py-3 text-left">{t('reports.date')}</th>
+                    <th className="px-4 py-3 text-right">{t('reports.amount')}</th>
+                    <th className="px-4 py-3 text-left">{t('reports.currency')}</th>
+                    <th className="px-4 py-3 text-left">{t('reports.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {clientPayments.map(p => (
+                  {clientPaymentsFiltered.map(p => (
                     <tr key={p.id} className="border-t">
                       <td className="px-4 py-3">{p.completed_at ? new Date(p.completed_at).toLocaleString() : '-'}</td>
-                      <td className="px-4 py-3 text-right">{p.amount}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(p.amount)}</td>
                       <td className="px-4 py-3">{p.currency || ''}</td>
                       <td className="px-4 py-3">{p.status || ''}</td>
                     </tr>
                   ))}
-                  {!clientPayments.length && (
+                  {!clientPaymentsFiltered.length && (
                     <tr>
-                      <td className="px-4 py-6 text-gray-500" colSpan={4}>No payments found.</td>
+                      <td className="px-4 py-6 text-gray-500" colSpan={4}>{t('reports.noData')}</td>
                     </tr>
                   )}
                 </tbody>
                 {clientPaymentsTotals && (
                   <tfoot>
                     <tr className="bg-gray-50 font-semibold border-t">
-                      <td className="px-4 py-3 text-right">Totals</td>
-                      <td className="px-4 py-3 text-right">{clientPaymentsTotals.amount_sum}</td>
-                      <td className="px-4 py-3" colSpan={2}>Count: {clientPaymentsTotals.count}</td>
+                      <td className="px-4 py-3 text-right">{t('reports.totals')}</td>
+                      <td className="px-4 py-3 text-right">{nf.format(clientPaymentsTotals.amount_sum)}</td>
+                      <td className="px-4 py-3" colSpan={2}>{t('reports.count')}: {nf.format(clientPaymentsTotals.count)}</td>
                     </tr>
                   </tfoot>
                 )}

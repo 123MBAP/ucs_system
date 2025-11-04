@@ -1,18 +1,81 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { SVGProps } from 'react';
 import { BarChart3, Receipt, User, MessageSquare } from 'lucide-react';
+import { useI18n } from 'src/lib/i18n';
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 // Icon components
 const Icons = {
-  Client: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
-  Payment: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" /></svg>,
-  Phone: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>,
-  Check: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
-  Loading: () => <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m8-10h-4M6 12H2" /></svg>,
-  Alert: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  Client: (props: SVGProps<SVGSVGElement>) => (
+    <svg
+      {...props}
+      className={`w-6 h-6 ${props.className || ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  ),
+  Payment: (props: SVGProps<SVGSVGElement>) => (
+    <svg
+      {...props}
+      className={`w-6 h-6 ${props.className || ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+    </svg>
+  ),
+  Phone: (props: SVGProps<SVGSVGElement>) => (
+    <svg
+      {...props}
+      className={`w-5 h-5 ${props.className || ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+    </svg>
+  ),
+  Check: (props: SVGProps<SVGSVGElement>) => (
+    <svg
+      {...props}
+      className={`w-5 h-5 ${props.className || ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    </svg>
+  ),
+  Loading: (props: SVGProps<SVGSVGElement>) => (
+    <svg
+      {...props}
+      className={`w-5 h-5 animate-spin ${props.className || ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m8-10h-4M6 12H2" />
+    </svg>
+  ),
+  Alert: (props: SVGProps<SVGSVGElement>) => (
+    <svg
+      {...props}
+      className={`w-5 h-5 ${props.className || ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
 };
 
 const ClientDashboard = () => {
+  const { t } = useI18n();
   const clientName = 'John Client';
 
   // zoneId not needed in component state
@@ -31,7 +94,15 @@ const ClientDashboard = () => {
     complained_client_ids?: number[];
   }>>([]);
   const [_complaining, setComplaining] = useState<Record<number, boolean>>({});
-  const weekdayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const weekdayNames = useMemo(() => [
+    t('weekday.mon'),
+    t('weekday.tue'),
+    t('weekday.wed'),
+    t('weekday.thu'),
+    t('weekday.fri'),
+    t('weekday.sat'),
+    t('weekday.sun')
+  ], [t]);
   const zoneServiceDayNames = useMemo(() => zoneServiceDays
     .map(d => weekdayNames[(Number(d) || 1) - 1])
     .filter(Boolean), [zoneServiceDays]);
@@ -155,255 +226,292 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent">
-              Client Dashboard
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-charcoal">
+              {t('clientDashboard.title')}
             </h1>
-            <p className="text-slate-600 mt-2">Welcome back! Manage your payments and account</p>
+            <p className="text-gray-600 mt-2 text-sm sm:text-base">{t('clientDashboard.subtitle')}</p>
           </div>
           <div className="flex items-center space-x-4 mt-4 sm:mt-0">
-            <div className="flex items-center space-x-2 text-sm text-slate-500">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
               <span>Account Active</span>
             </div>
           </div>
         </div>
 
-        {/* Client Profile Card */}
-        <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-2">
-                <span className="text-sm font-semibold text-slate-600">Client Profile</span>
-                <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium">
-                  Verified
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-slate-900">{clientName}</p>
-              <p className="text-slate-600 mt-1">Active client since 2024</p>
-            </div>
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Icons.Client />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="text-sm font-semibold text-slate-600">Service Day</span>
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          {/* Left Column - Profile and Info Cards */}
+          <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+            {/* Client Profile Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 transition-all duration-300 hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <span className="text-sm font-semibold text-gray-600">{t('client.profile')}</span>
+                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full font-medium border border-green-200">
+                      {t('common.verified')}
+                    </span>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-bold text-charcoal">{clientName}</p>
+                  <p className="text-gray-600 mt-1 text-sm sm:text-base">Active client since 2024</p>
                 </div>
-                <p className="text-slate-600">The day of service in your zone is:</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Icons.Client />
+                </div>
+              </div>
+            </div>
+
+            {/* Info Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {/* Service Day Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center space-x-2 mb-3">
+                  <span className="text-sm font-semibold text-gray-600">{t('clientDashboard.serviceDay')}</span>
+                </div>
+                <p className="text-gray-600 text-sm mb-2">The day of service in your zone is:</p>
+                <p className="text-lg sm:text-xl font-bold text-charcoal">
                   {zoneServiceDayNames.length ? zoneServiceDayNames.join(', ') : 'Not set'}
                 </p>
               </div>
-            </div>
-          </div>
-          {/* Amount To Pay (Monthly) */}
-          <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="text-sm font-semibold text-slate-600">Amount To Pay</span>
+
+              {/* Amount To Pay Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center space-x-2 mb-3">
+                  <span className="text-sm font-semibold text-gray-600">{t('clientDashboard.amountToPay')}</span>
                 </div>
-                <p className="text-3xl font-bold text-slate-900">{monthlyAmount != null ? `$${monthlyAmount.toLocaleString()}` : '—'}</p>
-                <p className="text-slate-600 mt-2">Your monthly amount</p>
+                <p className="text-lg sm:text-xl font-bold text-charcoal">
+                  {monthlyAmount != null ? `$${monthlyAmount.toLocaleString()}` : '—'}
+                </p>
+                <p className="text-gray-600 text-sm mt-1">Your monthly amount</p>
                 {monthlyAmount != null && (
-                  <p className="text-slate-500 text-sm mt-1">Remaining this month: ${Math.max(0, monthlyAmount - paidThisMonth).toLocaleString()}</p>
+                  <p className="text-gray-500 text-xs mt-2">
+                    Remaining this month: ${Math.max(0, monthlyAmount - paidThisMonth).toLocaleString()}
+                  </p>
                 )}
               </div>
-              <div className="text-4xl opacity-20">
-                <Icons.Payment />
-              </div>
-            </div>
-          </div>
-          {/* Amount Paid This Month */}
-          <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Icons.Payment />
-                  <span className="text-sm font-semibold text-slate-600">Amount Paid This Month</span>
+
+              {/* Amount Paid This Month Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Icons.Payment className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-semibold text-gray-600">{t('clientDashboard.paidThisMonth')}</span>
                 </div>
-                <p className="text-3xl font-bold text-slate-900">${paidThisMonth.toLocaleString()}</p>
-                <p className="text-slate-600 mt-2">Total paid this month</p>
+                <p className="text-lg sm:text-xl font-bold text-charcoal">${paidThisMonth.toLocaleString()}</p>
+                <p className="text-gray-600 text-sm mt-1">Total paid this month</p>
                 {monthlyAmount != null && (
                   <div className="flex items-center space-x-2 mt-3">
-                    <div className={`w-2 h-2 rounded-full ${paidThisMonth >= monthlyAmount ? 'bg-green-500' : 'bg-amber-500'}`}></div>
-                    <span className={`text-sm font-medium ${paidThisMonth >= monthlyAmount ? 'text-green-600' : 'text-amber-600'}`}>
-                      {paidThisMonth >= monthlyAmount ? 'Payment up to date' : 'Payment pending'}
+                    <div className={`w-2 h-2 rounded-full ${paidThisMonth >= monthlyAmount ? 'bg-green-600' : 'bg-amber-500'}`}></div>
+                    <span className={`text-xs font-medium ${paidThisMonth >= monthlyAmount ? 'text-green-600' : 'text-amber-600'}`}>
+                      {paidThisMonth >= monthlyAmount ? t('clientDashboard.paymentUpToDate') : t('clientDashboard.paymentPending')}
                     </span>
                   </div>
                 )}
               </div>
-              <div className="text-4xl opacity-20">
-                <Icons.Payment />
-              </div>
-            </div>
-          </div>
 
-          {/* Service Schedule Card */}
-          <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center space-x-2 mb-4">
-              <h2 className="text-xl font-bold text-slate-800">Service Schedule</h2>
-            </div>
-            {visibleSchedule.length === 0 ? (
-              <div className="text-slate-600">No scheduled services yet.</div>
-            ) : (
-              <div className="divide-y divide-slate-200">
-                {visibleSchedule.map((e) => {
-                  const dayName = weekdayNames[(Number(e.service_day) || 1) - 1] || '';
-                  const status = e.supervisor_status;
-                  const badge = status == null
-                    ? { text: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200' }
-                    : status === 'complete'
-                    ? { text: 'Completed', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
-                    : { text: 'Not Completed', cls: 'bg-red-50 text-red-700 border-red-200' };
-                  return (
-                    <div key={e.id} className="py-4 flex items-start justify-between">
-                      <div>
-                        <div className="text-slate-900 font-semibold">{dayName}</div>
-                        <div className="text-slate-600 text-sm">{e.service_start?.slice(0,5)} - {e.service_end?.slice(0,5)}</div>
-                        <div className="text-slate-500 text-xs mt-1">
-                          {e.vehicle_plate ? `Vehicle: ${e.vehicle_plate}` : ''}
-                          {e.vehicle_plate && e.driver_username ? ' • ' : ''}
-                          {e.driver_username ? `Driver: ${e.driver_username}` : ''}
-                        </div>
-                        {status === 'not_complete' && e.supervisor_reason && (
-                          <div className="text-red-600 text-xs mt-1">Reason: {e.supervisor_reason}</div>
-                        )}
-                        {status === 'complete' && (e.complained_client_ids || []).includes(clientId || -1) && (
-                          <div className="text-amber-700 text-xs mt-1">Complaint submitted. Awaiting review.</div>
-                        )}
-                        {status === 'complete' && canComplain(e) && (
-                          <button
-                            className="text-xs text-red-600 font-medium mt-2"
-                            onClick={() => submitComplaint(e.id)}
-                          >
-                            My home not yet
-                          </button>
-                        )}
-                      </div>
-                      <span className={`text-xs font-medium px-2 py-1 rounded-lg border ${badge.cls}`}>{badge.text}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Payment Form Card */}
-          <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-            <div className="flex items-center space-x-2 mb-6">
-              <Icons.Payment />
-              <h2 className="text-xl font-bold text-slate-800">Make a Payment</h2>
-            </div>
-
-            {/* Status Messages */}
-            {status.type !== 'idle' && (
-              <div className={`mb-6 p-4 rounded-xl border backdrop-blur-sm transition-all duration-300 ${
-                status.type === 'pending'
-                  ? 'bg-blue-50/80 border-blue-200 text-blue-700'
-                  : status.type === 'success'
-                  ? 'bg-green-50/80 border-green-200 text-green-700'
-                  : status.type === 'error'
-                  ? 'bg-red-50/80 border-red-200 text-red-700'
-                  : ''
-              }`}>
-                <div className="flex items-center space-x-2">
-                  {status.type === 'pending' && <Icons.Loading />}
-                  {status.type === 'success' && <Icons.Check />}
-                  {status.type === 'error' && <Icons.Alert />}
-                  <span className="font-medium">{status.message}</span>
+              {/* Quick Actions Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 className="text-sm font-semibold text-charcoal mb-4">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'Payment History', Icon: BarChart3, color: 'text-amber-600 bg-amber-50' },
+                    { label: 'Receipts', Icon: Receipt, color: 'text-green-600 bg-green-50' },
+                    { label: 'Profile', Icon: User, color: 'text-charcoal bg-gray-100' },
+                    { label: 'Support', Icon: MessageSquare, color: 'text-gray-600 bg-gray-50' },
+                  ].map(({ label, Icon, color }, index) => (
+                    <button
+                      key={index}
+                      className="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-lg hover:bg-amber-50 border border-gray-200 hover:border-amber-200 transition-all duration-200 group"
+                    >
+                      <span className={`mb-2 p-2 rounded-lg ${color}`}>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="text-xs font-medium text-charcoal text-center group-hover:text-amber-700">{label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
+            </div>
 
-            <form onSubmit={handlePay} className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3">
-                  <div className="flex items-center space-x-2">
-                    <Icons.Phone />
-                    <span>Phone Number</span>
-                  </div>
-                </label>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="e.g. +2507XXXXXXXX"
-                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  disabled={submitting}
-                />
-                <p className="text-xs text-slate-500 mt-2">
-                  Enter your mobile money phone number
-                </p>
+            {/* Service Schedule Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <h2 className="text-lg sm:text-xl font-bold text-charcoal">{t('clientDashboard.serviceSchedule')}</h2>
               </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className={`w-full flex items-center justify-center space-x-2 py-4 rounded-xl font-semibold shadow-lg transition-all duration-200 ${
-                  submitting 
-                    ? 'bg-blue-400 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl'
-                }`}
-              >
-                {submitting ? (
-                  <>
-                    <Icons.Loading />
-                    <span className="text-white">Processing Payment...</span>
-                  </>
-                ) : (
-                  <span className="text-white">Pay Now</span>
-                )}
-              </button>
-            </form>
-
-            {/* Payment Info */}
-            <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
-              <h3 className="text-sm font-semibold text-slate-700 mb-2">Payment Information</h3>
-              <ul className="text-xs text-slate-600 space-y-1">
-                <li>• Payments are processed via mobile money</li>
-                <li>• You will receive an STK push notification</li>
-                <li>• Standard transaction fees apply</li>
-                <li>• Receipts are generated automatically</li>
-              </ul>
+              {visibleSchedule.length === 0 ? (
+                <div className="text-gray-600 text-center py-8">{t('clientDashboard.noSchedule')}</div>
+              ) : (
+                <div className="space-y-3">
+                  {visibleSchedule.map((e) => {
+                    const dayName = weekdayNames[(Number(e.service_day) || 1) - 1] || '';
+                    const status = e.supervisor_status;
+                    const badge = status == null
+                      ? { text: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200' }
+                      : status === 'complete'
+                      ? { text: 'Completed', cls: 'bg-green-50 text-green-700 border-green-200' }
+                      : { text: 'Not Completed', cls: 'bg-red-50 text-red-700 border-red-200' };
+                    return (
+                      <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                              <div className="text-charcoal font-semibold text-sm sm:text-base">{dayName}</div>
+                              <div className="text-gray-600 text-xs sm:text-sm">{e.service_start?.slice(0,5)} - {e.service_end?.slice(0,5)}</div>
+                            </div>
+                            <span className={`text-xs font-medium px-2 py-1 rounded-lg border ${badge.cls} self-start sm:self-auto`}>
+                              {badge.text}
+                            </span>
+                          </div>
+                          <div className="text-gray-500 text-xs mt-2">
+                            {e.vehicle_plate ? `Vehicle: ${e.vehicle_plate}` : ''}
+                            {e.vehicle_plate && e.driver_username ? ' • ' : ''}
+                            {e.driver_username ? `Driver: ${e.driver_username}` : ''}
+                          </div>
+                          {status === 'not_complete' && e.supervisor_reason && (
+                            <div className="text-red-600 text-xs mt-2">Reason: {e.supervisor_reason}</div>
+                          )}
+                          {status === 'complete' && (e.complained_client_ids || []).includes(clientId || -1) && (
+                            <div className="text-amber-700 text-xs mt-2">Complaint submitted. Awaiting review.</div>
+                          )}
+                          {status === 'complete' && canComplain(e) && (
+                            <button
+                              className="text-xs text-amber-700 font-medium mt-2 hover:text-amber-800 transition-colors"
+                              onClick={() => submitComplaint(e.id)}
+                            >
+                              My home not yet serviced
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: 'View Payment History', Icon: BarChart3, onClick: () => {} , color: 'text-indigo-600 bg-indigo-50'},
-              { label: 'Download Receipts', Icon: Receipt, onClick: () => {} , color: 'text-emerald-600 bg-emerald-50'},
-              { label: 'Update Profile', Icon: User, onClick: () => {} , color: 'text-blue-600 bg-blue-50'},
-              { label: 'Get Support', Icon: MessageSquare, onClick: () => {} , color: 'text-orange-600 bg-orange-50'},
-            ].map(({ label, Icon, onClick, color }, index) => (
-              <button
-                key={index}
-                onClick={onClick}
-                className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl hover:bg-white border border-slate-200 hover:border-blue-200 transition-all duration-200 group hover:shadow-md"
-              >
-                <span className={`mb-2 p-2 rounded-lg ${color}`}>
-                  <Icon className="h-6 w-6" />
-                </span>
-                <span className="text-sm font-medium text-slate-700 text-center group-hover:text-blue-600">{label}</span>
-              </button>
-            ))}
+          {/* Right Column - Payment Form */}
+          <div className="space-y-6 sm:space-y-8">
+            {/* Payment Form Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sticky top-6">
+              <div className="flex items-center space-x-2 mb-6">
+                <Icons.Payment className="w-5 h-5 text-amber-600" />
+                <h2 className="text-lg sm:text-xl font-bold text-charcoal">{t('payment.makePayment')}</h2>
+              </div>
+
+              {/* Status Messages */}
+              {status.type !== 'idle' && (
+                <div className={`mb-6 p-4 rounded-xl border transition-all duration-300 ${
+                  status.type === 'pending'
+                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                    : status.type === 'success'
+                    ? 'bg-green-50 border-green-200 text-green-700'
+                    : status.type === 'error'
+                    ? 'bg-red-50 border-red-200 text-red-700'
+                    : ''
+                }`}>
+                  <div className="flex items-center space-x-2">
+                    {status.type === 'pending' && <Icons.Loading />}
+                    {status.type === 'success' && <Icons.Check />}
+                    {status.type === 'error' && <Icons.Alert />}
+                    <span className="font-medium text-sm">{status.message}</span>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handlePay} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-charcoal mb-3">
+                    <div className="flex items-center space-x-2">
+                      <Icons.Phone className="w-4 h-4 text-amber-600" />
+                      <span>{t('payment.phoneNumber')}</span>
+                    </div>
+                  </label>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="e.g. +2507XXXXXXXX"
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 text-charcoal placeholder-gray-400"
+                    disabled={submitting}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Enter your mobile money phone number
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className={`w-full flex items-center justify-center space-x-2 py-4 rounded-xl font-semibold shadow-sm transition-all duration-200 ${
+                    submitting 
+                      ? 'bg-amber-400 cursor-not-allowed' 
+                      : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 hover:shadow-md'
+                  }`}
+                >
+                  {submitting ? (
+                    <>
+                      <Icons.Loading />
+                      <span className="text-white text-sm">{t('payment.processing')}</span>
+                    </>
+                  ) : (
+                    <span className="text-white text-sm">{t('payment.payNow')}</span>
+                  )}
+                </button>
+              </form>
+
+              {/* Payment Info */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <h3 className="text-sm font-semibold text-charcoal mb-2">{t('payment.infoTitle')}</h3>
+                <ul className="text-xs text-gray-600 space-y-1">
+                  <li>• Payments are processed via mobile money</li>
+                  <li>• You will receive an STK push notification</li>
+                  <li>• Standard transaction fees apply</li>
+                  <li>• Receipts are generated automatically</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <style>{`
+        .text-charcoal {
+          color: #1E1E1E;
+        }
+        .bg-amber-50 {
+          background-color: #FFFBEB;
+        }
+        .bg-amber-500 {
+          background-color: #D97706;
+        }
+        .bg-amber-600 {
+          background-color: #B45309;
+        }
+        .text-amber-600 {
+          color: #D97706;
+        }
+        .text-amber-700 {
+          color: #B45309;
+        }
+        .border-amber-200 {
+          border-color: #FCD34D;
+        }
+        .bg-green-50 {
+          background-color: #F0FDF4;
+        }
+        .text-green-600 {
+          color: #15803D;
+        }
+        .border-green-200 {
+          border-color: #BBF7D0;
+        }
+      `}</style>
     </div>
   );
 };

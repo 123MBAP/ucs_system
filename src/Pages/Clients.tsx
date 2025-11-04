@@ -38,6 +38,7 @@ const Clients = () => {
   const [supervisorId, setSupervisorId] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [moveTargetZone, setMoveTargetZone] = useState<string>('');
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -190,20 +191,31 @@ const Clients = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
       <div className="mb-2">
-        <button onClick={() => navigate(-1)} className="text-blue-600 underline text-sm">← Back</button>
+        <button onClick={() => navigate(-1)} className="text-amber-600 underline text-sm">← Back</button>
       </div>
-      <h2 className="text-2xl font-bold mb-4">Clients</h2>
+      <h2 className="text-2xl font-bold mb-4" style={{ color: '#1E1E1E' }}>Clients</h2>
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-sm text-gray-700">Search</label>
-          <input value={search} onChange={e => setSearch(e.target.value)} className="mt-1 border rounded px-3 py-2" placeholder="Search by name, username or phone" />
+          <label className="block text-sm" style={{ color: '#1E1E1E' }}>Search</label>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="mt-1 border rounded px-3 py-2 focus:outline-none focus:ring-2"
+            style={{ borderColor: '#E2E8F0' }}
+            placeholder="Search by name, username or phone"
+          />
         </div>
         {role === 'manager' && (
           <div>
-            <label className="block text-sm text-gray-700">Supervisor</label>
-            <select className="mt-1 border rounded px-2 py-2" value={supervisorId} onChange={e => setSupervisorId(e.target.value)}>
+            <label className="block text-sm" style={{ color: '#1E1E1E' }}>Supervisor</label>
+            <select
+              className="mt-1 border rounded px-2 py-2 focus:outline-none focus:ring-2"
+              style={{ borderColor: '#E2E8F0' }}
+              value={supervisorId}
+              onChange={e => setSupervisorId(e.target.value)}
+            >
               <option value="">All Supervisors</option>
               {supervisors.map(s => (
                 <option key={s.id} value={s.id}>{s.username}</option>
@@ -237,7 +249,9 @@ const Clients = () => {
                       <tr key={c.id}>
                         <td className="px-3 py-2">
                           {c.profile_image_url ? (
-                            <img src={c.profile_image_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            <button onClick={() => setPreviewPhoto(c.profile_image_url!)} className="block">
+                              <img src={c.profile_image_url} alt="" className="w-10 h-10 rounded-full object-cover cursor-zoom-in" />
+                            </button>
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-gray-200"></div>
                           )}
@@ -250,7 +264,8 @@ const Clients = () => {
                           {/* Only chiefs can pay */}
                           <Link
                             to={`/payments?scope=chief&clientId=${encodeURIComponent(String(c.id))}&clientName=${encodeURIComponent(((c.name ? `${c.name.first || ''} ${c.name.last || ''}`.trim() : '') || c.username))}`}
-                            className="px-2 py-1 text-sm bg-amber-500 text-black rounded"
+                            className="px-2 py-1 text-sm rounded"
+                            style={{ backgroundColor: '#D97706', color: '#1E1E1E' }}
                           >Pay</Link>
                         </td>
                       </tr>
@@ -299,7 +314,9 @@ const Clients = () => {
                           </td>
                           <td className="px-3 py-2">
                             {c.profile_image_url ? (
-                              <img src={c.profile_image_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                              <button onClick={() => setPreviewPhoto(c.profile_image_url!)} className="block">
+                                <img src={c.profile_image_url} alt="" className="w-10 h-10 rounded-full object-cover cursor-zoom-in" />
+                              </button>
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-gray-200"></div>
                             )}
@@ -323,13 +340,13 @@ const Clients = () => {
                 <div className="p-3 border-t flex items-center gap-3">
                   <button disabled={!selectedIds.size} onClick={bulkDelete} className={`px-3 py-2 rounded text-white ${selectedIds.size ? 'bg-red-600' : 'bg-gray-300 cursor-not-allowed'}`}>Delete Selected</button>
                   <div className="flex items-center gap-2">
-                    <select className="border rounded px-2 py-2" value={moveTargetZone} onChange={e => setMoveTargetZone(e.target.value)}>
+                    <select className="border rounded px-2 py-2 focus:outline-none focus:ring-2" style={{ borderColor: '#E2E8F0' }} value={moveTargetZone} onChange={e => setMoveTargetZone(e.target.value)}>
                       <option value="">Move to zone…</option>
                       {zones.map(z => (
                         <option key={z.id} value={z.id}>{z.zone_name}</option>
                       ))}
                     </select>
-                    <button disabled={!selectedIds.size || !moveTargetZone} onClick={bulkMove} className={`px-3 py-2 rounded text-white ${selectedIds.size && moveTargetZone ? 'bg-blue-600' : 'bg-gray-300 cursor-not-allowed'}`}>Move Selected</button>
+                    <button disabled={!selectedIds.size || !moveTargetZone} onClick={bulkMove} className={`px-3 py-2 rounded text-white ${selectedIds.size && moveTargetZone ? 'bg-amber-600' : 'bg-gray-300 cursor-not-allowed'}`}>Move Selected</button>
                   </div>
                 </div>
               )}
@@ -354,11 +371,27 @@ const Clients = () => {
               <div className="mt-3">
                 <Link
                   to={`/payments?scope=chief&clientId=${encodeURIComponent(String(selectedClient.id))}&clientName=${encodeURIComponent(((selectedClient.name ? `${selectedClient.name.first || ''} ${selectedClient.name.last || ''}`.trim() : '') || selectedClient.username))}`}
-                  className="inline-flex items-center px-4 py-2 rounded font-semibold text-black"
-                  style={{ backgroundColor: '#FFCB05' }}
+                  className="inline-flex items-center px-4 py-2 rounded font-semibold"
+                  style={{ backgroundColor: '#D97706', color: '#1E1E1E' }}
                 >
                   Proceed to Payment
                 </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Photo Lightbox */}
+          {previewPhoto && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setPreviewPhoto(null)}></div>
+              <div className="relative z-10 max-w-3xl w-full">
+                <img src={previewPhoto} alt="Client" className="max-h-[80vh] w-full object-contain rounded-lg shadow-2xl bg-white" />
+                <div className="absolute top-2 right-2">
+                  <button
+                    onClick={() => setPreviewPhoto(null)}
+                    className="px-3 py-1 rounded-md text-white bg-black/60 hover:bg-black/80 text-sm"
+                  >Close</button>
+                </div>
               </div>
             </div>
           )}

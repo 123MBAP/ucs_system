@@ -1,6 +1,6 @@
+import { BarChart3, MapPinned, UserCog, Users as UsersIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPinned, Users as UsersIcon, BarChart3, UserCog } from 'lucide-react';
 
 type MonthlyPoint = { month: string; amount: number };
 type WeeklyPoint = { week: string; amount: number };
@@ -227,7 +227,7 @@ const Dashboard = () => {
     actionTo,
     gradient = 'from-amber-500 to-yellow-600',
   }: StatCardProps) => (
-    <div className="group bg-white rounded-xl shadow-sm border border-zinc-100 p-4 hover:shadow-md transition-all duration-200">
+    <div className="group bg-white rounded-xl shadow-sm border border-zinc-100 p-3 sm:p-4 hover:shadow-md transition-all duration-200">
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1">
           <p className="text-xs font-medium text-zinc-500 mb-1">{title}</p>
@@ -260,7 +260,7 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-800">Business Dashboard</h1>
@@ -333,7 +333,7 @@ const Dashboard = () => {
       </div>
 
       {/* Chart Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-zinc-100 p-5">
+      <div className="bg-white rounded-xl shadow-sm border border-zinc-100 p-4 sm:p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-5">
           <div>
             <h2 className="text-lg font-semibold text-zinc-800">Payment Trends</h2>
@@ -422,7 +422,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="h-64 relative">
+  {/* Chart: responsive on small screens (no forced min-width) */}
+  <div className="h-64 relative w-full">
           {chartLoading ? (
             <div className="h-full flex items-center justify-center text-zinc-500 text-sm">Loading payments...</div>
           ) : chartData.length === 0 ? (
@@ -436,8 +437,10 @@ const Dashboard = () => {
               const steps = 6;
               const ticks = Array.from({ length: steps }, (_, i) => Math.round((niceMax / (steps - 1)) * i));
 
+              // Responsive container: use full width and allow bars to shrink so
+              // the chart fits on narrow viewports instead of forcing horizontal scroll.
               return (
-                <div className="h-full flex">
+                <div className="h-full flex w-full">
                   {/* Y Axis with ticks */}
                   <div className="w-14 relative">
                     {ticks.map((t, i) => {
@@ -471,8 +474,10 @@ const Dashboard = () => {
                           const amount = Number(item.amount) || 0;
                           const height = Math.max(10, Math.min(100, (amount / niceMax) * 100)); // Minimum 10% height
                           
+                          // Allow each bar to shrink on small screens: remove forced min-width
+                          // and ensure flex-basis can go to 0 so bars compress evenly.
                           return (
-                            <div key={index} className="flex-1 max-w-[80px] flex flex-col items-center group">
+                            <div key={index} className="flex-1 min-w-0 flex flex-col items-center group">
                               {/* Tooltip */}
                               <div className="text-center mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
                                 <div className="bg-zinc-800 text-white text-xs px-2 py-1 rounded-md shadow-lg">
@@ -495,7 +500,7 @@ const Dashboard = () => {
                     <div className="absolute left-0 right-0 bottom-0">
                       <div className="flex justify-between items-center px-4">
                         {chartData.map((item: any, index: number) => (
-                          <div key={index} className="flex-1 text-center">
+                          <div key={index} className="flex-1 text-center truncate">
                             <p className="text-[11px] font-medium text-zinc-600">
                               {item.month || item.week || item.year || item.day}
                             </p>
@@ -512,9 +517,9 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-zinc-100 p-5">
+      <div className="bg-white rounded-xl shadow-sm border border-zinc-100 p-4 sm:p-5">
         <h3 className="text-base font-semibold text-zinc-800 mb-3">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {[
             { label: 'Add New Zone', to: '/add-zone', Icon: MapPinned, color: 'text-amber-600 bg-amber-50' },
             { label: 'Register Client', to: '/register-client', Icon: UsersIcon, color: 'text-emerald-600 bg-emerald-50' },
