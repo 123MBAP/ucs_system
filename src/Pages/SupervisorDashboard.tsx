@@ -70,6 +70,12 @@ const SupervisorDashboard = () => {
   const [onlyWithChief, setOnlyWithChief] = useState(false);
   const zonesGridRef = useRef<HTMLDivElement | null>(null);
 
+  const [vehicles, setVehicles] = useState<{ id: number; plate: string; image_url?: string | null; driver_username?: string | null }[]>([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(false);
+  const [vehiclesError, setVehiclesError] = useState<string | null>(null);
+  const [vehViewerOpen, setVehViewerOpen] = useState(false);
+  const [vehViewerSrc, setVehViewerSrc] = useState<string>('');
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login', { replace: true }); return; }
@@ -83,6 +89,21 @@ const SupervisorDashboard = () => {
       })
       .catch((e: any) => setError(e?.message || 'Failed to load zones'))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setVehiclesLoading(true);
+    setVehiclesError(null);
+    fetch(`${apiBase}/api/supervisor/vehicles`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error || 'Failed to load vehicles');
+        setVehicles(Array.isArray(data.vehicles) ? data.vehicles : []);
+      })
+      .catch((e: any) => setVehiclesError(e?.message || 'Failed to load vehicles'))
+      .finally(() => setVehiclesLoading(false));
   }, []);
 
   const nf = useMemo(() => new Intl.NumberFormat(lang === 'rw' ? undefined : undefined, { maximumFractionDigits: 0 }), [lang]);
@@ -216,6 +237,8 @@ const SupervisorDashboard = () => {
           </h1>
           <p className="text-stone-600 mt-2 truncate">{t('supervisor.subtitle')}</p>
         </div>
+
+      
 
         <div className="flex items-center space-x-4 mt-4 sm:mt-0 min-w-0">
           <div className="flex items-center space-x-2 text-sm text-stone-500">
@@ -531,6 +554,71 @@ const SupervisorDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Assigned Vehicles (moved below zones) */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-stone-800">Assigned Vehicles</h2>
+          <span className="text-sm text-stone-500">{vehicles.length} total</span>
+        </div>
+        {vehiclesError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm mb-4">{vehiclesError}</div>
+        )}
+        {vehiclesLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="border border-amber-100 rounded-xl p-4 animate-pulse">
+                <div className="h-5 bg-stone-200 rounded w-32 mb-3"></div>
+                <div className="h-4 bg-stone-200 rounded w-40 mb-3"></div>
+                <div className="h-32 bg-stone-100 rounded"></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {vehicles.map(v => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => { if (v.image_url) { setVehViewerSrc(v.image_url); setVehViewerOpen(true); } }}
+                className="text-left border border-amber-100 rounded-xl p-4 hover:shadow-md transition-shadow bg-white"
+                title={v.image_url ? 'Click to view image' : 'No image available'}
+              >
+                <div className="font-semibold text-stone-800">{v.plate}</div>
+                <div className="text-sm text-stone-500">{v.driver_username || 'Unassigned driver'}</div>
+                <div className="mt-2 h-36 rounded overflow-hidden bg-stone-50 flex items-center justify-center">
+                  {v.image_url ? (
+                    <img src={v.image_url} alt={v.plate} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-stone-400 text-sm">No image</span>
+                  )}
+                </div>
+              </button>
+            ))}
+            {!vehicles.length && (
+              <div className="col-span-full text-center py-8 text-stone-500">No vehicles assigned</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {vehViewerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setVehViewerOpen(false)}>
+          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <img src={vehViewerSrc} alt="Vehicle" className="w-full h-auto rounded-lg shadow-lg" />
+            <button
+              type="button"
+              onClick={() => setVehViewerOpen(false)}
+              className="absolute top-2 right-2 inline-flex items-center justify-center rounded-full bg-black/60 text-white w-9 h-9 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              aria-label="Close"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

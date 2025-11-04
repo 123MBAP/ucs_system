@@ -29,6 +29,10 @@ async function ensureTables() {
       ADD COLUMN IF NOT EXISTS supervisor_id INT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL;
     `);
     await db.query(`
+      ALTER TABLE vehicles
+      ADD COLUMN IF NOT EXISTS image_url VARCHAR(512);
+    `);
+    await db.query(`
       CREATE TABLE IF NOT EXISTS supervisor_service_schedule (
         id SERIAL PRIMARY KEY,
         zone_id INT NOT NULL REFERENCES zones(id) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -55,6 +59,28 @@ async function ensureTables() {
 router.use(async (req, res, next) => {
   await ensureTables();
   next();
+});
+
+// Vehicles assigned to the current supervisor (with assigned driver's username if any)
+router.get('/vehicles', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const { rows } = await db.query(
+      `SELECT v.id, v.plate, v.image_url,
+              ud.username AS driver_username
+       FROM vehicles v
+       LEFT JOIN driver_vehicle_assignments dva ON dva.vehicle_id = v.id
+       LEFT JOIN users ud ON ud.id = dva.user_id
+       LEFT JOIN roles r ON r.id = ud.role_id
+       WHERE v.supervisor_id = $1 AND (ud.id IS NULL OR r.role_name = 'driver')
+       ORDER BY v.plate ASC`,
+      [supervisorId]
+    );
+    return res.json({ vehicles: rows });
+  } catch (err) {
+    console.error('Supervisor vehicles error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // List all unconfirmed services for this supervisor across all zones

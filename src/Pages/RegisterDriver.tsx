@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 
-type ZoneOption = { id: string; name: string };
 type VehicleOption = { id: string; plate: string };
 
 const apiBase = import.meta.env.VITE_API_URL as string;
@@ -9,6 +8,7 @@ const RegisterDriver = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
+  const [salary, setSalary] = useState('');
 
   const [assignVehicle, setAssignVehicle] = useState(false);
   const [assignVehicleMode, setAssignVehicleMode] = useState<'existing' | 'new'>('existing');
@@ -16,29 +16,13 @@ const RegisterDriver = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [newVehiclePlate, setNewVehiclePlate] = useState('');
 
-  const [assignedZones, setAssignedZones] = useState<string[]>([]);
-  const [zones, setZones] = useState<ZoneOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function toggleZone(zoneId: string) {
-    setAssignedZones(prev => (prev.includes(zoneId) ? prev.filter(z => z !== zoneId) : [...prev, zoneId]));
-  }
-
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
-    fetch(`${apiBase}/api/zones`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(async r => {
-        const data = await r.json();
-        if (!r.ok) throw new Error(data?.error || 'Failed to load zones');
-        const opts: ZoneOption[] = (data.zones || []).map((z: any) => ({ id: String(z.id), name: z.zone_name }));
-        setZones(opts);
-      })
-      .catch(err => console.error('Load zones error:', err));
     // Load vehicles for assignment
     fetch(`${apiBase}/api/manager/vehicles`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -63,7 +47,7 @@ const RegisterDriver = () => {
       return;
     }
 
-    const payload = { firstName, lastName, username };
+    const payload = { firstName, lastName, username, salary: salary ? Number(salary) : undefined };
     const token = localStorage.getItem('token');
     if (!token) {
       setError('You must be logged in as manager to create a driver.');
@@ -116,22 +100,11 @@ const RegisterDriver = () => {
           }
         }
 
-        // Optional zones assignment
-        if (assignedZones.length) {
-          const rz = await fetch(`${apiBase}/api/manager/drivers/${driverId}/zones`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ zoneIds: assignedZones.map(z => Number(z)) })
-          });
-          const rzj = await rz.json();
-          if (!rz.ok) throw new Error(rzj?.error || 'Failed to set driver zones');
-        }
-
         setSuccess(`Driver created. Temporary password: ${data.tempPassword}`);
         // reset
         setFirstName(''); setLastName(''); setUsername('');
+        setSalary('');
         setAssignVehicle(false); setAssignVehicleMode('existing'); setSelectedVehicle(null); setNewVehiclePlate('');
-        setAssignedZones([]);
       })
       .catch((err: any) => setError(err.message || 'Failed to create driver'))
       .finally(() => setLoading(false));
@@ -159,6 +132,11 @@ const RegisterDriver = () => {
         <div>
           <label className="block text-sm font-medium text-gray-700">Username or Email</label>
           <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={username} onChange={e => setUsername(e.target.value)} required />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Salary (optional)</label>
+          <input type="number" min="0" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={salary} onChange={e => setSalary(e.target.value)} placeholder="Enter salary amount" />
         </div>
 
         <div className="pt-2">
@@ -197,18 +175,6 @@ const RegisterDriver = () => {
             )}
           </div>
         )}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Assign Zones (optional)</label>
-          <div className="mt-2 space-y-2">
-            {zones.map(z => (
-              <label key={z.id} className="flex items-center space-x-2">
-                <input type="checkbox" checked={assignedZones.includes(z.id)} onChange={() => toggleZone(z.id)} />
-                <span>{z.name}</span>
-              </label>
-            ))}
-          </div>
-        </div>
 
         <div>
           <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded-md ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{loading ? 'Creating…' : 'Create Driver'}</button>

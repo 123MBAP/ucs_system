@@ -608,7 +608,7 @@ const ManageWorkers = () => {
                       {/* Add Zone */}
                       <div>
                         <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>Add Zone</label>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <select 
                             value={addZoneId} 
                             onChange={e => setAddZoneId(e.target.value)} 
@@ -658,7 +658,7 @@ const ManageWorkers = () => {
                         <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>Move Zones to Another Supervisor</label>
                         <div className="space-y-3">
                           {s.zones.map(z => (
-                            <div key={z.id} className="flex items-center gap-2">
+                            <div key={z.id} className="flex flex-col sm:flex-row items-center gap-2">
                               <span className="text-sm flex-1" style={{ color: colors.text }}>{z.name}</span>
                               <select
                                 value={moveSelection[z.id] || ''}
@@ -707,8 +707,8 @@ const ManageWorkers = () => {
                   supervisors.forEach(s => (s.vehicles || []).forEach(v => assignedVehicleIds.add(v.id)));
                   const vehiclesNoSupervisor = vehicles.filter(v => !assignedVehicleIds.has(v.id));
                   return (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
+                      <div className="space-y-4">
+                      <div className="flex flex-col sm:flex-row items-center gap-3">
                         <select 
                           className="flex-1 border rounded-lg px-3 py-2 text-sm"
                           style={{ borderColor: colors.border }}
@@ -757,8 +757,8 @@ const ManageWorkers = () => {
                   supervisors.forEach(s => (s.zones || []).forEach(z => assignedZoneIds.add(z.id)));
                   const zonesNoSupervisor = zones.filter(z => !assignedZoneIds.has(z.id));
                   return (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
+                                <div className="space-y-4">
+                                <div className="flex flex-col sm:flex-row items-center gap-3">
                         <select 
                           className="flex-1 border rounded-lg px-3 py-2 text-sm"
                           style={{ borderColor: colors.border }}
@@ -889,7 +889,7 @@ const ManageWorkers = () => {
                     const chiefsNoZones = chiefs.filter(c => zones.every(z => z.assigned_chief !== c.id));
                     return (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-3">
+                          <div className="flex flex-col sm:flex-row items-center gap-3">
                           <select 
                             className="flex-1 border rounded-lg px-3 py-2 text-sm"
                             style={{ borderColor: colors.border }}
@@ -939,7 +939,7 @@ const ManageWorkers = () => {
                     const zonesNoChief = zones.filter(z => !z.assigned_chief);
                     return (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-3">
+                          <div className="flex flex-col sm:flex-row items-center gap-3">
                           <select 
                             className="flex-1 border rounded-lg px-3 py-2 text-sm"
                             style={{ borderColor: colors.border }}
@@ -1013,10 +1013,10 @@ const ManageWorkers = () => {
                           <div className="text-sm" style={{ color: colors.textLight }}>No manpower assigned</div>
                         )}
                         {(v.manpower || []).map(m => (
-                          <div key={m.manpower_id} className="flex items-center gap-2 border rounded-lg px-3 py-2" style={{ borderColor: colors.border }}>
+                          <div key={m.manpower_id} className="flex flex-col sm:flex-row items-center gap-2 border rounded-lg px-3 py-2" style={{ borderColor: colors.border }}>
                             <span className="text-sm" style={{ color: colors.text }}>{m.username}</span>
                             {manageVehicle[v.id] && (
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-col sm:flex-row items-center gap-2">
                                 <button
                                   className="px-2 py-1 text-xs rounded border"
                                   style={{ borderColor: colors.border }}
@@ -1065,7 +1065,7 @@ const ManageWorkers = () => {
                   const unassigned = manpower.filter(m => !assignedIds.has(m.id));
                   return (
                     <div className="space-y-4">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-col sm:flex-row items-center gap-3">
                         <select
                           className="flex-1 border rounded-lg px-3 py-2 text-sm"
                           style={{ borderColor: colors.border }}
@@ -1163,51 +1163,53 @@ const ManageWorkers = () => {
                         </div>
                       )}
                       {entries.map(({ driver, vehicle }) => (
-                        <div key={`${driver.id}-${vehicle.id}`} className="flex items-center justify-between p-3 border rounded-lg" style={{ borderColor: colors.border }}>
-                          <div className="text-sm">
+                        <div key={`${driver.id}-${vehicle.id}`} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border rounded-lg" style={{ borderColor: colors.border }}>
+                          <div className="text-sm min-w-0 flex-1 break-words">
                             <span className="font-medium" style={{ color: colors.text }}>{driver.username}</span>
                             <span className="ml-2" style={{ color: colors.textLight }}>→ {vehicle.plate}</span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center flex-wrap gap-2 sm:justify-end">
                             {manageDriver[driver.id] ? (
                               <>
-                                <button 
-                                  className="px-3 py-1 text-xs rounded border"
-                                  style={{ borderColor: colors.border }}
-                                  disabled={!!actionLoading[`assignDriver-${driver.id}`]} 
-                                  onClick={() => unassignDriverVehicle(driver.id)}
-                                >
-                                  Remove
-                                </button>
-                                <select
-                                  className="border rounded px-2 py-1 text-xs"
-                                  style={{ borderColor: colors.border }}
-                                  value={moveDriverTargetVehicle[driver.id] || ''}
-                                  onChange={e => setMoveDriverTargetVehicle(prev => ({ ...prev, [driver.id]: e.target.value }))}
-                                >
-                                  <option value="">Move to…</option>
-                                  {vehiclesNoDriver.filter(v => v.id !== vehicle.id).map(v => (
-                                    <option key={v.id} value={v.id}>{v.plate}</option>
-                                  ))}
-                                </select>
-                                <PrimaryButton
-                                  disabled={!moveDriverTargetVehicle[driver.id] || !!actionLoading[`assignDriver-${driver.id}`]}
-                                  loading={!!actionLoading[`assignDriver-${driver.id}`]}
-                                  onClick={() => {
-                                    const target = Number(moveDriverTargetVehicle[driver.id]);
-                                    if (Number.isFinite(target)) assignDriverVehicle(driver.id, target);
-                                  }}
-                                  className="text-xs px-2 py-1"
-                                >
-                                  Move
-                                </PrimaryButton>
-                                <button 
-                                  className="px-3 py-1 text-xs rounded border"
-                                  style={{ borderColor: colors.border }}
-                                  onClick={() => setManageDriver(prev => ({ ...prev, [driver.id]: false }))}
-                                >
-                                  Done
-                                </button>
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                                  <button 
+                                    className="px-3 py-1 text-xs rounded border"
+                                    style={{ borderColor: colors.border }}
+                                    disabled={!!actionLoading[`assignDriver-${driver.id}`]} 
+                                    onClick={() => unassignDriverVehicle(driver.id)}
+                                  >
+                                    Remove
+                                  </button>
+                                  <select
+                                    className="border rounded px-2 py-1 text-xs min-w-[8rem]"
+                                    style={{ borderColor: colors.border }}
+                                    value={moveDriverTargetVehicle[driver.id] || ''}
+                                    onChange={e => setMoveDriverTargetVehicle(prev => ({ ...prev, [driver.id]: e.target.value }))}
+                                  >
+                                    <option value="">Move to…</option>
+                                    {vehiclesNoDriver.filter(v => v.id !== vehicle.id).map(v => (
+                                      <option key={v.id} value={v.id}>{v.plate}</option>
+                                    ))}
+                                  </select>
+                                  <PrimaryButton
+                                    disabled={!moveDriverTargetVehicle[driver.id] || !!actionLoading[`assignDriver-${driver.id}`]}
+                                    loading={!!actionLoading[`assignDriver-${driver.id}`]}
+                                    onClick={() => {
+                                      const target = Number(moveDriverTargetVehicle[driver.id]);
+                                      if (Number.isFinite(target)) assignDriverVehicle(driver.id, target);
+                                    }}
+                                    className="text-xs px-2 py-1"
+                                  >
+                                    Move
+                                  </PrimaryButton>
+                                  <button 
+                                    className="px-3 py-1 text-xs rounded border"
+                                    style={{ borderColor: colors.border }}
+                                    onClick={() => setManageDriver(prev => ({ ...prev, [driver.id]: false }))}
+                                  >
+                                    Done
+                                  </button>
+                                </div>
                               </>
                             ) : (
                               <button 
@@ -1240,7 +1242,7 @@ const ManageWorkers = () => {
                     const vehiclesNoDriver = vehicles.filter(v => !v.drivers || v.drivers.length === 0);
                     return (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                           <select 
                             className="flex-1 border rounded-lg px-3 py-2 text-sm"
                             style={{ borderColor: colors.border }}
@@ -1292,7 +1294,7 @@ const ManageWorkers = () => {
                     const vehiclesNoDriver = vehicles.filter(v => !v.drivers || v.drivers.length === 0);
                     return (
                       <div className="space-y-4">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                           <select 
                             className="flex-1 border rounded-lg px-3 py-2 text-sm"
                             style={{ borderColor: colors.border }}

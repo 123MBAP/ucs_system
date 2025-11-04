@@ -14,6 +14,7 @@ import supervisorRouter from './backend/routes/supervisor.js';
 import manageWorkersRouter from './backend/routes/manageworkers.js';
 import manpowerRouter from './backend/routes/manpower.js';
 import profileRouter from './backend/routes/profile.js';
+import driverRouter from './backend/routes/driver.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -53,6 +54,7 @@ app.use('/api/chief', chiefRouter);
 app.use('/api/supervisor', supervisorRouter);
 app.use('/api/manageworkers', manageWorkersRouter);
 app.use('/api/manpower', manpowerRouter);
+app.use('/api/driver', driverRouter);
 app.use('/api/profile', profileRouter);
 
 app.get('/api/me', auth, (req, res) => {

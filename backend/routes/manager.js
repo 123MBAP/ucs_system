@@ -102,68 +102,163 @@ router.use(async (req, res, next) => {
   next();
 });
 
+// Update a vehicle (manager only)
+// Body can include: { plate?, make?, model?, imageUrl? }
+router.patch('/vehicles/:id', auth, requireManager, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid vehicle id' });
+    const { plate, make, model, imageUrl } = req.body || {};
+
+    // Build dynamic update
+    const sets = [];
+    const params = [];
+    let p = 1;
+    if (typeof plate === 'string' && plate.trim()) { sets.push(`plate = $${p++}`); params.push(plate.trim()); }
+    if (typeof make === 'string') { sets.push(`make = $${p++}`); params.push(make || null); }
+    if (typeof model === 'string') { sets.push(`model = $${p++}`); params.push(model || null); }
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'imageUrl')) {
+      sets.push(`image_url = $${p++}`);
+      params.push(imageUrl === null ? null : (typeof imageUrl === 'string' ? imageUrl : null));
+    }
+    if (!sets.length) return res.status(400).json({ error: 'No fields to update' });
+    params.push(id);
+
+    const sql = `UPDATE vehicles SET ${sets.join(', ')} WHERE id = $${p} RETURNING id, plate, make, model, image_url, supervisor_id`;
+    const up = await db.query(sql, params);
+    if (!up.rows.length) return res.status(404).json({ error: 'Vehicle not found' });
+    return res.json({ vehicle: up.rows[0] });
+  } catch (err) {
+    console.error('Update vehicle error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Workers summary: supervisors (with zones + salary), chiefs (with zones), manpower (with salary), drivers (with salary), vehicles
 router.get('/workers-summary', auth, requireManager, async (req, res) => {
   try {
-    // Supervisors
-    const supervisorsRes = await db.query(
-      `SELECT u.id, u.username,
-              up.first_name, up.last_name,
-              COALESCE(s.amount, 0)::numeric AS salary,
-              COALESCE(
-                (
-                  SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
-                  FROM zones z WHERE z.supervisor_id = u.id
-                ), '[]'::json
-              ) AS zones
-       FROM users u
-       JOIN roles r ON r.id = u.role_id
-       LEFT JOIN user_profiles up ON up.user_id = u.id
-       LEFT JOIN salaries s ON s.user_id = u.id
-       WHERE r.role_name = 'supervisor'
-       ORDER BY u.username ASC`);
+    let supervisorsRes, chiefsRes, manpowerRes, driversRes;
+    try {
+      // Prefer names from user_profiles, but fall back to users table if present
+      supervisorsRes = await db.query(
+        `SELECT u.id, u.username,
+                COALESCE(u.first_name, up.first_name) AS first_name,
+                COALESCE(u.last_name, up.last_name)   AS last_name,
+                COALESCE(s.amount, 0)::numeric AS salary,
+                COALESCE(
+                  (
+                    SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
+                    FROM zones z WHERE z.supervisor_id = u.id
+                  ), '[]'::json
+                ) AS zones
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+         LEFT JOIN user_profiles up ON up.user_id = u.id
+         LEFT JOIN salaries s ON s.user_id = u.id
+         WHERE r.role_name = 'supervisor'
+         ORDER BY u.username ASC`);
 
-    // Chiefs with zones
-    const chiefsRes = await db.query(
-      `SELECT u.id, u.username,
-              up.first_name, up.last_name,
-              COALESCE(
-                (
-                  SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
-                  FROM zones z WHERE z.assigned_chief = u.id
-                ), '[]'::json
-              ) AS zones
-       FROM users u
-       JOIN roles r ON r.id = u.role_id
-       LEFT JOIN user_profiles up ON up.user_id = u.id
-       WHERE r.role_name = 'chief'
-       ORDER BY u.username ASC`);
+      chiefsRes = await db.query(
+        `SELECT u.id, u.username,
+                COALESCE(u.first_name, up.first_name) AS first_name,
+                COALESCE(u.last_name, up.last_name)   AS last_name,
+                COALESCE(
+                  (
+                    SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
+                    FROM zones z WHERE z.assigned_chief = u.id
+                  ), '[]'::json
+                ) AS zones
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+         LEFT JOIN user_profiles up ON up.user_id = u.id
+         WHERE r.role_name = 'chief'
+         ORDER BY u.username ASC`);
 
-    // Manpower with salary
-    const manpowerRes = await db.query(
-      `SELECT u.id, u.username, up.first_name, up.last_name, COALESCE(s.amount,0)::numeric AS salary
-       FROM users u
-       JOIN roles r ON r.id = u.role_id
-       LEFT JOIN user_profiles up ON up.user_id = u.id
-       LEFT JOIN salaries s ON s.user_id = u.id
-       WHERE r.role_name = 'manpower'
-       ORDER BY u.username ASC`);
+      manpowerRes = await db.query(
+        `SELECT u.id, u.username,
+                COALESCE(u.first_name, up.first_name) AS first_name,
+                COALESCE(u.last_name, up.last_name)   AS last_name,
+                COALESCE(s.amount,0)::numeric AS salary
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+         LEFT JOIN user_profiles up ON up.user_id = u.id
+         LEFT JOIN salaries s ON s.user_id = u.id
+         WHERE r.role_name = 'manpower'
+         ORDER BY u.username ASC`);
 
-    // Drivers with salary
-    const driversRes = await db.query(
-      `SELECT u.id, u.username, up.first_name, up.last_name, COALESCE(s.amount,0)::numeric AS salary
-       FROM users u
-       JOIN roles r ON r.id = u.role_id
-       LEFT JOIN user_profiles up ON up.user_id = u.id
-       LEFT JOIN salaries s ON s.user_id = u.id
-       WHERE r.role_name = 'driver'
-       ORDER BY u.username ASC`);
+      driversRes = await db.query(
+        `SELECT u.id, u.username,
+                COALESCE(u.first_name, up.first_name) AS first_name,
+                COALESCE(u.last_name, up.last_name)   AS last_name,
+                COALESCE(s.amount,0)::numeric AS salary
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+         LEFT JOIN user_profiles up ON up.user_id = u.id
+         LEFT JOIN salaries s ON s.user_id = u.id
+         WHERE r.role_name = 'driver'
+         ORDER BY u.username ASC`);
+    } catch (e) {
+      // If users.first_name/last_name columns don't exist, fallback to user_profiles only
+      if (e && e.code === '42703') {
+        supervisorsRes = await db.query(
+          `SELECT u.id, u.username,
+                  up.first_name, up.last_name,
+                  COALESCE(s.amount, 0)::numeric AS salary,
+                  COALESCE(
+                    (
+                      SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
+                      FROM zones z WHERE z.supervisor_id = u.id
+                    ), '[]'::json
+                  ) AS zones
+           FROM users u
+           JOIN roles r ON r.id = u.role_id
+           LEFT JOIN user_profiles up ON up.user_id = u.id
+           LEFT JOIN salaries s ON s.user_id = u.id
+           WHERE r.role_name = 'supervisor'
+           ORDER BY u.username ASC`);
+
+        chiefsRes = await db.query(
+          `SELECT u.id, u.username,
+                  up.first_name, up.last_name,
+                  COALESCE(
+                    (
+                      SELECT json_agg(json_build_object('id', z.id, 'name', z.zone_name) ORDER BY z.zone_name)
+                      FROM zones z WHERE z.assigned_chief = u.id
+                    ), '[]'::json
+                  ) AS zones
+           FROM users u
+           JOIN roles r ON r.id = u.role_id
+           LEFT JOIN user_profiles up ON up.user_id = u.id
+           WHERE r.role_name = 'chief'
+           ORDER BY u.username ASC`);
+
+        manpowerRes = await db.query(
+          `SELECT u.id, u.username, up.first_name, up.last_name, COALESCE(s.amount,0)::numeric AS salary
+           FROM users u
+           JOIN roles r ON r.id = u.role_id
+           LEFT JOIN user_profiles up ON up.user_id = u.id
+           LEFT JOIN salaries s ON s.user_id = u.id
+           WHERE r.role_name = 'manpower'
+           ORDER BY u.username ASC`);
+
+        driversRes = await db.query(
+          `SELECT u.id, u.username, up.first_name, up.last_name, COALESCE(s.amount,0)::numeric AS salary
+           FROM users u
+           JOIN roles r ON r.id = u.role_id
+           LEFT JOIN user_profiles up ON up.user_id = u.id
+           LEFT JOIN salaries s ON s.user_id = u.id
+           WHERE r.role_name = 'driver'
+           ORDER BY u.username ASC`);
+      } else {
+        throw e;
+      }
+    }
 
     // Vehicles
     let vehicles = [];
     try {
       const vres = await db.query(
-        `SELECT v.id, v.plate, v.make, v.model, v.supervisor_id
+        `SELECT v.id, v.plate, v.make, v.model, v.supervisor_id, v.image_url
          FROM vehicles v
          ORDER BY v.plate ASC`
       );
@@ -534,7 +629,7 @@ router.patch('/supervisors/:id/zones/remove', auth, requireManager, async (req, 
 // Body: { plate: string, make?: string, model?: string }
 router.post('/vehicles', auth, requireManager, async (req, res) => {
   try {
-    const { plate, make, model } = req.body || {};
+    const { plate, make, model, imageUrl } = req.body || {};
     if (!plate || typeof plate !== 'string') {
       return res.status(400).json({ error: 'plate is required' });
     }
@@ -544,14 +639,57 @@ router.post('/vehicles', auth, requireManager, async (req, res) => {
       return res.status(409).json({ error: 'Vehicle plate already exists' });
     }
     const ins = await db.query(
-      `INSERT INTO vehicles (plate, make, model)
-       VALUES ($1, $2, $3)
-       RETURNING id, plate, make, model, created_at`,
-      [plate.trim(), make ?? null, model ?? null]
+      `INSERT INTO vehicles (plate, make, model, image_url)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, plate, make, model, image_url, created_at`,
+      [plate.trim(), make ?? null, model ?? null, imageUrl ?? null]
     );
     return res.status(201).json({ vehicle: ins.rows[0] });
   } catch (err) {
     console.error('Create vehicle error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Upload vehicle image via base64 (manager only) -> returns image_url
+router.post('/vehicles/upload-base64', auth, requireManager, async (req, res) => {
+  try {
+    const { dataUrl } = req.body || {};
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+      return res.status(400).json({ error: 'Invalid image data' });
+    }
+
+    const CLOUD_NAME = process.env.CLOUD_NAME;
+    const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
+    const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
+    if (!CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+      return res.status(500).json({ error: 'Cloudinary is not configured' });
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const folder = 'vehicles';
+    const crypto = await import('node:crypto');
+    const toSign = `folder=${folder}&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
+    const signature = crypto.createHash('sha1').update(toSign).digest('hex');
+
+    const form = new FormData();
+    form.append('file', dataUrl);
+    form.append('api_key', CLOUDINARY_API_KEY);
+    form.append('timestamp', String(timestamp));
+    form.append('folder', folder);
+    form.append('signature', signature);
+
+    const endpoint = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+    const upRes = await fetch(endpoint, { method: 'POST', body: form });
+    const upJson = await upRes.json();
+    if (!upRes.ok) {
+      return res.status(400).json({ error: upJson?.error?.message || 'Cloudinary upload failed' });
+    }
+    const secureUrl = upJson.secure_url || upJson.url;
+    if (!secureUrl) return res.status(400).json({ error: 'Upload succeeded but no URL returned' });
+    return res.json({ image_url: secureUrl });
+  } catch (err) {
+    console.error('vehicle image upload error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

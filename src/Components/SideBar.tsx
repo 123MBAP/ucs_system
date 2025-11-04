@@ -111,12 +111,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     manpower: new Set([
       '/manpower-dashboard',
       '/profile',
-      '/reports',
     ]),
     driver: new Set([
       '/driver-dashboard',
       '/profile',
-      '/reports',
     ]),
   };
 

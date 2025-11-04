@@ -17,6 +17,8 @@ const RegisterVehicle = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,7 +32,7 @@ const RegisterVehicle = () => {
       .catch(() => {})
   }, []);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
@@ -44,61 +46,78 @@ const RegisterVehicle = () => {
       return;
     }
     setLoading(true);
-    fetch(`${apiBase}/api/manager/vehicles`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ plate: plate.trim(), make: make || undefined, model: model || undefined })
-    })
-      .then(async r => {
-        const data = await r.json();
-        if (!r.ok) throw new Error(data?.error || 'Failed to register vehicle');
-        const vehicleId = data.vehicle.id;
+    try {
+      let finalImageUrl = imageUrl;
+      if (imageDataUrl) {
+        const up = await fetch(`${apiBase}/api/manager/vehicles/upload-base64`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ dataUrl: imageDataUrl })
+        });
+        const upj = await up.json();
+        if (!up.ok) throw new Error(upj?.error || 'Failed to upload image');
+        finalImageUrl = upj.image_url || finalImageUrl;
+        setImageUrl(finalImageUrl);
+      }
 
-        // optionally assign driver
-        if (assignDriver) {
-          if (assignMode === 'existing') {
-            if (!selectedDriverId) throw new Error('Please select a driver to assign');
-            const res = await fetch(`${apiBase}/api/manager/drivers/${selectedDriverId}/vehicle`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ vehicleId })
-            });
-            const rd = await res.json();
-            if (!res.ok) throw new Error(rd?.error || 'Failed to assign vehicle to driver');
-          } else {
-            if (!newDriverFirst.trim() || !newDriverLast.trim()) throw new Error('Driver first and last name are required');
-            // create driver then assign
-            const cd = await fetch(`${apiBase}/api/manager/drivers`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ firstName: newDriverFirst.trim(), lastName: newDriverLast.trim() })
-            });
-            const cjson = await cd.json();
-            if (!cd.ok) throw new Error(cjson?.error || 'Failed to create driver');
-            const driverId = cjson?.driver?.id;
-            if (!driverId) throw new Error('Driver created but id missing');
-            const ad = await fetch(`${apiBase}/api/manager/drivers/${driverId}/vehicle`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ vehicleId })
-            });
-            const adj = await ad.json();
-            if (!ad.ok) throw new Error(adj?.error || 'Failed to assign vehicle to new driver');
-          }
+      const r = await fetch(`${apiBase}/api/manager/vehicles`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plate: plate.trim(), make: make || undefined, model: model || undefined, imageUrl: finalImageUrl || undefined })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.error || 'Failed to register vehicle');
+      const vehicleId = data.vehicle.id;
+
+      // optionally assign driver
+      if (assignDriver) {
+        if (assignMode === 'existing') {
+          if (!selectedDriverId) throw new Error('Please select a driver to assign');
+          const res = await fetch(`${apiBase}/api/manager/drivers/${selectedDriverId}/vehicle`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ vehicleId })
+          });
+          const rd = await res.json();
+          if (!res.ok) throw new Error(rd?.error || 'Failed to assign vehicle to driver');
+        } else {
+          if (!newDriverFirst.trim() || !newDriverLast.trim()) throw new Error('Driver first and last name are required');
+          // create driver then assign
+          const cd = await fetch(`${apiBase}/api/manager/drivers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ firstName: newDriverFirst.trim(), lastName: newDriverLast.trim() })
+          });
+          const cjson = await cd.json();
+          if (!cd.ok) throw new Error(cjson?.error || 'Failed to create driver');
+          const driverId = cjson?.driver?.id;
+          if (!driverId) throw new Error('Driver created but id missing');
+          const ad = await fetch(`${apiBase}/api/manager/drivers/${driverId}/vehicle`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ vehicleId })
+          });
+          const adj = await ad.json();
+          if (!ad.ok) throw new Error(adj?.error || 'Failed to assign vehicle to new driver');
         }
+      }
 
-        setSuccess(`Vehicle ${data.vehicle.plate} created${assignDriver ? ' and assigned' : ''}.`);
-        setPlate('');
-        setMake('');
-        setModel('');
-        setAssignDriver(false);
-        setAssignMode('existing');
-        setSelectedDriverId('');
-        setNewDriverFirst('');
-        setNewDriverLast('');
-      })
-      .catch((e: any) => setError(e?.message || 'Failed to register vehicle'))
-      .finally(() => setLoading(false));
+      setSuccess(`Vehicle ${data.vehicle.plate} created${assignDriver ? ' and assigned' : ''}.`);
+      setPlate('');
+      setMake('');
+      setModel('');
+      setAssignDriver(false);
+      setAssignMode('existing');
+      setSelectedDriverId('');
+      setNewDriverFirst('');
+      setNewDriverLast('');
+      setImageDataUrl(null);
+      setImageUrl('');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to register vehicle');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -123,6 +142,36 @@ const RegisterVehicle = () => {
             <label className="block text-sm text-gray-700">Model</label>
             <input className="mt-1 w-full border rounded px-3 py-2" value={model} onChange={e => setModel(e.target.value)} />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-700">Vehicle Image (optional)</label>
+          <div className="mt-1 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (!f) { setImageDataUrl(null); return; }
+                const reader = new FileReader();
+                reader.onload = () => setImageDataUrl(String(reader.result || ''));
+                reader.readAsDataURL(f);
+              }}
+              className="block"
+            />
+            <input 
+              type="url" 
+              placeholder="Or paste image URL"
+              value={imageUrl}
+              onChange={e => setImageUrl(e.target.value)}
+              className="w-full sm:w-72 border rounded px-3 py-2"
+            />
+          </div>
+          {(imageDataUrl || imageUrl) && (
+            <div className="mt-3">
+              <img src={imageDataUrl || imageUrl} alt="Vehicle preview" className="max-h-40 rounded border" />
+            </div>
+          )}
         </div>
 
         <div className="pt-2">
