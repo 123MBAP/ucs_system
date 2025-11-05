@@ -22,13 +22,20 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 const app = express();
 
 const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || '*';
+const baseCors = {
+  credentials: true,
+  methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','Accept'],
+  optionsSuccessStatus: 204,
+};
 const corsOptions = allowedOriginsEnv === '*'
   ? {
+      ...baseCors,
       // Reflect the request Origin header. This works with credentials and avoids '*'.
       origin: true,
-      credentials: true,
     }
   : {
+      ...baseCors,
       origin: function (origin, callback) {
         // Allow non-browser requests or missing origin (e.g., curl, server-to-server)
         if (!origin) return callback(null, true);
@@ -36,9 +43,15 @@ const corsOptions = allowedOriginsEnv === '*'
         if (allowed.includes(origin)) return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
       },
-      credentials: true,
     };
 app.use(cors(corsOptions));
+// Handle preflight requests for all routes without using wildcard path syntax
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return cors(corsOptions)(req, res, () => res.sendStatus(204));
+  }
+  next();
+});
 
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ limit: '20mb', extended: true }));
