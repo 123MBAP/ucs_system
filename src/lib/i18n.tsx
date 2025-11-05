@@ -14,6 +14,13 @@ const messages: Messages = {
   'nav.help': { en: 'Help', rw: 'Ifashwa' },
   'nav.privacy': { en: 'Privacy', rw: 'Ubuzima bwite' },
   'nav.terms': { en: 'Terms', rw: 'Amasezerano' },
+  // Common
+  'common.view': { en: 'View', rw: 'Reba' },
+  'common.loading': { en: 'Loading…', rw: 'Kuremerwa…' },
+  'common.notSet': { en: 'Not set', rw: 'Ntibyashyizweho' },
+  'common.serviceStart': { en: 'Service Start Time', rw: 'Igihe cyo gutangiza Serivisi' },
+  'common.serviceEnd': { en: 'Service End Time', rw: 'Igihe cyo kurangiza Serivisi' },
+  'common.multipleZones': { en: 'Multiple Zones', rw: 'Zone nyinshi' },
   // Weekdays
   'weekday.mon': { en: 'Monday', rw: 'Kuwa Mbere' },
   'weekday.tue': { en: 'Tuesday', rw: 'Kuwa Kabiri' },
@@ -199,11 +206,26 @@ const messages: Messages = {
   'driver.salary': { en: 'Salary', rw: 'Umushahara' },
   'driver.assignedZones': { en: 'Assigned Zones', rw: 'Utugari wahawe' },
   'driver.none': { en: 'None', rw: 'Nta na kimwe' },
+  'driver.notAssigned': { en: 'Not assigned', rw: 'Ntayeguriwe' },
+  'driver.notSet': { en: 'Not set', rw: 'Ntibyashyizweho' },
   'driver.schedule.title': { en: 'Service Schedule', rw: 'Igenaminsi ry’Imirimo' },
   'driver.schedule.none': { en: 'No scheduled services yet.', rw: 'Nta mirimo iteganyijwe.' },
   'driver.zone': { en: 'Zone', rw: 'Agace' },
   'driver.vehicle': { en: 'Vehicle', rw: 'Imodoka' },
   'driver.team': { en: 'Team', rw: 'Itsinda' },
+  // Chief Dashboard
+  'chief.title': { en: 'Chief of Zone Dashboard', rw: 'Ibiro bya Chief wa Zone' },
+  'chief.subtitle': { en: 'Overview for chief and zone', rw: 'Incamake ya Chief na zone' },
+  'chief.label.chief': { en: 'Chief', rw: 'Chief' },
+  'chief.label.zone': { en: 'Zone', rw: 'Zone' },
+  'chief.cards.clientsTotal': { en: 'Number of Clients', rw: 'Umubare w’Abakiriya' },
+  'chief.cards.amountTotal': { en: 'Total Amount To Be Paid', rw: 'Igiteranyo kigomba Kwishyurwa' },
+  'chief.cards.amountPaid': { en: 'Amount Paid', rw: 'Amafaranga Yishyuwe' },
+  'chief.cards.amountRemaining': { en: 'Remaining Amount', rw: 'Amafaranga Asigaye' },
+  'chief.cards.clientsPaid': { en: 'Clients Paid', rw: 'Abakiriya bishyuye' },
+  'chief.cards.clientsRemaining': { en: 'Clients Remaining', rw: 'Abakiriya basigaye' },
+  'chief.cards.todayPayments': { en: "Today's Payments", rw: 'Imyishyurire y’uyu munsi' },
+  'chief.cards.todayPaymentsDesc': { en: 'Payments received today', rw: 'Imyishyurire yakiriwe uyu munsi' },
 };
 
 type I18nContextValue = {

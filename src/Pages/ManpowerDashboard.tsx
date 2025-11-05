@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useI18n } from 'src/lib/i18n';
+import { useI18n } from '@/lib/i18n';
 import { User, Truck, Wallet, BadgeCheck } from 'lucide-react';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
@@ -10,8 +10,8 @@ type ManpowerInfo = {
   name: string;
   salary: number | null;
   vehicle: { plate: string } | null;
-  driver: { username: string } | null;
-  supervisor: { username: string } | null;
+  driver: { username: string; full_name?: string | null } | null;
+  supervisor: { username: string; full_name?: string | null } | null;
 };
 
 const ManpowerDashboard = () => {
@@ -95,8 +95,8 @@ const ManpowerDashboard = () => {
             <div>
               <div className="text-sm font-semibold text-zinc-600">{t('manpower.assignedVehicle')}</div>
               <div className="text-2xl font-bold text-zinc-900 mt-1">{loading ? '…' : (info.vehicle?.plate || t('manpower.notAssigned'))}</div>
-              <div className="text-sm text-zinc-600 mt-2 flex items-center gap-1"><BadgeCheck className="w-4 h-4" /> {t('manpower.driver')}: {loading ? '…' : (info.driver?.username || '-')}</div>
-              <div className="text-sm text-zinc-600 mt-1 flex items-center gap-1"><BadgeCheck className="w-4 h-4" /> {t('manpower.supervisor')}: {loading ? '…' : (info.supervisor?.username || '-')}</div>
+              <div className="text-sm text-zinc-600 mt-2 flex items-center gap-1"><BadgeCheck className="w-4 h-4" /> {t('manpower.driver')}: {loading ? '…' : (info.driver?.full_name || info.driver?.username || '-')}</div>
+              <div className="text-sm text-zinc-600 mt-1 flex items-center gap-1"><BadgeCheck className="w-4 h-4" /> {t('manpower.supervisor')}: {loading ? '…' : (info.supervisor?.full_name || info.supervisor?.username || '-')}</div>
             </div>
             <div className="shrink-0 p-2 rounded-lg bg-amber-50 text-amber-600">
               <Truck className="h-8 w-8" />
@@ -124,9 +124,17 @@ const ManpowerDashboard = () => {
         {schedule.length === 0 ? (
           <div className="text-zinc-600">{t('manpower.schedule.none')}</div>
         ) : (
-          <div className="divide-y divide-zinc-200">
+          <div className="space-y-4">
             {schedule.map((e) => {
-              const weekdayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+              const weekdayNames = [
+                t('weekday.mon'),
+                t('weekday.tue'),
+                t('weekday.wed'),
+                t('weekday.thu'),
+                t('weekday.fri'),
+                t('weekday.sat'),
+                t('weekday.sun'),
+              ];
               const dayName = weekdayNames[(Number(e.service_day) || 1) - 1] || '';
               const status = e.supervisor_status;
               const badge = status == null
@@ -134,30 +142,46 @@ const ManpowerDashboard = () => {
                 : status === 'complete'
                 ? { text: t('status.completed'), cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
                 : { text: t('status.notCompleted'), cls: 'bg-red-50 text-red-700 border-red-200' };
+              const manpowerNames = (() => {
+                const names = (e as any).assigned_manpower_names as string[] | undefined;
+                const usernames = e.assigned_manpower_usernames ?? [];
+                return (names && names.length ? names : usernames) || [];
+              })();
               return (
-                <div key={e.id} className="py-4 flex items-start justify-between">
-                  <div>
+                <div key={e.id} className="rounded-xl border border-zinc-100 p-4">
+                  <div className="flex items-center justify-between">
                     <div className="text-zinc-900 font-semibold">{dayName}</div>
-                    <div className="text-zinc-600 text-sm">{e.service_start?.slice(0,5)} - {e.service_end?.slice(0,5)}</div>
-                    <div className="text-zinc-500 text-xs mt-1 space-y-0.5">
-                      <div>
-                        {e.zone_name ? `${t('manpower.zone')}: ${e.zone_name}` : ''}
-                        {e.zone_name && (e.vehicle_plate || e.driver_username) ? ' • ' : ''}
-                        {e.vehicle_plate ? `${t('manpower.vehicle')}: ${e.vehicle_plate}` : ''}
-                        {e.vehicle_plate && e.driver_username ? ' • ' : ''}
-                        {e.driver_username ? `${t('manpower.driver')}: ${e.driver_username}` : ''}
-                      </div>
-                      {!!(e.assigned_manpower_usernames && e.assigned_manpower_usernames.length) && (
-                        <div>
-                          {t('manpower.team')}: {e.assigned_manpower_usernames.join(', ')}
-                        </div>
-                      )}
+                    <span className={`text-xs font-medium px-2 py-1 rounded-lg border ${badge.cls}`}>{badge.text}</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="rounded-lg bg-zinc-50 p-3">
+                      <div className="text-xs text-zinc-500">{t('manpower.vehicle')}</div>
+                      <div className="text-sm font-semibold text-zinc-800">{e.vehicle_plate || '-'}</div>
                     </div>
+                    <div className="rounded-lg bg-zinc-50 p-3">
+                      <div className="text-xs text-zinc-500">{t('manpower.driver')}</div>
+                      <div className="text-sm font-semibold text-zinc-800">{e.driver_username || '-'}</div>
+                    </div>
+                    <div className="rounded-lg bg-zinc-50 p-3">
+                      <div className="text-xs text-zinc-500">{t('common.serviceStart')}</div>
+                      <div className="text-sm font-semibold text-zinc-800">{e.service_start?.slice(0,5) || '-'}</div>
+                    </div>
+                    <div className="rounded-lg bg-zinc-50 p-3">
+                      <div className="text-xs text-zinc-500">{t('common.serviceEnd')}</div>
+                      <div className="text-sm font-semibold text-zinc-800">{e.service_end?.slice(0,5) || '-'}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs text-zinc-600 space-y-1">
+                    {!!e.zone_name && (
+                      <div>{t('manpower.zone')}: {e.zone_name}</div>
+                    )}
+                    {manpowerNames.length > 0 && (
+                      <div>{t('manpower.team')}: {manpowerNames.join(', ')}</div>
+                    )}
                     {status === 'not_complete' && e.supervisor_reason && (
-                      <div className="text-red-600 text-xs mt-1">{t('manpower.reason')}: {e.supervisor_reason}</div>
+                      <div className="text-red-600">{t('manpower.reason')}: {e.supervisor_reason}</div>
                     )}
                   </div>
-                  <span className={`text-xs font-medium px-2 py-1 rounded-lg border ${badge.cls}`}>{badge.text}</span>
                 </div>
               );
             })}

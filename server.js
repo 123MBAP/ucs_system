@@ -15,6 +15,7 @@ import manageWorkersRouter from './backend/routes/manageworkers.js';
 import manpowerRouter from './backend/routes/manpower.js';
 import profileRouter from './backend/routes/profile.js';
 import driverRouter from './backend/routes/driver.js';
+import chatRouter from './backend/routes/chat.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -56,6 +57,7 @@ app.use('/api/manageworkers', manageWorkersRouter);
 app.use('/api/manpower', manpowerRouter);
 app.use('/api/driver', driverRouter);
 app.use('/api/profile', profileRouter);
+app.use('/api/chat', chatRouter);
 
 app.get('/api/me', auth, (req, res) => {
   return res.json({ user: req.user });

@@ -33,6 +33,12 @@ async function ensureTables() {
       ADD COLUMN IF NOT EXISTS image_url VARCHAR(512);
     `);
     await db.query(`
+      CREATE TABLE IF NOT EXISTS manpower_vehicle_assignments (
+        manpower_id INT PRIMARY KEY REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+        vehicle_id INT NOT NULL REFERENCES vehicles(id) ON UPDATE CASCADE ON DELETE CASCADE
+      );
+    `);
+    await db.query(`
       CREATE TABLE IF NOT EXISTS supervisor_service_schedule (
         id SERIAL PRIMARY KEY,
         zone_id INT NOT NULL REFERENCES zones(id) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -59,6 +65,37 @@ async function ensureTables() {
 router.use(async (req, res, next) => {
   await ensureTables();
   next();
+});
+
+// Unassign driver from any vehicle (supervisor scope)
+router.delete('/zones/:id/driver/vehicle/:driverUserId', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const zoneId = Number(req.params.id);
+    const driverUserId = Number(req.params.driverUserId);
+    if (!Number.isFinite(zoneId) || !Number.isFinite(driverUserId)) return res.status(400).json({ error: 'Invalid id' });
+
+    const zr = await db.query('SELECT id, supervisor_id FROM zones WHERE id = $1', [zoneId]);
+    if (!zr.rows.length) return res.status(404).json({ error: 'Zone not found' });
+    if (zr.rows[0].supervisor_id !== supervisorId) return res.status(403).json({ error: 'Forbidden' });
+
+    // Ensure the driver assignment belongs to a vehicle owned by this supervisor
+    const own = await db.query(
+      `SELECT dva.user_id
+       FROM driver_vehicle_assignments dva
+       JOIN vehicles v ON v.id = dva.vehicle_id
+       WHERE dva.user_id = $1 AND v.supervisor_id = $2`,
+      [driverUserId, supervisorId]
+    );
+    if (!own.rows.length) return res.status(404).json({ error: 'Assignment not found' });
+
+    const del = await db.query('DELETE FROM driver_vehicle_assignments WHERE user_id = $1 RETURNING user_id', [driverUserId]);
+    if (!del.rows.length) return res.status(404).json({ error: 'Assignment not found' });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Unassign driver (supervisor) error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Vehicles assigned to the current supervisor (with assigned driver's username if any)
@@ -320,26 +357,39 @@ router.get('/zones/:id/supervision', auth, requireRole('supervisor'), async (req
     );
 
     const drivers = await db.query(
-      `SELECT u.id, u.username,
-              dva.vehicle_id,
-              v.plate AS vehicle_plate,
-              COALESCE(dva.assigned_manpowers, '{}') AS assigned_manpowers
+      `SELECT 
+         u.id,
+         u.username,
+         NULLIF(TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))), '') AS full_name,
+         dva.vehicle_id,
+         v.plate AS vehicle_plate,
+         COALESCE(dva.assigned_manpowers, '{}') AS assigned_manpowers
        FROM users u
        JOIN roles r ON r.id = u.role_id
        LEFT JOIN driver_vehicle_assignments dva ON dva.user_id = u.id
        LEFT JOIN vehicles v ON v.id = dva.vehicle_id
        WHERE r.role_name = 'driver'
-       ORDER BY u.username ASC`
+       ORDER BY COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))), ''), u.username) ASC`
     );
 
     const manpower = await db.query(
-      `SELECT DISTINCT u.id, u.username
+      `SELECT 
+         u.id,
+         u.username,
+         NULLIF(TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))), '') AS full_name
        FROM manpower_vehicle_assignments mva
        JOIN users u ON u.id = mva.manpower_id
        JOIN roles r ON r.id = u.role_id
        JOIN vehicles v ON v.id = mva.vehicle_id
        WHERE v.supervisor_id = $1 AND r.role_name = 'manpower'
-       ORDER BY u.username ASC`,
+       GROUP BY 
+         u.id, 
+         u.username, 
+         NULLIF(TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))), '')
+       ORDER BY COALESCE(
+         NULLIF(TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))), ''), 
+         u.username
+       ) ASC`,
       [supervisorId]
     );
 
@@ -347,7 +397,14 @@ router.get('/zones/:id/supervision', auth, requireRole('supervisor'), async (req
       `SELECT v.id, v.plate,
               COALESCE(
                 (
-                  SELECT json_agg(json_build_object('id', u.id, 'username', u.username) ORDER BY u.username)
+                  SELECT json_agg(
+                           json_build_object(
+                             'id', u.id,
+                             'username', u.username,
+                             'full_name', NULLIF(TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))), '')
+                           )
+                           ORDER BY COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))), ''), u.username)
+                         )
                   FROM manpower_vehicle_assignments mva
                   JOIN users u ON u.id = mva.manpower_id
                   WHERE mva.vehicle_id = v.id
@@ -360,6 +417,19 @@ router.get('/zones/:id/supervision', auth, requireRole('supervisor'), async (req
       [supervisorId]
     );
 
+    // Unassigned manpower (no vehicle assignment) available to be added
+    const unassignedMp = await db.query(
+      `SELECT 
+         u.id,
+         u.username,
+         NULLIF(TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))), '') AS full_name
+       FROM users u
+       JOIN roles r ON r.id = u.role_id
+       LEFT JOIN manpower_vehicle_assignments mva ON mva.manpower_id = u.id
+       WHERE r.role_name = 'manpower' AND mva.manpower_id IS NULL
+       ORDER BY COALESCE(NULLIF(TRIM(CONCAT(COALESCE(u.first_name,''),' ',COALESCE(u.last_name,''))), ''), u.username) ASC`
+    );
+
     return res.json({
       zone: { id: zr.rows[0].id, name: zr.rows[0].zone_name },
       serviceDays,
@@ -368,6 +438,7 @@ router.get('/zones/:id/supervision', auth, requireRole('supervisor'), async (req
       manpower: manpower.rows,
       vehicles: vehicles.rows,
       supervisorVehicles: vehicles.rows,
+      unassignedManpower: unassignedMp.rows,
     });
   } catch (err) {
     console.error('Zone supervision detail error:', err);
@@ -488,6 +559,77 @@ router.patch('/zones/:id/driver/vehicle/manpowers', auth, requireRole('superviso
     return res.json({ assignment: up.rows[0] });
   } catch (err) {
     console.error('Set vehicle manpowers error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Assign or move manpower to a vehicle (bulk)
+router.patch('/zones/:id/vehicle/:vehicleId/manpower', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const zoneId = Number(req.params.id);
+    const vehicleId = Number(req.params.vehicleId);
+    const { manpowerIds } = req.body || {};
+    if (!Number.isFinite(zoneId) || !Number.isFinite(vehicleId)) return res.status(400).json({ error: 'Invalid id' });
+    if (!Array.isArray(manpowerIds)) return res.status(400).json({ error: 'manpowerIds must be an array' });
+    const ids = manpowerIds.map((x) => Number(x)).filter(Number.isFinite);
+
+    // Vehicle must belong to supervisor
+    const v = await db.query('SELECT id FROM vehicles WHERE id = $1 AND supervisor_id = $2', [vehicleId, supervisorId]);
+    if (!v.rows.length) return res.status(404).json({ error: 'Vehicle not found' });
+
+    if (!ids.length) return res.json({ updated: 0 });
+
+    // Ensure all users are manpower role
+    const roleChk = await db.query(
+      `SELECT u.id
+       FROM users u JOIN roles r ON r.id = u.role_id
+       WHERE u.id = ANY($1) AND r.role_name = 'manpower'`,
+      [ids]
+    );
+    const validIds = roleChk.rows.map((r) => r.id);
+
+    let updated = 0;
+    for (const mid of validIds) {
+      const up = await db.query(
+        `INSERT INTO manpower_vehicle_assignments (manpower_id, vehicle_id)
+         VALUES ($1, $2)
+         ON CONFLICT (manpower_id) DO UPDATE SET vehicle_id = EXCLUDED.vehicle_id
+         RETURNING manpower_id`,
+        [mid, vehicleId]
+      );
+      if (up.rows.length) updated++;
+    }
+    return res.json({ updated });
+  } catch (err) {
+    console.error('Assign/move manpower to vehicle error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Remove a manpower from a specific vehicle
+router.delete('/zones/:id/vehicle/:vehicleId/manpower/:manpowerId', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const zoneId = Number(req.params.id);
+    const vehicleId = Number(req.params.vehicleId);
+    const manpowerId = Number(req.params.manpowerId);
+    if (!Number.isFinite(zoneId) || !Number.isFinite(vehicleId) || !Number.isFinite(manpowerId)) return res.status(400).json({ error: 'Invalid id' });
+
+    // Vehicle must belong to supervisor
+    const v = await db.query('SELECT id FROM vehicles WHERE id = $1 AND supervisor_id = $2', [vehicleId, supervisorId]);
+    if (!v.rows.length) return res.status(404).json({ error: 'Vehicle not found' });
+
+    const del = await db.query(
+      `DELETE FROM manpower_vehicle_assignments
+       WHERE manpower_id = $1 AND vehicle_id = $2
+       RETURNING manpower_id`,
+      [manpowerId, vehicleId]
+    );
+    if (!del.rows.length) return res.status(404).json({ error: 'Assignment not found' });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Remove manpower from vehicle error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

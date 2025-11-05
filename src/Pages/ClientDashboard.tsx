@@ -213,13 +213,28 @@ const ClientDashboard = () => {
     setStatus({ type: 'pending', message: 'Payment initiated. Please confirm on your phone…' });
 
     try {
-      // Simulate a payment initiation API and waiting for STK push confirmation
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // initiate
-      await new Promise((resolve) => setTimeout(resolve, 3000)); // wait for confirmation
+      const token = localStorage.getItem('token');
+      if (!token || monthlyAmount == null) {
+        setStatus({ type: 'error', message: 'Missing session or amount. Please reload and try again.' });
+        return;
+      }
+      const amountToPay = Number(monthlyAmount);
 
-      setStatus({ type: 'success', message: 'Payment confirmed on your phone. Thank you!' });
+      const res = await fetch(`${apiBase}/api/payments/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount: amountToPay, phoneNumber }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to initiate payment');
+      }
+      setStatus({ type: 'pending', message: 'Request sent. Approve the prompt on your phone to complete payment.' });
     } catch (err) {
-      setStatus({ type: 'error', message: 'Payment failed. Please try again.' });
+      setStatus({ type: 'error', message: (err as any)?.message || 'Payment failed. Please try again.' });
     } finally {
       setSubmitting(false);
     }
@@ -425,6 +440,14 @@ const ClientDashboard = () => {
               )}
 
               <form onSubmit={handlePay} className="space-y-6">
+                {monthlyAmount != null && (
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <div className="text-xs text-amber-700">Amount to pay (current month)</div>
+                    <div className="text-lg font-bold text-charcoal">
+                      {`$${Number(monthlyAmount).toLocaleString()}`}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-semibold text-charcoal mb-3">
                     <div className="flex items-center space-x-2">

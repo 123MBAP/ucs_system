@@ -34,6 +34,7 @@ const ZoneDetail = lazy(() => import('src/Pages/ZoneDetail'));
 const ZoneManpower = lazy(() => import('src/Pages/ZoneManpower'));
 const Zones = lazy(() => import('src/Pages/Zones'));
 const ZoneSupervision = lazy(() => import('src/Pages/ZoneSupervision'));
+const Chat = lazy(() => import('src/Pages/Chat'));
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -194,6 +195,7 @@ function AppShell() {
                 <Route path="/register-vehicle" element={<RegisterVehicle />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/payments" element={<Payments />} />
+                <Route path="/chat" element={<Chat />} />
                 <Route path="/manage-workers" element={<ManageWorkers />} />
                 <Route path="/workers" element={<Workers />} />
                 <Route path="/profile" element={<Profile />} />

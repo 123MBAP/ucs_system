@@ -60,6 +60,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { name: 'My Profile', icon: <Icons.Profile />, to: '/profile' },
     { name: 'Reports', icon: <Icons.Reports />, to: '/reports' },
     { name: 'Payments', icon: <Icons.Payments />, to: '/payments' },
+    { name: 'Chat', icon: <Icons.Reports />, to: '/chat' },
   ];
 
   const storedUser = typeof localStorage !== 'undefined' ? localStorage.getItem('user') : null;
@@ -84,6 +85,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       '/register-client',
       '/clients',
       '/payments',
+      '/chat',
     ]),
     supervisor: new Set([
       '/supervisor-dashboard',
@@ -93,12 +95,14 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       '/reports',
       '/clients',
       '/payments',
+      '/chat',
     ]),
     client: new Set([
       '/client-dashboard',
       '/profile',
       '/reports',
       '/payments',
+      '/chat',
     ]),
     chief: new Set([
       '/chief-dashboard',
@@ -107,14 +111,17 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       '/reports',
       '/clients',
       '/payments',
+      '/chat',
     ]),
     manpower: new Set([
       '/manpower-dashboard',
       '/profile',
+      '/chat',
     ]),
     driver: new Set([
       '/driver-dashboard',
       '/profile',
+      '/chat',
     ]),
   };
 

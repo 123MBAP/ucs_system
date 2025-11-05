@@ -4,8 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 type Vehicle = { id: number; plate: string };
-type Driver = { id: number; username: string };
-type Manpower = { id: number; username: string };
+type Driver = { id: number; username: string; full_name?: string | null; vehicle_id?: number | null };
 
 type ScheduleEntry = {
   id: number;
@@ -191,8 +190,12 @@ export default function SupervisorServiceSchedule() {
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [manpower, setManpower] = useState<Manpower[]>([]);
   const [zoneName, setZoneName] = useState<string>('');
+  // Maps derived from supervision data
+  const [vehicleDriverMap, setVehicleDriverMap] = useState<Map<number, number | null>>(new Map());
+  const [vehicleDriverNameMap, setVehicleDriverNameMap] = useState<Map<number, string>>(new Map());
+  const [vehicleManpowerMap, setVehicleManpowerMap] = useState<Map<number, { ids: number[]; names: string[] }>>(new Map());
+  const [manpowerNameById, setManpowerNameById] = useState<Map<number, string>>(new Map());
 
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [savedDays, setSavedDays] = useState<number[]>([]);
@@ -230,8 +233,31 @@ export default function SupervisorServiceSchedule() {
         if (!sr.ok) throw new Error(sdata?.error || 'Failed to load schedule');
         setZoneName(zdata?.zone?.name || '');
         setVehicles((zdata?.vehicles || []).map((v: any) => ({ id: Number(v.id), plate: String(v.plate) })));
-        setDrivers((zdata?.drivers || []).map((d: any) => ({ id: Number(d.id), username: String(d.username) })));
-        setManpower((zdata?.manpower || []).map((m: any) => ({ id: Number(m.id), username: String(m.username) })));
+        setDrivers((zdata?.drivers || []).map((d: any) => ({ id: Number(d.id), username: String(d.username), full_name: d.full_name ?? null, vehicle_id: d.vehicle_id ?? null })));
+        const mpName = new Map<number, string>();
+        (zdata?.manpower || []).forEach((m: any) => {
+          mpName.set(Number(m.id), String(m.full_name ?? m.username));
+        });
+        setManpowerNameById(mpName);
+        // Build vehicle -> driver map and names
+        const vDr = new Map<number, number | null>();
+        const vDrName = new Map<number, string>();
+        (zdata?.vehicles || []).forEach((v: any) => {
+          const dr = (zdata?.drivers || []).find((d: any) => d.vehicle_id === v.id) || null;
+          vDr.set(Number(v.id), dr ? Number(dr.id) : null);
+          vDrName.set(Number(v.id), dr ? String(dr.full_name || dr.username) : 'None assigned');
+        });
+        setVehicleDriverMap(vDr);
+        setVehicleDriverNameMap(vDrName);
+        // Build vehicle -> manpower list map
+        const vMp = new Map<number, { ids: number[]; names: string[] }>();
+        (zdata?.vehicles || []).forEach((v: any) => {
+          const arr = Array.isArray(v.assigned_manpower_users) ? v.assigned_manpower_users : [];
+          const ids = arr.map((u: any) => Number(u.id));
+          const names = arr.map((u: any) => String(u.full_name || u.username));
+          vMp.set(Number(v.id), { ids, names });
+        });
+        setVehicleManpowerMap(vMp);
         setSchedule((sdata?.schedule || []));
         const days: number[] = Array.isArray(zdata?.serviceDays) ? zdata.serviceDays.map((n: any) => Number(n)).filter((n: any) => Number.isFinite(n)) : [];
         setSavedDays(days);
@@ -294,10 +320,6 @@ export default function SupervisorServiceSchedule() {
     setSchedule(prev => prev.filter(e => e.id !== entryId));
   }
 
-  function toggleManpower(id: number) {
-    setSelectedManpower(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  }
-
   const dayName = (d: number) => new Date(2000, 0, d).toLocaleString(undefined, { weekday: 'long' });
   const allDays = [1,2,3,4,5,6,7];
   const nonSavedDays = allDays.filter(d => !savedDays.includes(d));
@@ -308,9 +330,19 @@ export default function SupervisorServiceSchedule() {
   }, [vehicles]);
   const driverNameById = useMemo(() => {
     const m = new Map<number, string>();
-    drivers.forEach(d => m.set(d.id, d.username));
+    drivers.forEach(d => m.set(d.id, d.full_name || d.username));
     return m;
   }, [drivers]);
+
+  // Whenever a vehicle is chosen, auto-fill driver and manpower from maps and disable manual selection
+  useEffect(() => {
+    const vid = Number(vehicleId);
+    if (!vid) return;
+    const autoDriverId = vehicleDriverMap.get(vid) ?? null;
+    setDriverId(autoDriverId ? String(autoDriverId) : '');
+    const mp = vehicleManpowerMap.get(vid) || { ids: [], names: [] };
+    setSelectedManpower(mp.ids);
+  }, [vehicleId, vehicleDriverMap, vehicleManpowerMap]);
 
   // Enhanced filtering logic
   const filteredSchedule = useMemo(() => {
@@ -544,67 +576,52 @@ export default function SupervisorServiceSchedule() {
                   <div>
                     <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}>
                       <Icons.Driver className="w-4 h-4" style={{ color: colors.primary }} />
-                      Assign Driver
+                      Assigned Driver
                     </label>
-                    <select 
-                      value={driverId} 
-                      onChange={e => setDriverId(e.target.value)} 
-                      className="w-full rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-4 border transition-all duration-300"
-                      style={{ 
-                        backgroundColor: colors.cardBg,
-                        borderColor: colors.border,
-                        color: colors.text
-                      }}
-                    >
-                      <option value="">Optional - Select driver</option>
-                      {drivers.map(d => (
-                        <option key={d.id} value={d.id}>{d.username}</option>
-                      ))}
-                    </select>
+                    {vehicleId ? (
+                      <div className="w-full rounded-xl px-4 py-3 text-lg border" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.text }}>
+                        {vehicleDriverNameMap.get(Number(vehicleId)) || 'None assigned'}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl border text-sm" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
+                        Choose a vehicle to see its assigned driver.
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: colors.text }}>
                     <Icons.Manpower className="w-4 h-4" style={{ color: colors.primary }} />
-                    Assign Manpower Team
+                    {vehicleId ? 'Assigned Manpower Team' : 'Assign Manpower Team'}
                     {selectedManpower.length > 0 && (
                       <span className="text-xs px-2 py-1 rounded-full ml-2" style={{ backgroundColor: colors.primary, color: 'white' }}>
                         {selectedManpower.length} selected
                       </span>
                     )}
                   </label>
-                  <div className="flex flex-wrap gap-3 max-h-32 overflow-y-auto p-2 rounded-xl" style={{ backgroundColor: colors.background }}>
-                    {manpower.map(m => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => toggleManpower(m.id)}
-                        className={`px-4 py-3 rounded-xl border text-sm font-semibold transition-all duration-300 hover:scale-105 active:scale-95 ${
-                          selectedManpower.includes(m.id) 
-                            ? 'text-white shadow-lg' 
-                            : 'hover:shadow-md'
-                        }`}
-                        style={selectedManpower.includes(m.id) ? {
-                          backgroundColor: colors.primary,
-                          borderColor: colors.primary
-                        } : {
-                          backgroundColor: colors.cardBg,
-                          color: colors.text,
-                          borderColor: colors.border
-                        }}
-                      >
-                        {m.username}
-                      </button>
-                    ))}
-                  </div>
+                  {vehicleId ? (
+                    <div className="flex flex-wrap gap-2 p-2 rounded-xl" style={{ backgroundColor: colors.background }}>
+                      {(vehicleManpowerMap.get(Number(vehicleId))?.names || []).length ? (
+                        (vehicleManpowerMap.get(Number(vehicleId))?.names || []).map((n, idx) => (
+                          <span key={idx} className="px-3 py-2 rounded-xl text-sm border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}>{n}</span>
+                        ))
+                      ) : (
+                        <span className="italic" style={{ color: colors.textLight }}>None assigned</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl border text-sm" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
+                      Choose a vehicle to work on the selected service day. The assigned driver and manpowers for that vehicle will be used.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-8 pt-6 border-t" style={{ borderColor: colors.borderLight }}>
               <div className="text-sm" style={{ color: colors.textLight }}>
-                {selectedManpower.length} manpower • {vehicleId ? 'Vehicle selected' : 'No vehicle'} • {driverId ? 'Driver assigned' : 'No driver'}
+                {selectedManpower.length} manpower • {vehicleId ? 'Vehicle selected' : 'No vehicle'} • {driverId ? 'Driver (auto)' : 'No driver'}
               </div>
               <PrimaryButton 
                 onClick={addEntry}
@@ -702,16 +719,26 @@ export default function SupervisorServiceSchedule() {
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                        <div className="flex flex-col gap-4 mb-4">
                           <div className="flex items-center gap-3">
                             <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: colors.primary }}></div>
                             <span className="text-xl font-bold" style={{ color: colors.text }}>{dayName(e.service_day)}</span>
                           </div>
-                          <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: colors.background }}>
-                            <Icons.Time className="w-4 h-4" style={{ color: colors.primary }} />
-                            <span className="font-semibold" style={{ color: colors.text }}>
-                              {e.service_start.substring(0,5)} - {e.service_end.substring(0,5)}
-                            </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: colors.background }}>
+                              <Icons.Time className="w-4 h-4 flex-shrink-0" style={{ color: colors.primary }} />
+                              <div>
+                                <div className="text-xs" style={{ color: colors.textLight }}>Service Start Time</div>
+                                <div className="font-semibold" style={{ color: colors.text }}>{e.service_start.substring(0,5)}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: colors.background }}>
+                              <Icons.Time className="w-4 h-4 flex-shrink-0" style={{ color: colors.primary }} />
+                              <div>
+                                <div className="text-xs" style={{ color: colors.textLight }}>Service End Time</div>
+                                <div className="font-semibold" style={{ color: colors.text }}>{e.service_end.substring(0,5)}</div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                         
@@ -738,15 +765,23 @@ export default function SupervisorServiceSchedule() {
                             </div>
                           )}
                           
-                          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: colors.background }}>
-                            <Icons.Manpower className="w-5 h-5 flex-shrink-0" style={{ color: colors.primary }} />
-                            <div>
-                              <div className="font-semibold" style={{ color: colors.text }}>
-                                {e.assigned_manpower_ids?.length
-                                  ? `${e.assigned_manpower_ids.length} team members`
-                                  : 'No team assigned'}
+                          <div className="flex items-start gap-3 p-3 rounded-xl" style={{ backgroundColor: colors.background }}>
+                            <Icons.Manpower className="w-5 h-5 flex-shrink-0 mt-1" style={{ color: colors.primary }} />
+                            <div className="min-w-0">
+                              <div className="font-semibold mb-1" style={{ color: colors.text }}>
+                                {e.assigned_manpower_ids?.length ? 'Manpower' : 'No team assigned'}
                               </div>
-                              <div className="text-sm" style={{ color: colors.textLight }}>Manpower</div>
+                              {e.assigned_manpower_ids?.length ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {e.assigned_manpower_ids.map((mid) => (
+                                    <span key={mid} className="px-2 py-1 rounded-lg text-sm border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}>
+                                      {manpowerNameById.get(mid) || `#${mid}`}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-sm" style={{ color: colors.textLight }}>Manpower</div>
+                              )}
                             </div>
                           </div>
                         </div>
