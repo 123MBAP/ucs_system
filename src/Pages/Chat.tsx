@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function Chat() {
-  const API_BASE = (import.meta as any)?.env?.VITE_API_BASE || (import.meta as any)?.env?.VITE_API_URL || '';
+  const API_BASE =import.meta.env.VITE_API_URL as string;
   const [tab, setTab] = React.useState<'general' | 'workers'>('general');
   const [message, setMessage] = React.useState('');
   const [messages, setMessages] = React.useState<{
