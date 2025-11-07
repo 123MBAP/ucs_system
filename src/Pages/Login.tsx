@@ -21,8 +21,14 @@ const colors = {
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [resetEmail, setResetEmail] = useState('');
   const [showReset, setShowReset] = useState(false);
+  const [fpStep, setFpStep] = useState<'start' | 'options' | 'email_code' | 'done'>('start');
+  const [fpUsernameOrEmail, setFpUsernameOrEmail] = useState('');
+  const [fpError, setFpError] = useState<string | null>(null);
+  const [fpLoading, setFpLoading] = useState(false);
+  const [fpData, setFpData] = useState<{ userType: 'user' | 'client'; userId: number; username: string; emailHint: string | null; canEmailReset: boolean; isClient: boolean; role?: string | null } | null>(null);
+  const [fpRequestId, setFpRequestId] = useState<number | null>(null);
+  const [fpCode, setFpCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -53,15 +59,86 @@ const Login = () => {
     }
   }
 
-  function handleReset(e: React.FormEvent) {
-    e.preventDefault();
-    if (!resetEmail.trim()) {
-      alert('Enter your email to reset password.');
-      return;
-    }
-    console.log('Password reset for', resetEmail);
-    alert('Password reset link sent (mock).');
-    setResetEmail(''); setShowReset(false);
+  async function fpStart() {
+    setFpError(null);
+    setFpLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/password/start`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernameOrEmail: fpUsernameOrEmail })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error || 'Failed');
+      setFpData(d);
+      setFpStep('options');
+    } catch (e: any) {
+      setFpError(e?.message || 'Failed');
+    } finally { setFpLoading(false); }
+  }
+
+  async function fpClientRequestChief() {
+    if (!fpData) return;
+    setFpError(null); setFpLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/password/client/request`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: fpData.username })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error || 'Failed');
+      setFpStep('done');
+    } catch (e: any) {
+      setFpError(e?.message || 'Failed');
+    } finally { setFpLoading(false); }
+  }
+
+  async function fpSendEmailCode() {
+    if (!fpData) return;
+    setFpError(null); setFpLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/password/email/send`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userType: fpData.userType, userId: fpData.userId })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error || 'Failed');
+      setFpRequestId(d.requestId);
+      setFpStep('email_code');
+    } catch (e: any) {
+      setFpError(e?.message || 'Failed');
+    } finally { setFpLoading(false); }
+  }
+
+  async function fpVerifyCode() {
+    if (!fpRequestId) return;
+    setFpError(null); setFpLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/password/email/verify`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: fpRequestId, code: fpCode })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error || 'Failed');
+      setFpStep('done');
+    } catch (e: any) {
+      setFpError(e?.message || 'Failed');
+    } finally { setFpLoading(false); }
+  }
+
+  async function fpUserRequestSupervisor() {
+    if (!fpData) return;
+    setFpError(null); setFpLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/password/user/request-supervisor`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: fpData.username })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error || 'Failed');
+      setFpStep('done');
+    } catch (e: any) {
+      setFpError(e?.message || 'Failed');
+    } finally { setFpLoading(false); }
   }
 
   // UI Components
@@ -268,7 +345,7 @@ const Login = () => {
             <div className="text-center">
               <button 
                 type="button" 
-                onClick={() => setShowReset(true)}
+                onClick={() => { setShowReset(true); setFpStep('start'); setFpUsernameOrEmail(''); setFpData(null); setFpError(null); setFpRequestId(null); setFpCode(''); }}
                 className="text-sm font-medium transition-colors duration-200 hover:underline"
                 style={{ color: colors.textLight }}
               >
@@ -294,40 +371,94 @@ const Login = () => {
                   </button>
                 </div>
                 
-                <form onSubmit={handleReset} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>
-                      Email Address
-                    </label>
-                    <input
-                      value={resetEmail}
-                      onChange={e => setResetEmail(e.target.value)}
-                      className="block w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2"
-                      style={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        borderColor: colors.border,
-                        color: colors.text
-                      }}
-                      placeholder="Enter your email address"
-                      type="email"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center space-x-3 pt-2">
-                    <AccentButton
-                      type="submit"
-                      className="flex-1 py-3"
-                    >
-                      Send Reset Link
-                    </AccentButton>
-                    <OutlineButton
-                      onClick={() => setShowReset(false)}
-                      className="flex-1 py-3"
-                    >
-                      Cancel
-                    </OutlineButton>
-                  </div>
-                </form>
+                <div className="space-y-4">
+                  {fpError && (
+                    <div className="p-3 rounded border" style={{ backgroundColor: '#FEF2F2', borderColor: colors.error, color: colors.error }}>
+                      {fpError}
+                    </div>
+                  )}
+                  {fpStep === 'start' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>
+                          Username or Email
+                        </label>
+                        <input
+                          value={fpUsernameOrEmail}
+                          onChange={e => setFpUsernameOrEmail(e.target.value)}
+                          className="block w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2"
+                          style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: colors.border, color: colors.text }}
+                          placeholder="Enter your username or email"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-3 pt-2">
+                        <AccentButton onClick={fpStart} className="flex-1 py-3" disabled={fpLoading}>
+                          {fpLoading ? 'Please wait...' : 'Continue'}
+                        </AccentButton>
+                        <OutlineButton onClick={() => setShowReset(false)} className="flex-1 py-3">Cancel</OutlineButton>
+                      </div>
+                    </div>
+                  )}
+
+                  {fpStep === 'options' && fpData && (
+                    <div className="space-y-4">
+                      <div style={{ color: colors.text }}>
+                        <p className="text-sm">Account: <span className="font-semibold">{fpData.username}</span></p>
+                        {fpData.canEmailReset && (
+                          <p className="text-sm">Email hint: <span className="font-semibold">{fpData.emailHint}</span></p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {fpData.canEmailReset && (
+                          <AccentButton onClick={fpSendEmailCode} className="w-full py-3" disabled={fpLoading}>
+                            {fpLoading ? 'Sending...' : 'Reset via Email Code'}
+                          </AccentButton>
+                        )}
+                        {fpData.isClient && (
+                          <OutlineButton onClick={fpClientRequestChief} className="w-full py-3">
+                            Ask Chief to Reset Password
+                          </OutlineButton>
+                        )}
+                        {!fpData.isClient && (fpData.role === 'chief' || fpData.role === 'driver' || fpData.role === 'manpower') && (
+                          <OutlineButton onClick={fpUserRequestSupervisor} className="w-full py-3">
+                            Ask Supervisor to Reset Password
+                          </OutlineButton>
+                        )}
+                        <OutlineButton onClick={() => setFpStep('start')} className="w-full py-3">Back</OutlineButton>
+                      </div>
+                    </div>
+                  )}
+
+                  {fpStep === 'email_code' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>
+                          Enter Verification Code (sent to your email)
+                        </label>
+                        <input
+                          value={fpCode}
+                          onChange={e => setFpCode(e.target.value)}
+                          className="block w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2"
+                          style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: colors.border, color: colors.text }}
+                          placeholder="6-digit code"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-3 pt-2">
+                        <AccentButton onClick={fpVerifyCode} className="flex-1 py-3" disabled={fpLoading}>
+                          {fpLoading ? 'Verifying...' : 'Verify & Reset'}
+                        </AccentButton>
+                        <OutlineButton onClick={() => setFpStep('options')} className="flex-1 py-3">Back</OutlineButton>
+                      </div>
+                    </div>
+                  )}
+
+                  {fpStep === 'done' && (
+                    <div className="space-y-4 text-center" style={{ color: colors.text }}>
+                      <p>Your password has been reset to default: <span className="font-semibold">123</span> if approved or verified.</p>
+                      <AccentButton onClick={() => { setShowReset(false); }} className="w-full py-3">Close</AccentButton>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -336,7 +467,7 @@ const Login = () => {
         {/* Footer Note */}
         <div className="text-center mt-6">
           <p className="text-sm" style={{ color: colors.textLight }}>
-            © 2024 UCS Company. Secure Management System
+            2024 UCS Company. Secure Management System
           </p>
         </div>
       </div>

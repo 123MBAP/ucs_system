@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useI18n } from 'src/lib/i18n';
 import LoadingSpinner from '../Components/LoadingSpinner';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
@@ -17,6 +18,7 @@ type Zone = { id: number; name: string; assigned_chief?: number | null; supervis
 type UserRef = { id: number; username: string };
 
 const ManageWorkers = () => {
+  const { t } = useI18n();
   const [supervisors, setSupervisors] = useState<SupervisorRow[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -481,9 +483,9 @@ const ManageWorkers = () => {
     <div className="p-6 space-y-8 min-h-screen" style={{ backgroundColor: colors.background }}>
       {/* Page Header */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: colors.text }}>Manage Workers</h1>
+        <h1 className="text-3xl font-bold mb-2 ucs-gradient-text">{t('manageWorkers.title')}</h1>
         <p className="text-lg" style={{ color: colors.textLight }}>
-          Manage supervisors, chiefs, manpower, and drivers across your organization
+          {t('manageWorkers.subtitle')}
         </p>
       </div>
 
@@ -501,7 +503,7 @@ const ManageWorkers = () => {
         <div className="space-y-12 max-w-7xl mx-auto">
           {/* SECTION 1: SUPERVISORS */}
           <section>
-            <SectionHeader title="Manage Supervisors" number={1} />
+            <SectionHeader title={t('manageWorkers.section.supervisors')} number={1} />
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {supervisors.map(s => (
@@ -513,7 +515,7 @@ const ManageWorkers = () => {
                     </div>
                     {editingId === s.id ? (
                       <OutlineButton onClick={cancelEdit} className="text-sm px-3 py-1">
-                        Close
+                        {t('manageWorkers.close')}
                       </OutlineButton>
                     ) : (
                       <button 
@@ -521,14 +523,14 @@ const ManageWorkers = () => {
                         className="text-sm font-medium underline px-3 py-1 rounded"
                         style={{ color: colors.primary }}
                       >
-                        Manage
+                        {t('manageWorkers.manage')}
                       </button>
                     )}
                   </div>
 
                   <div className="space-y-3 mb-4">
                     <div>
-                      <span className="text-sm font-medium" style={{ color: colors.textLight }}>Assigned Vehicles:</span>
+                      <span className="text-sm font-medium" style={{ color: colors.textLight }}>{t('manageWorkers.assignedVehicles')}</span>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {s.vehicles && s.vehicles.length ? 
                           s.vehicles.map(v => (
@@ -536,12 +538,12 @@ const ManageWorkers = () => {
                               {v.plate}
                             </span>
                           )) : 
-                          <span className="text-sm" style={{ color: colors.textLight }}>None</span>
+                          <span className="text-sm" style={{ color: colors.textLight }}>{t('manageWorkers.none')}</span>
                         }
                       </div>
                     </div>
                     <div>
-                      <span className="text-sm font-medium" style={{ color: colors.textLight }}>Zones:</span>
+                      <span className="text-sm font-medium" style={{ color: colors.textLight }}>{t('manageWorkers.zones')}</span>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {s.zones && s.zones.length ? 
                           s.zones.map(z => (
@@ -549,7 +551,7 @@ const ManageWorkers = () => {
                               {z.name}
                             </span>
                           )) : 
-                          <span className="text-sm" style={{ color: colors.textLight }}>None</span>
+                          <span className="text-sm" style={{ color: colors.textLight }}>{t('manageWorkers.none')}</span>
                         }
                       </div>
                     </div>
@@ -559,7 +561,7 @@ const ManageWorkers = () => {
                     <div className="space-y-4 border-t pt-4" style={{ borderColor: colors.border }}>
                       {/* Assign Vehicle */}
                       <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>Assign Vehicle</label>
+                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>{t('manageWorkers.assignVehicle')}</label>
                         <select 
                           value={editVehicleId} 
                           onChange={e => setEditVehicleId(e.target.value)} 
@@ -568,7 +570,7 @@ const ManageWorkers = () => {
                             borderColor: colors.border
                           }}
                         >
-                          <option value="">Select a vehicle…</option>
+                          <option value="">{t('manageWorkers.selectVehicle')}</option>
                           {vehicles.map(v => (
                             <option key={v.id} value={v.id}>{v.plate}</option>
                           ))}
@@ -580,14 +582,14 @@ const ManageWorkers = () => {
                             loading={!!actionLoading[`saveVehicle-${s.id}`]}
                             className="text-sm px-3 py-1"
                           >
-                            Add Vehicle
+                            {t('manageWorkers.addVehicle')}
                           </PrimaryButton>
                         </div>
                       </div>
 
                       {/* Unassign Vehicles */}
                       <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>Unassign Vehicles</label>
+                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>{t('manageWorkers.unassignVehicles')}</label>
                         <div className="flex flex-wrap gap-2">
                           {s.vehicles.map(v => (
                             <button 
@@ -601,13 +603,13 @@ const ManageWorkers = () => {
                               {v.plate} <span>✕</span>
                             </button>
                           ))}
-                          {!s.vehicles.length && <div className="text-sm" style={{ color: colors.textLight }}>No vehicles to unassign</div>}
+                          {!s.vehicles.length && <div className="text-sm" style={{ color: colors.textLight }}>{t('manageWorkers.noVehiclesToUnassign')}</div>}
                         </div>
                       </div>
 
                       {/* Add Zone */}
                       <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>Add Zone</label>
+                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>{t('manageWorkers.addZone')}</label>
                         <div className="flex flex-col sm:flex-row gap-2">
                           <select 
                             value={addZoneId} 
@@ -615,7 +617,7 @@ const ManageWorkers = () => {
                             className="flex-1 border rounded-lg px-3 py-2 text-sm"
                             style={{ borderColor: colors.border }}
                           >
-                            <option value="">Select a zone…</option>
+                            <option value="">{t('manageWorkers.selectZone')}</option>
                             {zones
                               .filter(z => !s.zones.some(sz => sz.id === z.id))
                               .map(z => (
@@ -628,14 +630,14 @@ const ManageWorkers = () => {
                             loading={!!actionLoading[`addZone-${s.id}`]}
                             className="text-sm px-3 py-1"
                           >
-                            Add
+                            {t('manageWorkers.add')}
                           </PrimaryButton>
                         </div>
                       </div>
 
                       {/* Remove Zones */}
                       <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>Remove Zones</label>
+                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>{t('manageWorkers.removeZones')}</label>
                         <div className="flex flex-wrap gap-2">
                           {s.zones.map(z => (
                             <button 
@@ -649,13 +651,13 @@ const ManageWorkers = () => {
                               {z.name} <span>✕</span>
                             </button>
                           ))}
-                          {!s.zones.length && <div className="text-sm" style={{ color: colors.textLight }}>No zones to remove</div>}
+                          {!s.zones.length && <div className="text-sm" style={{ color: colors.textLight }}>{t('manageWorkers.noZonesToRemove')}</div>}
                         </div>
                       </div>
 
                       {/* Move Zones */}
                       <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>Move Zones to Another Supervisor</label>
+                        <label className="block text-sm font-medium mb-2" style={{ color: colors.text }}>{t('manageWorkers.moveZones')}</label>
                         <div className="space-y-3">
                           {s.zones.map(z => (
                             <div key={z.id} className="flex flex-col sm:flex-row items-center gap-2">
@@ -666,7 +668,7 @@ const ManageWorkers = () => {
                                 className="border rounded-lg px-2 py-1 text-sm"
                                 style={{ borderColor: colors.border }}
                               >
-                                <option value="">Select supervisor…</option>
+                                <option value="">{t('manageWorkers.selectSupervisor')}</option>
                                 {supervisors.filter(sv => sv.id !== s.id).map(sv => (
                                   <option key={sv.id} value={sv.id}>{sv.username}</option>
                                 ))}
@@ -677,7 +679,7 @@ const ManageWorkers = () => {
                                 loading={!!actionLoading[`moveZone-${z.id}`]}
                                 className="text-sm px-2 py-1"
                               >
-                                Move
+                                {t('manageWorkers.move')}
                               </PrimaryButton>
                             </div>
                           ))}
@@ -691,7 +693,7 @@ const ManageWorkers = () => {
               {!supervisors.length && (
                 <Card>
                   <div className="text-center py-8" style={{ color: colors.textLight }}>
-                    No supervisors found
+                    {t('manageWorkers.noSupervisorsFound')}
                   </div>
                 </Card>
               )}
@@ -701,7 +703,7 @@ const ManageWorkers = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Unassigned Vehicles */}
               <Card>
-                <SubsectionHeader title="Unassigned Vehicles" />
+                <SubsectionHeader title={t('manageWorkers.unassignedVehicles')} />
                 {(() => {
                   const assignedVehicleIds = new Set<number>();
                   supervisors.forEach(s => (s.vehicles || []).forEach(v => assignedVehicleIds.add(v.id)));

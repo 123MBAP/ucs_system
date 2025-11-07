@@ -23,3 +23,9 @@ body {
     @apply font-sans bg-zinc-50 text-zinc-900;
   }
 }
+
+@layer components {
+  .ucs-gradient-text {
+    @apply bg-gradient-to-r from-amber-400 to-amber-500 bg-clip-text text-transparent;
+  }
+}

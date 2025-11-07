@@ -1,7 +1,7 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Sidebar from 'src/Components/SideBar';
-import { LanguageProvider, useI18n } from 'src/lib/i18n';
+import { useI18n } from 'src/lib/i18n';
 
 // Lazy-loaded route components (code-splitting)
 const AddNewZone = lazy(() => import('src/Pages/AddNewZone'));
@@ -35,6 +35,7 @@ const ZoneManpower = lazy(() => import('src/Pages/ZoneManpower'));
 const Zones = lazy(() => import('src/Pages/Zones'));
 const ZoneSupervision = lazy(() => import('src/Pages/ZoneSupervision'));
 const Chat = lazy(() => import('src/Pages/Chat'));
+const VerifyEmail = lazy(() => import('src/Pages/VerifyEmail'));
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -49,6 +50,7 @@ function AppShell() {
   });
   const location = useLocation();
   const onLoginPage = location.pathname === '/login';
+  const publicRoutes = new Set(['/login', '/verify-email']);
   const shellBg = onLoginPage ? '' : 'bg-gradient-to-br from-zinc-50 to-amber-50';
   const { t, lang, setLang } = useI18n();
   const [langOpen, setLangOpen] = useState(false);
@@ -89,6 +91,53 @@ function AppShell() {
     };
   }, []);
 
+  function autoLogout() {
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } catch {}
+    window.dispatchEvent(new Event('auth-changed'));
+    if (location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+  }
+
+  // Route guard: redirect to /login if visiting protected routes without token
+  React.useEffect(() => {
+    const token = localStorage.getItem('token');
+    const isPublic = publicRoutes.has(location.pathname);
+    if (!token && !isPublic) {
+      autoLogout();
+    }
+  }, [location.pathname]);
+
+  // Install global fetch wrapper once to inject Authorization and auto-logout on 401
+  React.useEffect(() => {
+    const w = window as any;
+    if (w.__fetch_patched__) return;
+    const origFetch: typeof window.fetch = window.fetch.bind(window);
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = new Headers(init?.headers || {});
+        if (token && !headers.has('Authorization')) {
+          headers.set('Authorization', `Bearer ${token}`);
+        }
+        const resp = await origFetch(input, { ...init, headers });
+        if (resp.status === 401) {
+          // Attempt to read body for consistency, but don't block logout
+          try { await resp.clone().json(); } catch {}
+          autoLogout();
+        }
+        return resp;
+      } catch (e) {
+        // Network or other error — fall through
+        throw e;
+      }
+    };
+    w.__fetch_patched__ = true;
+  }, []);
+
   return (
     <div className={`flex min-h-screen w-full overflow-x-hidden lg:pl-[var(--sidebar-w)] ${shellBg}`}>
       {isLoggedIn && !onLoginPage && (
@@ -98,7 +147,7 @@ function AppShell() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         {isLoggedIn && !onLoginPage && (
-          <header className="bg-gradient-to-r from-neutral-900 to-neutral-800 text-gray-100 backdrop-blur shadow-sm z-10 border-b border-neutral-700">
+          <header className="bg-gradient-to-r from-neutral-900 to-neutral-800 backdrop-blur shadow-sm z-10 border-b border-neutral-700">
             <div className="flex items-center justify-between p-3 sm:p-4 gap-2 min-w-0">
               <div className="flex items-center gap-3 min-w-0">
                 <button
@@ -110,7 +159,7 @@ function AppShell() {
                   </svg>
                 </button>
                 <div className="flex flex-col min-w-0 max-w-[60vw] sm:max-w-none">
-                  <h1 className="text-sm sm:text-2xl font-bold text-gray-100 whitespace-nowrap truncate">
+                  <h1 className="text-sm sm:text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-500 bg-clip-text text-transparent whitespace-nowrap truncate">
                     {t('app.title')}
                   </h1>
                   <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">{t('app.subtitle')}</p>
@@ -224,6 +273,7 @@ function AppShell() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/register-manpower" element={<RegisterManpower />} />
                 <Route path="/register-client" element={<RegisterClient />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
               </Routes>
             </Suspense>
           </div>
@@ -260,11 +310,9 @@ function AppShell() {
 
 function App() {
   return (
-    <LanguageProvider>
-      <BrowserRouter>
-        <AppShell />
-      </BrowserRouter>
-    </LanguageProvider>
+    <BrowserRouter>
+      <AppShell />
+    </BrowserRouter>
   );
 }
 

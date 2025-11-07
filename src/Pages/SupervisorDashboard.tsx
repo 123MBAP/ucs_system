@@ -80,6 +80,8 @@ const SupervisorDashboard = () => {
   const [totalsLoading, setTotalsLoading] = useState(false);
   const [totalsError, setTotalsError] = useState<string | null>(null);
   const [totals, setTotals] = useState<{ due_total: number; paid_total: number; remaining_total: number; year?: number; month?: number } | null>(null);
+  const [pwReqs, setPwReqs] = useState<{ id: number; userId: number; username: string; emailHint: string | null; role: string; createdAt: string }[]>([]);
+  const [pwBusyId, setPwBusyId] = useState<number | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -252,6 +254,60 @@ const SupervisorDashboard = () => {
 
   return (
     <div className="space-y-8 overflow-x-hidden">
+      {pwReqs.length > 0 && (
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-stone-800">Password Reset Requests</h2>
+            <button
+              className="text-sm text-amber-700 underline"
+              onClick={async () => {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                try {
+                  const r = await fetch(`${apiBase}/api/password/supervisor/requests`, { headers: { Authorization: `Bearer ${token}` } });
+                  const j = await r.json();
+                  if (!r.ok) throw new Error(j?.error || 'Failed');
+                  setPwReqs(Array.isArray(j?.requests) ? j.requests : []);
+                } catch {}
+              }}
+            >
+              {t('common.refresh')}
+            </button>
+          </div>
+          <div className="space-y-2">
+            {pwReqs.map(r => (
+              <div key={r.id} className="flex items-center justify-between p-3 rounded-lg border border-amber-100 bg-amber-50/40">
+                <div>
+                  <div className="text-sm font-medium text-stone-900">{r.username} <span className="text-xs text-stone-500">({r.role})</span></div>
+                  {r.emailHint && <div className="text-xs text-stone-600">Email: {r.emailHint}</div>}
+                  <div className="text-xs text-stone-500">Requested at: {new Date(r.createdAt).toLocaleString()}</div>
+                </div>
+                <button
+                  disabled={pwBusyId === r.id}
+                  onClick={async () => {
+                    const token = localStorage.getItem('token');
+                    if (!token) return;
+                    setPwBusyId(r.id);
+                    try {
+                      const resp = await fetch(`${apiBase}/api/password/supervisor/requests/${r.id}/reset`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+                      const d = await resp.json();
+                      if (!resp.ok) throw new Error(d?.error || 'Failed');
+                      setPwReqs(prev => prev.filter(x => x.id !== r.id));
+                    } catch (e: any) {
+                      alert(e?.message || 'Failed to reset');
+                    } finally {
+                      setPwBusyId(null);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-md text-white text-sm ${pwBusyId === r.id ? 'bg-gray-400' : 'bg-neutral-900 hover:bg-neutral-800'}`}
+                >
+                  {pwBusyId === r.id ? 'Resetting...' : 'Reset to 123'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between min-w-0">
         <div className="min-w-0">

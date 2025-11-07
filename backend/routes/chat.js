@@ -1,8 +1,19 @@
 import express from 'express';
 import db from '../db.js';
 import auth from '../middlewares/auth.js';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
+
+// In-memory SSE clients
+const sseClients = new Set();
+
+function broadcastChatEvent(event) {
+  const payload = `data: ${JSON.stringify(event)}\n\n`;
+  for (const client of sseClients) {
+    try { client.res.write(payload); } catch {}
+  }
+}
 
 function assertGroup(group) {
   return group === 'general' || group === 'workers';
@@ -22,6 +33,78 @@ async function ensureReplyColumn() {
   );
   await db.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_reply_to ON chat_messages(reply_to_id);`);
 }
+
+async function ensureChatTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id SERIAL PRIMARY KEY,
+      "group" TEXT NOT NULL CHECK ("group" IN ('general','workers')),
+      user_id INTEGER,
+      message TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      reply_to_id INTEGER NULL
+    );
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_group_created ON chat_messages("group", created_at DESC);`);
+  await ensureReplyColumn();
+}
+
+// Ensure table exists when this router is mounted
+router.use(async (_req, _res, next) => {
+  try { await ensureChatTable(); } catch (e) { console.warn('ensureChatTable warn:', e?.message); }
+  next();
+});
+
+// GET /api/chat/stream?token=...
+router.get('/stream', async (req, res) => {
+  const token = String(req.query.token || '');
+  if (!token) return res.status(401).end();
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_change_me');
+    // Setup SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+    // Initial hello
+    res.write(`event: hello\n`);
+    res.write(`data: ${JSON.stringify({ ok: true, user: { id: user.id, role: user.role } })}\n\n`);
+    const client = { res, userId: user.id };
+    sseClients.add(client);
+    const ping = setInterval(() => {
+      try { res.write(`: ping\n\n`); } catch {}
+    }, 15000);
+    req.on('close', () => {
+      clearInterval(ping);
+      sseClients.delete(client);
+      try { res.end(); } catch {}
+    });
+  } catch (_e) {
+    return res.status(401).end();
+  }
+});
+
+// GET /api/chat/unread?groups=general,workers
+router.get('/unread', auth, async (req, res) => {
+  try {
+    const raw = String(req.query.groups || 'general');
+    const groups = raw.split(',').map((g) => g.trim()).filter(Boolean).filter(assertGroup);
+    if (!groups.length) return res.json({ unread: {} });
+    // Simple heuristic: count messages in last 24h not authored by the current user
+    const result = {};
+    for (const g of groups) {
+      const { rows } = await db.query(
+        `SELECT COUNT(*)::int AS c FROM chat_messages WHERE "group" = $1 AND created_at > NOW() - INTERVAL '24 hours' AND (user_id IS NULL OR user_id <> $2)`,
+        [g, req.user.id]
+      );
+      result[g] = rows[0]?.c ?? 0;
+    }
+    return res.json({ unread: result });
+  } catch (err) {
+    console.error('chat unread error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 router.get('/messages', auth, async (req, res) => {
   async function run() {
@@ -97,7 +180,10 @@ router.post('/messages', auth, async (req, res) => {
       [g, userId, String(message).trim(), reply_to_id ?? null]
     );
 
-    return res.status(201).json({ message: ins.rows[0] });
+    const msg = ins.rows[0];
+    // Notify SSE clients
+    try { broadcastChatEvent({ type: 'message', message: msg }); } catch {}
+    return res.status(201).json({ message: msg });
   }
   try {
     return await run();

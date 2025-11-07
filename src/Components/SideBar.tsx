@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { useI18n } from 'src/lib/i18n';
 import type { JSX } from 'react';
 
 type SidebarProps = {
@@ -21,6 +22,12 @@ const Icons = {
   Zone: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.447-.894L15 4m0 13V4m0 0L9 7" /></svg>,
   Profile: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
   Reports: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+  Chat: () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M2.5 4.75A2.75 2.75 0 015.25 2h9.5A2.75 2.75 0 0117.5 4.75v6.5A2.75 2.75 0 0114.75 14h-6.8l-3.2 2.4a.75.75 0 01-1.2-.6V4.75z" />
+      <path d="M8.5 16.5h5.75l3.2 2.4a.75.75 0 001.2-.6v-6.5A2.75 2.75 0 0015.9 9H15v2.25A2.75 2.75 0 0112.25 14H9v.75a1.75 1.75 0 001.75 1.75z" opacity=".3" />
+    </svg>
+  ),
   Payments: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" /></svg>,
   Folder: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>,
   ChevronDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>,
@@ -38,29 +45,30 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     window.location.href = '/login';
   }
 
+  const { t } = useI18n();
   const menuItems: { name: string; icon: JSX.Element; to: string }[] = [
-    { name: 'Dashboard', icon: <Icons.Dashboard />, to: '/' },
-    { name: 'Manage Workers', icon: <Icons.Workers />, to: '/manage-workers' },
-    { name: 'Workers', icon: <Icons.Workers />, to: '/workers' },
-    { name: 'Supervisor Dashboard', icon: <Icons.Supervisor />, to: '/supervisor-dashboard' },
-    { name: 'Services Supervision', icon: <Icons.Supervisor />, to: '/supervisor/services' },
-    { name: 'Chief Dashboard', icon: <Icons.Chief />, to: '/chief-dashboard' },
-    { name: 'Clients', icon: <Icons.Client />, to: '/clients' },
-    { name: 'Day of Service Plan', icon: <Icons.Folder />, to: '/chief-service-plan' },
-    { name: 'Client Dashboard', icon: <Icons.Client />, to: '/client-dashboard' },
-    { name: 'Manpower Dashboard', icon: <Icons.Manpower />, to: '/manpower-dashboard' },
-    { name: 'Driver Dashboard', icon: <Icons.Driver />, to: '/driver-dashboard' },
-    { name: 'Register Client', icon: <Icons.AddUser />, to: '/register-client' },
-    { name: 'Register Driver', icon: <Icons.Driver />, to: '/register-driver' },
-    { name: 'Register Vehicle', icon: <Icons.Vehicle />, to: '/register-vehicle' },
-    { name: 'Register Manpower', icon: <Icons.Manpower />, to: '/register-manpower' },
-    { name: 'Add New Zone', icon: <Icons.Zone />, to: '/add-zone' },
-    { name: 'Register Supervisor', icon: <Icons.Supervisor />, to: '/register-supervisor' },
-    { name: 'Register Chief of Zone', icon: <Icons.Chief />, to: '/register-chief' },
-    { name: 'My Profile', icon: <Icons.Profile />, to: '/profile' },
-    { name: 'Reports', icon: <Icons.Reports />, to: '/reports' },
-    { name: 'Payments', icon: <Icons.Payments />, to: '/payments' },
-    { name: 'Chat', icon: <Icons.Reports />, to: '/chat' },
+    { name: t('sidebar.dashboard'), icon: <Icons.Dashboard />, to: '/' },
+    { name: t('sidebar.manageWorkers'), icon: <Icons.Workers />, to: '/manage-workers' },
+    { name: t('sidebar.workers'), icon: <Icons.Workers />, to: '/workers' },
+    { name: t('sidebar.supervisorDashboard'), icon: <Icons.Supervisor />, to: '/supervisor-dashboard' },
+    { name: t('sidebar.servicesSupervision'), icon: <Icons.Supervisor />, to: '/supervisor/services' },
+    { name: t('sidebar.chiefDashboard'), icon: <Icons.Chief />, to: '/chief-dashboard' },
+    { name: t('sidebar.clients'), icon: <Icons.Client />, to: '/clients' },
+    { name: t('sidebar.dayOfServicePlan'), icon: <Icons.Folder />, to: '/chief-service-plan' },
+    { name: t('sidebar.clientDashboard'), icon: <Icons.Client />, to: '/client-dashboard' },
+    { name: t('sidebar.manpowerDashboard'), icon: <Icons.Manpower />, to: '/manpower-dashboard' },
+    { name: t('sidebar.driverDashboard'), icon: <Icons.Driver />, to: '/driver-dashboard' },
+    { name: t('sidebar.registerClient'), icon: <Icons.AddUser />, to: '/register-client' },
+    { name: t('sidebar.registerDriver'), icon: <Icons.Driver />, to: '/register-driver' },
+    { name: t('sidebar.registerVehicle'), icon: <Icons.Vehicle />, to: '/register-vehicle' },
+    { name: t('sidebar.registerManpower'), icon: <Icons.Manpower />, to: '/register-manpower' },
+    { name: t('sidebar.addNewZone'), icon: <Icons.Zone />, to: '/add-zone' },
+    { name: t('sidebar.registerSupervisor'), icon: <Icons.Supervisor />, to: '/register-supervisor' },
+    { name: t('sidebar.registerChiefOfZone'), icon: <Icons.Chief />, to: '/register-chief' },
+    { name: t('sidebar.myProfile'), icon: <Icons.Profile />, to: '/profile' },
+    { name: t('sidebar.reports'), icon: <Icons.Reports />, to: '/reports' },
+    { name: t('sidebar.payments'), icon: <Icons.Payments />, to: '/payments' },
+    { name: t('sidebar.chat'), icon: <Icons.Chat />, to: '/chat' },
   ];
 
   const storedUser = typeof localStorage !== 'undefined' ? localStorage.getItem('user') : null;
@@ -137,6 +145,68 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   }, [widthValue]);
   const visibleItems = allowed ? menuItems.filter(item => allowed.has(item.to)) : menuItems;
 
+  // Chat unread count
+  const API_BASE = (import.meta as any).env?.VITE_API_URL as string;
+  const [unread, setUnread] = useState(0);
+  function getUserId(): number | null {
+    try {
+      const u = localStorage.getItem('user');
+      return u ? (JSON.parse(u)?.id ?? null) : null;
+    } catch { return null; }
+  }
+  async function computeUnread() {
+    try {
+      const token = localStorage.getItem('token');
+      if (!API_BASE || !token) { setUnread(0); return; }
+      const role = userRole;
+      const groups: Array<'general' | 'workers'> = role === 'client' ? ['general'] : ['general','workers'];
+
+      // Compute from lists using local last_read timestamps
+      const me = getUserId();
+      let total = 0;
+      for (const g of groups) {
+        const lastReadRaw = localStorage.getItem(`chat_last_read_${g}`);
+        const lastRead = lastReadRaw ? new Date(lastReadRaw).getTime() : 0;
+        const res = await fetch(`${API_BASE}/api/chat/messages?group=${encodeURIComponent(g)}&limit=100`, {
+          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        const list: any[] = Array.isArray(data?.messages) ? data.messages : [];
+        const count = list.reduce((acc, m) => {
+          const ts = new Date(m?.created_at || 0).getTime();
+          const fromMe = me != null && Number(m?.user_id) === Number(me);
+          return acc + ((ts > lastRead && !fromMe) ? 1 : 0);
+        }, 0);
+        total += count;
+      }
+      setUnread(total);
+    } catch {
+      setUnread(0);
+    }
+  }
+  useEffect(() => {
+    computeUnread();
+    const id = setInterval(computeUnread, 30000);
+    const onRead = () => computeUnread();
+    window.addEventListener('chat-read', onRead);
+    window.addEventListener('storage', onRead);
+    // Subscribe to SSE for realtime updates (best effort)
+    let es: EventSource | null = null;
+    try {
+      const token = localStorage.getItem('token');
+      if (API_BASE && token) {
+        es = new EventSource(`${API_BASE}/api/chat/stream?token=${encodeURIComponent(token)}`);
+        es.onmessage = () => computeUnread();
+      }
+    } catch {}
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('chat-read', onRead);
+      window.removeEventListener('storage', onRead);
+      try { es && es.close(); } catch {}
+    };
+  }, []);
+
   // Register routes to group under a dropdown
   const registerPaths = new Set([
     '/register-client',
@@ -175,9 +245,9 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             </div>
             <div className="flex flex-col">
               <span className="text-base font-bold bg-gradient-to-r from-amber-400 to-amber-500 bg-clip-text text-transparent">
-                UCS Company
+                {t('sidebar.companyName')}
               </span>
-              <span className="text-xs text-gray-400">Management System</span>
+              <span className="text-xs text-gray-400">{t('sidebar.managementSystem')}</span>
             </div>
           </div>
           <button 
@@ -208,7 +278,12 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <div className="text-gray-400 group-hover:text-amber-400 transition-colors duration-200">
                 {item.icon}
               </div>
-              <span className="font-medium tracking-wide">{item.name}</span>
+              <span className="font-medium tracking-wide flex-1">{item.name}</span>
+              {item.to === '/chat' && unread > 0 && (
+                <span className="ml-auto text-xs bg-red-500 text-white rounded-full px-2 py-0.5 shadow">
+                  {unread > 99 ? '99+' : unread}
+                </span>
+              )}
             </NavLink>
           ))}
 
@@ -222,7 +297,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                   <div className="text-gray-400 group-hover:text-amber-400 transition-colors duration-200">
                     <Icons.Folder />
                   </div>
-                  <span className="font-medium tracking-wide">Manage Registrations</span>
+                  <span className="font-medium tracking-wide">{t('sidebar.manageRegistrations')}</span>
                 </span>
                 <span className="text-gray-400 group-hover:text-amber-400 transition-transform duration-200">
                   {regOpen ? <Icons.ChevronDown /> : <Icons.ChevronRight />}
@@ -271,7 +346,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             className="mt-3 w-full group flex items-center justify-center space-x-2 bg-neutral-800/50 hover:bg-red-600/20 text-gray-300 hover:text-red-400 border border-neutral-700 hover:border-red-500/30 text-sm font-medium py-2 px-3 rounded-xl transition-all duration-200"
           >
             <Icons.Logout />
-            <span>Logout</span>
+            <span>{t('sidebar.logout')}</span>
           </button>
         </div>
       </div>

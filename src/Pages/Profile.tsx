@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -12,6 +13,15 @@ const Profile = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Email + verification state
+  const [email, setEmail] = useState('');
+  const [emailVerified, setEmailVerified] = useState<boolean>(false);
+  const [editEmail, setEditEmail] = useState<boolean>(false);
+  const [emailCode, setEmailCode] = useState('');
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [resendSecs, setResendSecs] = useState<number>(0);
+
   const [editFirst, setEditFirst] = useState(false);
   const [editLast, setEditLast] = useState(false);
   const [editUsername, setEditUsername] = useState(false);
@@ -20,6 +30,14 @@ const Profile = () => {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+  // Change password state
+  const [pwStep, setPwStep] = useState<'verify' | 'new'>('verify');
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwSuccess, setPwSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -34,6 +52,8 @@ const Profile = () => {
         setLastName(p.last_name || '');
         setPhone(p.phone_number || '');
         setImageUrl(p.profile_image_url || '');
+        setEmail(p.email || '');
+        setEmailVerified(Boolean(p.email_verified));
       })
       .catch(err => setError(err.message || 'Failed to load profile'));
   }, []);
@@ -104,6 +124,155 @@ const Profile = () => {
 
   const hasEdits = editFirst || editLast || editUsername || editPhone || editImage;
 
+  // Change password actions
+  async function verifyOldPassword() {
+    setPwError(null); setPwSuccess(null);
+    if (!oldPassword) { setPwError('Enter your current password'); return; }
+    const token = localStorage.getItem('token');
+    if (!token) { setPwError('Not authenticated'); return; }
+    try {
+      setPwBusy(true);
+      const r = await fetch(`${apiBase}/api/profile/password/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ oldPassword })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j?.error || 'Old password is incorrect');
+      setPwStep('new');
+      setPwSuccess('Old password verified');
+    } catch (e: any) {
+      setPwError(e?.message || 'Failed to verify password');
+    } finally { setPwBusy(false); }
+  }
+
+  async function changePassword() {
+    setPwError(null); setPwSuccess(null);
+    if (!newPassword || !confirmPassword) { setPwError('Fill in all fields'); return; }
+    if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return; }
+    const token = localStorage.getItem('token');
+    if (!token) { setPwError('Not authenticated'); return; }
+    try {
+      setPwBusy(true);
+      const r = await fetch(`${apiBase}/api/profile/password/change`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ oldPassword, newPassword })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j?.error || 'Failed to change password');
+      setPwSuccess('Password changed successfully');
+      setOldPassword(''); setNewPassword(''); setConfirmPassword(''); setPwStep('verify');
+    } catch (e: any) {
+      setPwError(e?.message || 'Failed to change password');
+    } finally { setPwBusy(false); }
+  }
+
+  // Email actions
+  async function saveEmail() {
+    setError(null); setSuccess(null);
+    const token = localStorage.getItem('token');
+    if (!token) { setError('Not authenticated'); return; }
+    if (!/^\S+@\S+\.\S+$/.test(email)) { setError('Enter a valid email'); return; }
+    try {
+      const r = await fetch(`${apiBase}/api/profile/email`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j?.error || 'Failed to save email');
+      setEditEmail(false);
+      setEmailVerified(Boolean(j?.email_verified ?? false));
+      setSuccess('Email saved');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save email');
+    }
+  }
+
+  async function sendVerificationCode() {
+    setError(null); setSuccess(null);
+    const token = localStorage.getItem('token');
+    if (!token) { setError('Not authenticated'); return; }
+    if (!/^\S+@\S+\.\S+$/.test(email)) { setError('Enter a valid email first'); return; }
+    try {
+      setSendingCode(true);
+      const r = await fetch(`${apiBase}/api/profile/email/send-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j?.error || 'Failed to send verification code');
+      setSuccess('Verification code sent');
+      setResendSecs(60);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to send code');
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
+  async function verifyCode() {
+    setError(null); setSuccess(null);
+    const token = localStorage.getItem('token');
+    if (!token) { setError('Not authenticated'); return; }
+    if (!emailCode.trim()) { setError('Enter the verification code'); return; }
+    try {
+      setVerifyingCode(true);
+      const r = await fetch(`${apiBase}/api/profile/email/verify-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code: emailCode })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j?.error || 'Invalid or expired code');
+      setEmailVerified(true);
+      setEmailCode('');
+      setSuccess('Email verified');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to verify code');
+    } finally {
+      setVerifyingCode(false);
+    }
+  }
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendSecs <= 0) return;
+    const id = setInterval(() => setResendSecs((s) => s - 1), 1000);
+    return () => clearInterval(id);
+  }, [resendSecs]);
+
+  // Verify via link token in URL: ?email_verify_token=...
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get('email_verify_token');
+    if (!token) return;
+    (async () => {
+      try {
+        const auth = localStorage.getItem('token');
+        if (!auth) return;
+        const r = await fetch(`${apiBase}/api/profile/email/verify-link`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth}` },
+          body: JSON.stringify({ token })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j?.error || 'Failed to verify email');
+        setEmailVerified(true);
+        setSuccess('Email verified');
+      } catch (e: any) {
+        setError(e?.message || 'Email verification failed');
+      } finally {
+        // remove token from URL
+        navigate('/profile', { replace: true });
+      }
+    })();
+  }, [location.search, navigate]);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setViewerOpen(false);
@@ -144,9 +313,9 @@ const Profile = () => {
               </div>
             )}
 
-            <div className="flex flex-col lg:flex-row gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Profile Image Section */}
-              <div className="lg:w-1/3">
+              <div className="lg:col-span-1">
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                   <h3 className="text-lg font-semibold text-charcoal mb-4">Profile Photo</h3>
                   
@@ -220,116 +389,288 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
-            </div>
-            {/* Profile Details Section */}
-            <div className="lg:w-2/3">
-              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                <h3 className="text-lg font-semibold text-charcoal mb-6">Personal Information</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* First Name */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-sm font-medium text-charcoal">First Name</label>
-                      <button 
-                        type="button" 
-                        onClick={() => setEditFirst(v => !v)}
-                        className="text-xs text-amber-600 hover:text-amber-700 font-medium"
-                      >
-                        {editFirst ? 'Cancel' : 'Edit'}
-                      </button>
-                    </div>
-                    {editFirst ? (
-                      <input
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                        value={firstName}
-                        onChange={e => setFirstName(e.target.value)}
-                        placeholder="Enter first name"
-                      />
-                    ) : (
-                      <div className="w-full px-3 py-2 rounded-lg text-charcoal">
-                        {firstName || '-'}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Last Name */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-sm font-medium text-charcoal">Last Name</label>
-                      <button 
-                        type="button" 
-                        onClick={() => setEditLast(v => !v)}
-                        className="text-xs text-amber-600 hover:text-amber-700 font-medium"
-                      >
-                        {editLast ? 'Cancel' : 'Edit'}
-                      </button>
-                    </div>
-                    {editLast ? (
-                      <input
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                        value={lastName}
-                        onChange={e => setLastName(e.target.value)}
-                        placeholder="Enter last name"
-                      />
-                    ) : (
-                      <div className="w-full px-3 py-2 rounded-lg text-charcoal">
-                        {lastName || '-'}
+              {/* Profile Details Section (move this up so password/email appear below) */}
+              <div className="lg:col-span-3">
+                <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                  <h3 className="text-lg font-semibold text-charcoal mb-6">Personal Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-charcoal">First Name</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setEditFirst(v => !v)}
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+                        >
+                          {editFirst ? 'Cancel' : 'Edit'}
+                        </button>
                       </div>
-                    )}
-                  </div>
+                      {editFirst ? (
+                        <input
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          value={firstName}
+                          onChange={e => setFirstName(e.target.value)}
+                          placeholder="Enter first name"
+                        />
+                      ) : (
+                        <div className="w-full px-3 py-2 rounded-lg text-charcoal">
+                          {firstName || '-'}
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Username */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-sm font-medium text-charcoal">Username</label>
-                      <button 
-                        type="button" 
-                        onClick={() => setEditUsername(v => !v)}
-                        className="text-xs text-amber-600 hover:text-amber-700 font-medium"
-                      >
-                        {editUsername ? 'Cancel' : 'Edit'}
-                      </button>
-                    </div>
-                    {editUsername ? (
-                      <input
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                        value={username}
-                        onChange={e => setUsername(e.target.value)}
-                        placeholder="Enter username"
-                      />
-                    ) : (
-                      <div className="w-full px-3 py-2 rounded-lg text-charcoal">
-                        {username || '-'}
+                    {/* Last Name */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-charcoal">Last Name</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setEditLast(v => !v)}
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+                        >
+                          {editLast ? 'Cancel' : 'Edit'}
+                        </button>
                       </div>
-                    )}
-                  </div>
+                      {editLast ? (
+                        <input
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          value={lastName}
+                          onChange={e => setLastName(e.target.value)}
+                          placeholder="Enter last name"
+                        />
+                      ) : (
+                        <div className="w-full px-3 py-2 rounded-lg text-charcoal">
+                          {lastName || '-'}
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Phone Number */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-sm font-medium text-charcoal">Phone Number</label>
-                      <button 
-                        type="button" 
-                        onClick={() => setEditPhone(v => !v)}
-                        className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+                    {/* Username */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-charcoal">Username</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setEditUsername(v => !v)}
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+                        >
+                          {editUsername ? 'Cancel' : 'Edit'}
+                        </button>
+                      </div>
+                      {editUsername ? (
+                        <input
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          value={username}
+                          onChange={e => setUsername(e.target.value)}
+                          placeholder="Enter username"
+                        />
+                      ) : (
+                        <div className="w-full px-3 py-2 rounded-lg text-charcoal">
+                          {username || '-'}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Phone Number */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-charcoal">Phone Number</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setEditPhone(v => !v)}
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+                        >
+                          {editPhone ? 'Cancel' : 'Edit'}
+                        </button>
+                      </div>
+                      {editPhone ? (
+                        <input
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          value={phone}
+                          onChange={e => setPhone(e.target.value)}
+                          placeholder="Enter phone number"
+                        />
+                      ) : (
+                        <div className="w-full px-3 py-2 rounded-lg text-charcoal">
+                          {phone || '-'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Change Password Card (moved below Personal Information) */}
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 lg:col-span-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-charcoal">Change Password</h3>
+                    <p className="text-sm text-gray-600 mt-1">Verify your current password, then set a new password.</p>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {pwError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">{pwError}</div>
+                  )}
+                  {pwSuccess && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm">{pwSuccess}</div>
+                  )}
+                  {pwStep === 'verify' ? (
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-charcoal">Current Password</label>
+                      <input
+                        type="password"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        value={oldPassword}
+                        onChange={e => setOldPassword(e.target.value)}
+                        placeholder="Enter current password"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={verifyOldPassword}
+                          disabled={pwBusy || !oldPassword}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium ${pwBusy || !oldPassword ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                        >
+                          {pwBusy ? 'Verifying…' : 'Verify'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setOldPassword(''); setPwError(null); setPwSuccess(null); }}
+                          className="px-4 py-2 rounded-lg bg-gray-100 text-charcoal hover:bg-gray-200 text-sm font-medium"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal">New Password</label>
+                        <input
+                          type="password"
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          value={newPassword}
+                          onChange={e => setNewPassword(e.target.value)}
+                          placeholder="Enter new password"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-charcoal">Confirm New Password</label>
+                        <input
+                          type="password"
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          value={confirmPassword}
+                          onChange={e => setConfirmPassword(e.target.value)}
+                          placeholder="Re-enter new password"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={changePassword}
+                          disabled={pwBusy || !newPassword || !confirmPassword}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium ${pwBusy || !newPassword || !confirmPassword ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                        >
+                          {pwBusy ? 'Saving…' : 'Change Password'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setPwStep('verify'); setNewPassword(''); setConfirmPassword(''); setPwError(null); setPwSuccess(null); }}
+                          className="px-4 py-2 rounded-lg bg-gray-100 text-charcoal hover:bg-gray-200 text-sm font-medium"
+                        >
+                          Back
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Account Email Card (moved below Personal Information) */}
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 lg:col-span-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-charcoal">Account Email</h3>
+                    <p className="text-sm text-gray-600 mt-1">This email will be used to verify your account, reset your password, and recover access.</p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border ${emailVerified ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                    {emailVerified ? 'Verified' : 'Unverified'}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {editEmail ? (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder="name@example.com"
+                        type="email"
+                      />
+                      <button
+                        type="button"
+                        onClick={saveEmail}
+                        className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium"
                       >
-                        {editPhone ? 'Cancel' : 'Edit'}
+                        Save Email
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditEmail(false)}
+                        className="px-4 py-2 rounded-lg bg-gray-100 text-charcoal hover:bg-gray-200 text-sm font-medium"
+                      >
+                        Cancel
                       </button>
                     </div>
-                    {editPhone ? (
-                      <input
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                        value={phone}
-                        onChange={e => setPhone(e.target.value)}
-                        placeholder="Enter phone number"
-                      />
-                    ) : (
-                      <div className="w-full px-3 py-2 rounded-lg text-charcoal">
-                        {phone || '-'}
+                  ) : (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="w-full px-3 py-2 rounded-lg text-charcoal bg-white border border-gray-200">
+                        {email || '-'}
                       </div>
-                    )}
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => setEditEmail(true)}
+                        className="shrink-0 px-4 py-2 rounded-lg bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 text-sm font-medium"
+                      >
+                        {email ? 'Edit' : 'Add Email'}
+                      </button>
+                    </div>
+                  )}
+
+                  {!emailVerified && (
+                    <div className="space-y-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          type="button"
+                          onClick={sendVerificationCode}
+                          disabled={sendingCode || resendSecs > 0 || !email}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium border ${sendingCode || resendSecs > 0 || !email ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'}`}
+                        >
+                          {resendSecs > 0 ? `Resend in ${resendSecs}s` : 'Send verification code'}
+                        </button>
+                        <div className="flex-1 flex items-stretch gap-2">
+                          <input
+                            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            value={emailCode}
+                            onChange={e => setEmailCode(e.target.value)}
+                            placeholder="Enter code"
+                          />
+                          <button
+                            type="button"
+                            onClick={verifyCode}
+                            disabled={verifyingCode || !emailCode.trim()}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium ${verifyingCode || !emailCode.trim() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                          >
+                            {verifyingCode ? 'Verifying…' : 'Verify'}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500">You can verify either by entering the code received or by clicking the link in the email.</div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@ import { BarChart3, MapPinned, UserCog, Users as UsersIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ChartComponent from 'src/Components/ChartComponent';
+import { useI18n } from 'src/lib/i18n';
 
 type MonthlyPoint = { month: string; amount: number };
 type WeeklyPoint = { week: string; amount: number };
@@ -35,6 +36,7 @@ const Icons = {
 };
 
 const Dashboard = () => {
+  const { lang, setLang, t } = useI18n();
   // Monthly chart data only (to match SupervisorDashboard behavior)
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
@@ -319,12 +321,25 @@ const Dashboard = () => {
     <div className="space-y-6 overflow-x-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-800">Business Dashboard</h1>
-          <p className="text-sm text-zinc-500 mt-1">Here's an overview of your operations today.</p>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-amber-500 bg-clip-text text-transparent">{t('sidebar.dashboard')}</h1>
+          <p className="text-sm text-zinc-500 mt-1">{t('app.subtitle')}</p>
         </div>
-        <div className="flex items-center mt-3 sm:mt-0 space-x-2 text-sm text-green-600">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span>System Online</span>
+        <div className="flex items-center mt-3 sm:mt-0 space-x-3">
+          <div className="flex items-center space-x-2 text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>{t('app.systemOnline')}</span>
+          </div>
+          <div>
+            <label className="sr-only">Language</label>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value as any)}
+              className="text-sm bg-white border border-zinc-200 rounded-md px-2 py-1"
+            >
+              <option value="en">{t('lang.english')}</option>
+              <option value="rw">{t('lang.kinyarwanda')}</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -392,12 +407,12 @@ const Dashboard = () => {
       <div className="bg-white rounded-xl shadow-sm border border-zinc-100 p-4 sm:p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-5">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-800">Payment Trends</h2>
-            <p className="text-xs text-zinc-500 mt-1">Visual overview of payment performance</p>
+              <h2 className="text-lg font-semibold text-zinc-800">{t('supervisor.trends.title')}</h2>
+              <p className="text-xs text-zinc-500 mt-1">{t('supervisor.trends.subtitle')}</p>
           </div>
           <div className="flex flex-wrap items-end gap-2 mt-3 md:mt-0">
             <div>
-              <label className="block text-[11px] text-zinc-600">Year</label>
+              <label className="block text-[11px] text-zinc-600">{t('reports.filters.year')}</label>
               <select className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700" value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
                 {Array.from({ length: 6 }).map((_, i) => {
                   const y = new Date().getFullYear() - i;
@@ -406,7 +421,7 @@ const Dashboard = () => {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] text-zinc-600">Month</label>
+              <label className="block text-[11px] text-zinc-600">{t('reports.filters.month')}</label>
               <select className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700" value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
                 <option value={0}>All months</option>
                 {Array.from({ length: 12 }).map((_, i) => {
@@ -418,7 +433,7 @@ const Dashboard = () => {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] text-zinc-600">Zone</label>
+              <label className="block text-[11px] text-zinc-600">{t('reports.filters.zone')}</label>
               <select className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700" value={zoneId} onChange={(e) => { setZoneId(e.target.value); if (e.target.value) setSupervisorId(''); }}>
                 <option value="">All Zones</option>
                 {zones.map(z => (
@@ -427,7 +442,7 @@ const Dashboard = () => {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] text-zinc-600">Supervisor</label>
+              <label className="block text-[11px] text-zinc-600">{t('reports.filters.supervisor')}</label>
               <select className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700" value={supervisorId} onChange={(e) => { setSupervisorId(e.target.value); if (e.target.value) setZoneId(''); }}>
                 <option value="">All Supervisors</option>
                 {supervisors.map(s => (
@@ -440,9 +455,9 @@ const Dashboard = () => {
 
         <div className="h-64 relative w-full">
           {chartLoading ? (
-            <div className="h-full flex items-center justify-center text-zinc-500 text-sm">Loading payments...</div>
+            <div className="h-full flex items-center justify-center text-zinc-500 text-sm">{t('supervisor.trends.loading')}</div>
           ) : chartData.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-zinc-500 text-sm">No payments to display</div>
+            <div className="h-full flex items-center justify-center text-zinc-500 text-sm">{t('supervisor.trends.empty')}</div>
           ) : (
             <ChartComponent
               data={(chartData as any[]).map(d => ({ name: (d as any).month || (d as any).week || (d as any).year || (d as any).day, amount: Number((d as any).amount) || 0 }))}
