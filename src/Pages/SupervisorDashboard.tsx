@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import ChartComponent from 'src/Components/ChartComponent';
 import { useI18n } from 'src/lib/i18n';
 import LoadingSpinner from 'src/Components/LoadingSpinner';
 
@@ -47,8 +48,7 @@ const SupervisorDashboard = () => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Payments chart state
-  const [chartType, setChartType] = useState<'yearly' | 'monthly' | 'weekly' | 'daily'>('monthly');
+  // Payments chart state (always show monthly)
   const [chartData, setChartData] = useState<{ amount: number }[]>([] as any);
   const [chartLoading, setChartLoading] = useState(false);
   const [chartError, setChartError] = useState<string | null>(null);
@@ -61,10 +61,11 @@ const SupervisorDashboard = () => {
     daily: { day: string; amount: number }[];
   }>({ yearly: [], monthly: [], weekly: [], daily: [] });
 
-  // Payment filters
-  const [filterZoneId, setFilterZoneId] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  // Reports-like chart filters
+  const now = new Date();
+  const [year, setYear] = useState<number>(now.getFullYear());
+  const [month, setMonth] = useState<number>(0); // 0 = All months
+  const [chartZoneId, setChartZoneId] = useState<string>('');
 
   // Zones display controls
   const [onlyWithChief, setOnlyWithChief] = useState(false);
@@ -75,6 +76,10 @@ const SupervisorDashboard = () => {
   const [vehiclesError, setVehiclesError] = useState<string | null>(null);
   const [vehViewerOpen, setVehViewerOpen] = useState(false);
   const [vehViewerSrc, setVehViewerSrc] = useState<string>('');
+
+  const [totalsLoading, setTotalsLoading] = useState(false);
+  const [totalsError, setTotalsError] = useState<string | null>(null);
+  const [totals, setTotals] = useState<{ due_total: number; paid_total: number; remaining_total: number; year?: number; month?: number } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -89,6 +94,27 @@ const SupervisorDashboard = () => {
       })
       .catch((e: any) => setError(e?.message || 'Failed to load zones'))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setTotalsLoading(true);
+    setTotalsError(null);
+    fetch(`${apiBase}/api/supervisor/payment-totals`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error || 'Failed to load totals');
+        setTotals({
+          due_total: Number(data?.due_total || 0),
+          paid_total: Number(data?.paid_total || 0),
+          remaining_total: Number(data?.remaining_total || 0),
+          year: data?.year,
+          month: data?.month,
+        });
+      })
+      .catch((e: any) => setTotalsError(e?.message || 'Failed to load totals'))
+      .finally(() => setTotalsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -195,23 +221,21 @@ const SupervisorDashboard = () => {
 
   // Apply filters to payments and compute series
   const filteredPayments = useMemo(() => {
+    const inSameYearMonth = (iso?: string | null) => {
+      if (!iso) return false;
+      const d = new Date(iso);
+      const m = d.getMonth() + 1;
+      const y = d.getFullYear();
+      if (y !== year) return false;
+      if (month && m !== month) return false;
+      return true;
+    };
     return rawPayments.filter((p: any) => {
-      if (filterZoneId && String(p?.zone_id ?? '') !== String(filterZoneId)) return false;
-      const dateStr = p?.completed_at || p?.created_at || p?.updated_at || p?.inserted_at;
-      if (startDate) {
-        const s = new Date(startDate);
-        const d = new Date(dateStr || 0);
-        if (d < s) return false;
-      }
-      if (endDate) {
-        const e = new Date(endDate);
-        e.setHours(23,59,59,999);
-        const d = new Date(dateStr || 0);
-        if (d > e) return false;
-      }
+      if (chartZoneId && String(p?.zone_id ?? '') !== String(chartZoneId)) return false;
+      if (!inSameYearMonth(p?.completed_at || p?.created_at || p?.updated_at || p?.inserted_at)) return false;
       return true;
     });
-  }, [rawPayments, filterZoneId, startDate, endDate]);
+  }, [rawPayments, chartZoneId, year, month]);
 
   useEffect(() => {
     const s = aggregatePayments(filteredPayments);
@@ -219,9 +243,8 @@ const SupervisorDashboard = () => {
   }, [filteredPayments]);
 
   useEffect(() => {
-    const map: any = { yearly: series.yearly, monthly: series.monthly, weekly: series.weekly, daily: series.daily };
-    setChartData(map[chartType] || []);
-  }, [chartType, series]);
+    setChartData(series.monthly || []);
+  }, [series]);
 
   const totalClients = zones.reduce((sum, zone) => sum + zone.client_count, 0);
   const zonesWithChief = zones.filter(z => z.chief_username).length;
@@ -246,6 +269,52 @@ const SupervisorDashboard = () => {
             <span className="truncate">{t('supervisor.systemsOk')}</span>
           </div>
         </div>
+
+        {/* Amount Due */}
+        <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-stone-600 mb-2">Amount Due</p>
+              <p className="text-3xl font-bold text-stone-900">{totalsLoading ? '...' : nf.format(Number(totals?.due_total || 0))}</p>
+              <p className="text-sm text-stone-500 mt-1">This month across your zones</p>
+            </div>
+            <div className="p-4 rounded-xl bg-gradient-to-br from-stone-700 to-stone-500 shadow-lg">
+              <Icons.TrendUp />
+            </div>
+          </div>
+          {totalsError && (<div className="text-xs text-red-600 mt-2 truncate">{totalsError}</div>)}
+        </div>
+
+        {/* Amount Paid */}
+        <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-stone-600 mb-2">Amount Paid</p>
+              <p className="text-3xl font-bold text-stone-900">{totalsLoading ? '...' : nf.format(Number(totals?.paid_total || 0))}</p>
+              <p className="text-sm text-stone-500 mt-1">Received this month</p>
+            </div>
+            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-600 to-green-500 shadow-lg">
+              <Icons.TrendUp />
+            </div>
+          </div>
+          {totalsError && (<div className="text-xs text-red-600 mt-2 truncate">{totalsError}</div>)}
+        </div>
+
+        {/* Remaining Amount */}
+        <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-stone-600 mb-2">Remaining</p>
+              <p className="text-3xl font-bold text-stone-900">{totalsLoading ? '...' : nf.format(Number(totals?.remaining_total || 0))}</p>
+              <p className="text-sm text-stone-500 mt-1">Due after payments</p>
+            </div>
+            <div className="p-4 rounded-xl bg-gradient-to-br from-amber-600 to-orange-500 shadow-lg">
+              <Icons.TrendUp />
+            </div>
+          </div>
+          {totalsError && (<div className="text-xs text-red-600 mt-2 truncate">{totalsError}</div>)}
+        </div>
+
       </div>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -318,27 +387,37 @@ const SupervisorDashboard = () => {
             <h2 className="text-lg font-semibold text-stone-800">{t('supervisor.trends.title')}</h2>
             <p className="text-xs text-stone-500 mt-1">{t('supervisor.trends.subtitle')}</p>
           </div>
-          <div className="flex flex-wrap gap-2 mt-3 md:mt-0">
-            {/* Filters: zone and date range */}
-            <select className="px-2 py-1.5 rounded-md text-xs bg-stone-100 text-stone-700" value={filterZoneId} onChange={e => setFilterZoneId(e.target.value)}>
-              <option value="">{t('supervisor.filters.allZones')}</option>
-              {zones.map(z => (
-                <option key={z.id} value={z.id}>{z.zone_name}</option>
-              ))}
-            </select>
-            <input type="date" className="px-2 py-1.5 rounded-md text-xs bg-stone-100 text-stone-700" value={startDate} onChange={e => setStartDate(e.target.value)} aria-label={t('supervisor.filters.startDate')} />
-            <input type="date" className="px-2 py-1.5 rounded-md text-xs bg-stone-100 text-stone-700" value={endDate} onChange={e => setEndDate(e.target.value)} aria-label={t('supervisor.filters.endDate')} />
-            {(['yearly','monthly','weekly','daily'] as const).map(key => (
-              <button
-                key={key}
-                onClick={() => setChartType(key)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
-                  chartType === key ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                }`}
-              >
-                {key === 'yearly' ? t('supervisor.trends.year') : key === 'monthly' ? t('supervisor.trends.monthly') : key === 'weekly' ? t('supervisor.trends.weekly') : t('supervisor.trends.daily')}
-              </button>
-            ))}
+          <div className="flex flex-wrap gap-2 mt-3 md:mt-0 items-end">
+            <div>
+              <label className="block text-[11px] text-stone-600">{t('reports.filters.year')}</label>
+              <select className="px-2 py-1.5 rounded-md text-xs bg-stone-100 text-stone-700" value={year} onChange={e => setYear(Number(e.target.value))}>
+                {Array.from({ length: 6 }).map((_, i) => {
+                  const y = new Date().getFullYear() - i;
+                  return <option key={y} value={y}>{y}</option>;
+                })}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] text-stone-600">{t('reports.filters.month')}</label>
+              <select className="px-2 py-1.5 rounded-md text-xs bg-stone-100 text-stone-700" value={month} onChange={e => setMonth(Number(e.target.value))}>
+                <option value={0}>{t('reports.filters.all')}</option>
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const m = i + 1;
+                  const d = new Date(2000, i, 1);
+                  const name = d.toLocaleString(undefined, { month: 'long' });
+                  return <option key={m} value={m}>{name}</option>;
+                })}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] text-stone-600">{t('reports.filters.zone')}</label>
+              <select className="px-2 py-1.5 rounded-md text-xs bg-stone-100 text-stone-700" value={chartZoneId} onChange={e => setChartZoneId(e.target.value)}>
+                <option value="">{t('supervisor.filters.allZones')}</option>
+                {zones.map(z => (
+                  <option key={z.id} value={z.id}>{z.zone_name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -350,98 +429,13 @@ const SupervisorDashboard = () => {
               <div>{chartError}</div>
               <button onClick={() => setReloadKey(v => v + 1)} className="px-3 py-1.5 rounded-md bg-amber-600 text-white">{t('supervisor.retry')}</button>
             </div>
-          ) : (chartData as any[]).length === 0 ? (
-            <div className="h-full flex items-center justify-center text-stone-500 text-sm">{t('supervisor.trends.empty')}</div>
           ) : (
-            (() => {
-              const amounts = (chartData as any[]).map((d: any) => Number(d.amount) || 0);
-              const rawMax = Math.max(...amounts, 1);
-              const magnitude = Math.pow(10, Math.floor(Math.log10(rawMax)));
-              const niceMax = Math.ceil(rawMax / magnitude) * magnitude; // round up to 1, 2, 5, 10 * power of 10
-              const steps = 6; // 6 horizontal lines (including bottom)
-              const ticks = Array.from({ length: steps }, (_, i) => Math.round((niceMax / (steps - 1)) * i));
-
-              return (
-                <div className="h-full flex">
-                  {/* Y Axis with ticks */}
-                  <div className="w-10 relative">
-                    {ticks.map((t, i) => {
-                      const pct = 100 - (t / niceMax) * 100;
-                      return (
-                        <div key={i} className="absolute left-0 w-full" style={{ top: `${pct}%` }}>
-                          <div className="-translate-y-1/2 flex items-center">
-                            <span className="text-[10px] text-stone-500 w-8 text-right pr-1">{nf.format(t)}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Plot area */}
-                  <div className="flex-1 relative min-w-0">
-                    {/* Gridlines */}
-                    {ticks.map((t, i) => {
-                      const pct = 100 - (t / niceMax) * 100;
-                      return (
-                        <div key={i} className="absolute left-0 right-0" style={{ top: `${pct}%` }}>
-                          <div className={`h-px ${i === 0 ? 'bg-stone-300' : 'bg-stone-100'}`}></div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Vertical Gridlines */}
-                    <div className="absolute inset-x-0 bottom-6 top-2 pointer-events-none">
-                      {(() => {
-                        const count = (chartData as any[]).length || 1;
-                        return Array.from({ length: count }, (_, i) => {
-                          const leftPct = ((i + 0.5) / count) * 100; // center of each bar
-                          return (
-                            <div key={i} className="absolute top-0 bottom-0" style={{ left: `${leftPct}%` }}>
-                              <div className="w-px h-full bg-stone-100 -translate-x-1/2" />
-                            </div>
-                          );
-                        });
-                      })()}
-                    </div>
-
-                    {/* Bars */}
-                    <div className="absolute inset-x-0 bottom-6 top-2">
-                      <div className="flex items-end justify-between h-full space-x-2">
-                        {(chartData as any[]).map((item: any, index: number) => {
-                          const height = Math.max(0, Math.min(100, (Number(item.amount) / niceMax) * 100));
-                          return (
-                            <div key={index} className="flex-1 flex flex-col items-center group">
-                              <div className="text-center mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                <div className="bg-stone-800 text-white text-xs px-2 py-1 rounded-md shadow">
-                                  {nf.format(Number(item.amount))}
-                                </div>
-                              </div>
-                              <div
-                                className="w-full bg-gradient-to-t from-amber-500 to-yellow-500 rounded-md transition-all duration-300 hover:opacity-90 cursor-pointer"
-                                style={{ height: `${height}%` }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* X Axis labels */}
-                    <div className="absolute left-0 right-0 bottom-0">
-                      <div className="flex justify-between items-center">
-                        {(chartData as any[]).map((item: any, index: number) => (
-                          <div key={index} className="flex-1 text-center truncate">
-                            <p className="text-[11px] font-medium text-stone-600 break-words">
-                              {'year' in item ? item.year : 'month' in item ? item.month : 'week' in item ? item.week : item.day}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()
+            <ChartComponent
+              data={(chartData as any[]).map(d => ({ name: ('year' in d ? d.year : 'month' in d ? d.month : 'week' in d ? d.week : d.day), amount: Number(d.amount) || 0 }))}
+              xKey="name"
+              series={[{ key: 'amount', name: t('supervisor.trends.amount') }]}
+              height={260}
+            />
           )}
         </div>
       </div>

@@ -67,6 +67,50 @@ router.use(async (req, res, next) => {
   next();
 });
 
+// Monthly payment totals across all zones assigned to the current supervisor
+// Returns: { due_total, paid_total, remaining_total, year, month }
+router.get('/payment-totals', auth, requireRole('supervisor'), async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+
+    // Gather zone ids for this supervisor
+    const zr = await db.query('SELECT id FROM zones WHERE supervisor_id = $1', [supervisorId]);
+    const zoneIds = zr.rows.map(r => r.id);
+    if (!zoneIds.length) {
+      const now = new Date();
+      return res.json({ due_total: 0, paid_total: 0, remaining_total: 0, year: now.getFullYear(), month: now.getMonth() + 1 });
+    }
+
+    // Compute monthly due: sum of clients.monthly_amount in supervisor's zones
+    const dueRes = await db.query(
+      `SELECT COALESCE(SUM(monthly_amount), 0) AS due_total
+       FROM clients
+       WHERE zone_id = ANY($1)`,
+      [zoneIds]
+    );
+    const due_total = Number(dueRes.rows[0]?.due_total || 0);
+
+    // Compute paid this month for clients in these zones
+    const paidRes = await db.query(
+      `SELECT COALESCE(SUM(pc.amount), 0) AS paid_total
+       FROM payments_completed pc
+       JOIN clients c ON c.id = pc.client_id
+       WHERE c.zone_id = ANY($1)
+         AND DATE_TRUNC('month', pc.completed_at) = DATE_TRUNC('month', NOW())
+         AND (pc.status ILIKE 'success%' OR pc.status IS NULL)`,
+      [zoneIds]
+    );
+    const paid_total = Number(paidRes.rows[0]?.paid_total || 0);
+
+    const remaining_total = Math.max(0, due_total - paid_total);
+    const now = new Date();
+    return res.json({ due_total, paid_total, remaining_total, year: now.getFullYear(), month: now.getMonth() + 1 });
+  } catch (err) {
+    console.error('Supervisor payment totals error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Unassign driver from any vehicle (supervisor scope)
 router.delete('/zones/:id/driver/vehicle/:driverUserId', auth, requireRole('supervisor'), async (req, res) => {
   try {

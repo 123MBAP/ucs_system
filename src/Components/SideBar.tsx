@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 
 type SidebarProps = {
@@ -128,6 +128,13 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const allowed = userRole && roleAllowed[userRole] ? roleAllowed[userRole] : null;
   const isSupervisor = userRole === 'supervisor';
   const widthClass = isSupervisor ? 'w-72' : 'w-64';
+  const widthValue = isSupervisor ? '18rem' : '16rem';
+
+  useEffect(() => {
+    try {
+      document.documentElement.style.setProperty('--sidebar-w', widthValue);
+    } catch {}
+  }, [widthValue]);
   const visibleItems = allowed ? menuItems.filter(item => allowed.has(item.to)) : menuItems;
 
   // Register routes to group under a dropdown
@@ -154,8 +161,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       )}
       
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-30
-        ${widthClass} bg-gradient-to-b from-neutral-900 to-neutral-800 text-gray-200 transform
+        fixed inset-y-0 left-0 z-30 lg:fixed lg:inset-y-0 lg:left-0 lg:h-screen
+        ${widthClass} bg-gradient-to-b from-neutral-900 to-neutral-800 text-gray-200 transform lg:transform-none
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 transition-all duration-300 ease-in-out
         flex flex-col shadow-2xl border-r border-neutral-700

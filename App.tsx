@@ -39,12 +39,28 @@ const Chat = lazy(() => import('src/Pages/Chat'));
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(Boolean(localStorage.getItem('token')));
+  const [user, setUser] = useState<any>(() => {
+    try {
+      const u = localStorage.getItem('user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  });
   const location = useLocation();
   const onLoginPage = location.pathname === '/login';
   const shellBg = onLoginPage ? '' : 'bg-gradient-to-br from-zinc-50 to-amber-50';
   const { t, lang, setLang } = useI18n();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = React.useRef<HTMLDivElement | null>(null);
+  const initials = (name?: string, email?: string) => {
+    const src = (name && name.trim()) || (email && email.split('@')[0]) || '';
+    if (!src) return 'U';
+    const parts = src.split(/\s+/).filter(Boolean);
+    const first = parts[0]?.[0] || '';
+    const second = parts[1]?.[0] || '';
+    return (first + second || first || 'U').toUpperCase();
+  };
 
   React.useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -56,17 +72,25 @@ function AppShell() {
   }, []);
 
   React.useEffect(() => {
-    const syncAuth = () => setIsLoggedIn(Boolean(localStorage.getItem('token')));
-    window.addEventListener('storage', syncAuth);
-    window.addEventListener('auth-changed', syncAuth as EventListener);
+    const sync = () => {
+      setIsLoggedIn(Boolean(localStorage.getItem('token')));
+      try {
+        const u = localStorage.getItem('user');
+        setUser(u ? JSON.parse(u) : null);
+      } catch {
+        setUser(null);
+      }
+    };
+    window.addEventListener('storage', sync);
+    window.addEventListener('auth-changed', sync as EventListener);
     return () => {
-      window.removeEventListener('storage', syncAuth);
-      window.removeEventListener('auth-changed', syncAuth as EventListener);
+      window.removeEventListener('storage', sync);
+      window.removeEventListener('auth-changed', sync as EventListener);
     };
   }, []);
 
   return (
-    <div className={`flex h-screen w-full overflow-x-hidden ${shellBg}`}>
+    <div className={`flex min-h-screen w-full overflow-x-hidden lg:pl-[var(--sidebar-w)] ${shellBg}`}>
       {isLoggedIn && !onLoginPage && (
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       )}
@@ -74,54 +98,46 @@ function AppShell() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         {isLoggedIn && !onLoginPage && (
-          <header className="bg-white/90 backdrop-blur-md shadow-sm z-10 border-b border-amber-200">
-            <div className="flex items-center justify-between p-4 min-w-0">
-              <div className="flex items-center space-x-4">
+          <header className="bg-gradient-to-r from-neutral-900 to-neutral-800 text-gray-100 backdrop-blur shadow-sm z-10 border-b border-neutral-700">
+            <div className="flex items-center justify-between p-3 sm:p-4 gap-2 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden p-2 rounded-xl hover:bg-amber-50 transition-colors duration-200"
+                  className="lg:hidden p-2 rounded-xl hover:bg-neutral-800 transition-colors duration-200"
                 >
-                  <svg className="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
-                <div className="flex flex-col min-w-0">
-                  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-amber-700 to-amber-500 bg-clip-text text-transparent whitespace-nowrap truncate">
+                <div className="flex flex-col min-w-0 max-w-[60vw] sm:max-w-none">
+                  <h1 className="text-sm sm:text-2xl font-bold text-gray-100 whitespace-nowrap truncate">
                     {t('app.title')}
                   </h1>
-                  <p className="text-sm text-amber-700/70 hidden sm:block">{t('app.subtitle')}</p>
+                  <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">{t('app.subtitle')}</p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-4">
-                {/* Notifications */}
-                <button className="hidden md:inline-flex relative p-2 rounded-xl hover:bg-amber-50 transition-colors duration-200 group">
-                  <svg className="w-6 h-6 text-amber-700 group-hover:text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM10.24 8.56a5.97 5.97 0 01-4.66-7.4 1 1 0 00-.68-1.2A1 1 0 004 1a6 6 0 006.24 7.56z" />
-                  </svg>
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
-
+              <div className="flex items-center gap-2 sm:gap-4">
                 {/* Language Switcher (compact) */}
                 <div ref={langRef} className="relative">
                   <button
                     onClick={() => setLangOpen(v => !v)}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-sm border border-amber-200 text-amber-700/80 hover:bg-amber-50 min-w-[56px] justify-center"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-sm border border-neutral-700 text-gray-200 hover:bg-neutral-800 min-w-[36px] sm:min-w-[56px] justify-center"
                     aria-haspopup="listbox"
                     aria-expanded={langOpen}
                     aria-label="Change language"
                   >
                     <span className="text-base leading-none">{lang === 'rw' ? '🇷🇼' : '🇬🇧'}</span>
-                    <span className="font-semibold">{lang === 'rw' ? 'RW' : 'EN'}</span>
-                    <svg className="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className="font-semibold hidden sm:inline">{lang === 'rw' ? 'RW' : 'EN'}</span>
+                    <svg className="w-4 h-4 text-gray-300 hidden sm:inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
                   {langOpen && (
-                    <div className="absolute right-0 mt-1 w-28 bg-white border border-amber-200 rounded-lg shadow-lg overflow-hidden z-20">
+                    <div className="absolute right-0 mt-1 w-28 bg-neutral-900 border border-neutral-700 rounded-lg shadow-lg overflow-hidden z-20">
                       <button
                         onClick={() => { setLang('en'); setLangOpen(false); }}
-                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-amber-50 ${lang === 'en' ? 'bg-amber-50 text-amber-800' : 'text-amber-800/80'}`}
+                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-neutral-800 ${lang === 'en' ? 'bg-neutral-800 text-white' : 'text-gray-200'}`}
                         role="option"
                         aria-selected={lang === 'en'}
                       >
@@ -130,7 +146,7 @@ function AppShell() {
                       </button>
                       <button
                         onClick={() => { setLang('rw'); setLangOpen(false); }}
-                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-amber-50 ${lang === 'rw' ? 'bg-amber-50 text-amber-800' : 'text-amber-800/80'}`}
+                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-neutral-800 ${lang === 'rw' ? 'bg-neutral-800 text-white' : 'text-gray-200'}`}
                         role="option"
                         aria-selected={lang === 'rw'}
                       >
@@ -141,16 +157,23 @@ function AppShell() {
                   )}
                 </div>
 
+                {/* Mobile User Avatar */}
+                <div className="md:hidden">
+                  <div className="w-8 h-8 bg-gradient-to-br from-amber-600 to-amber-400 rounded-full flex items-center justify-center shadow">
+                    <span className="font-semibold text-white text-xs">{initials(user?.name || user?.fullName, user?.email)}</span>
+                  </div>
+                </div>
+
                 {/* User Profile */}
-                <div className="hidden md:flex items-center space-x-3 p-2 rounded-xl hover:bg-amber-50 transition-colors duration-200 cursor-pointer">
+                <div className="hidden md:flex items-center space-x-3 p-2 rounded-xl hover:bg-neutral-800 transition-colors duration-200 cursor-pointer">
                   <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-amber-400 rounded-full flex items-center justify-center shadow-lg">
-                    <span className="font-semibold text-white text-sm">AD</span>
+                    <span className="font-semibold text-white text-sm">{initials(user?.name || user?.fullName, user?.email)}</span>
                   </div>
-                  <div className="hidden md:block">
-                    <p className="text-sm font-semibold text-amber-900">Admin User</p>
-                    <p className="text-xs text-amber-700/70">Administrator</p>
+                  <div className="hidden md:block min-w-0">
+                    <p className="text-sm font-semibold text-gray-100 truncate max-w-[160px]">{user?.name || user?.fullName || user?.username || 'User'}</p>
+                    <p className="text-xs text-gray-400 truncate max-w-[160px]">{user?.role || user?.email || ''}</p>
                   </div>
-                  <svg className="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>

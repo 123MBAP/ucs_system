@@ -1,6 +1,7 @@
 import { BarChart3, MapPinned, UserCog, Users as UsersIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import ChartComponent from 'src/Components/ChartComponent';
 
 type MonthlyPoint = { month: string; amount: number };
 type WeeklyPoint = { week: string; amount: number };
@@ -34,13 +35,21 @@ const Icons = {
 };
 
 const Dashboard = () => {
-  const [chartType, setChartType] = useState<'yearly' | 'monthly' | 'weekly' | 'daily'>('monthly');
+  // Monthly chart data only (to match SupervisorDashboard behavior)
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [paymentsRows, setPaymentsRows] = useState<any[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(0); // 0 = All months
+
+  // Filters like Reports + SupervisorDashboard
+  type SimpleZone = { id: number; zone_name: string; supervisor_id?: number | null };
+  const [zones, setZones] = useState<SimpleZone[]>([]);
+  const [zoneId, setZoneId] = useState<string>('');
+  const [supervisors, setSupervisors] = useState<Array<{ id: number; username: string }>>([]);
+  const [supervisorId, setSupervisorId] = useState<string>('');
 
   const fmt = (n: number | null | undefined) => Number(n ?? 0).toLocaleString();
 
@@ -126,15 +135,9 @@ const Dashboard = () => {
   }
 
   useEffect(() => {
-    // Fixed chart data mapping
-    const map: any = {
-      yearly: series.yearly,
-      monthly: series.monthly,
-      weekly: series.weekly,
-      daily: series.daily,
-    };
-    setChartData(map[chartType] || []);
-  }, [chartType, series]);
+    // Always show monthly series
+    setChartData(series.monthly || []);
+  }, [series]);
 
   // Fetch completed payments and compute series
   useEffect(() => {
@@ -186,6 +189,59 @@ const Dashboard = () => {
     load();
     return () => { cancelled = true; };
   }, []);
+
+  // Load zones for manager (and supervisor if needed in the future)
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${apiBase}/api/zones`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error || 'Failed to load zones');
+        const zs: SimpleZone[] = (data.zones || []).map((z: any) => ({ id: z.id, zone_name: z.zone_name, supervisor_id: z.supervisor_id }));
+        setZones(zs);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Load supervisors list (manager)
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${apiBase}/api/report/supervisors`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error || 'Failed to load supervisors');
+        setSupervisors(Array.isArray(data.supervisors) ? data.supervisors : []);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Filter payments by selected year/month, zone, supervisor
+  const filteredPayments = useMemo(() => {
+    const inSameYearMonth = (iso?: string | null) => {
+      if (!iso) return false;
+      const d = new Date(iso);
+      if (d.getFullYear() !== selectedYear) return false;
+      if (selectedMonth && (d.getMonth() + 1) !== selectedMonth) return false;
+      return true;
+    };
+    const supervisorZoneIds = supervisorId
+      ? zones.filter(z => String(z.supervisor_id ?? '') === String(supervisorId)).map(z => z.id)
+      : [];
+    return paymentsRows.filter((p: any) => {
+      if (!inSameYearMonth(p?.completed_at || p?.created_at || p?.updated_at || p?.inserted_at)) return false;
+      if (zoneId && String(p?.zone_id ?? '') !== String(zoneId)) return false;
+      if (!zoneId && supervisorId && !supervisorZoneIds.includes(Number(p?.zone_id))) return false;
+      return true;
+    });
+  }, [paymentsRows, selectedYear, selectedMonth, zoneId, supervisorId, zones]);
+
+  // Recompute series when filters change
+  useEffect(() => {
+    const s = aggregatePayments(filteredPayments, selectedYear, selectedMonth);
+    setSeries({ yearly: s.yearly, monthly: s.monthly, weekly: s.weekly, daily: s.daily });
+  }, [filteredPayments, selectedYear, selectedMonth]);
 
   // Recompute series when drill-down filters change
   useEffect(() => {
@@ -339,179 +395,61 @@ const Dashboard = () => {
             <h2 className="text-lg font-semibold text-zinc-800">Payment Trends</h2>
             <p className="text-xs text-zinc-500 mt-1">Visual overview of payment performance</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 mt-3 md:mt-0">
-            <button
-              onClick={() => setChartType('yearly')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
-                chartType === 'yearly'
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-              }`}
-            >
-              Year
-            </button>
-            <button
-              onClick={() => setChartType('monthly')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
-                chartType === 'monthly'
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setChartType('weekly')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
-                chartType === 'weekly'
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-              }`}
-            >
-              Weekly
-            </button>
-            <button
-              onClick={() => setChartType('daily')}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
-                chartType === 'daily'
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-              }`}
-            >
-              Daily
-            </button>
-
-            {chartType === 'yearly' && (
-              <>
-                <span className="mx-1 text-zinc-400">|</span>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700"
-                >
-                  {series.yearly.map(y => (
-                    <option key={y.year} value={Number(y.year)}>{y.year}</option>
-                  ))}
-                </select>
-              </>
-            )}
-
-            {chartType === 'monthly' && (
-              <>
-                <span className="mx-1 text-zinc-400">|</span>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700"
-                >
-                  {series.yearly.map(y => (
-                    <option key={y.year} value={Number(y.year)}>{y.year}</option>
-                  ))}
-                </select>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700"
-                >
-                  {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, idx) => (
-                    <option key={m} value={idx+1}>{m}</option>
-                  ))}
-                </select>
-              </>
-            )}
+          <div className="flex flex-wrap items-end gap-2 mt-3 md:mt-0">
+            <div>
+              <label className="block text-[11px] text-zinc-600">Year</label>
+              <select className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700" value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
+                {Array.from({ length: 6 }).map((_, i) => {
+                  const y = new Date().getFullYear() - i;
+                  return <option key={y} value={y}>{y}</option>;
+                })}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] text-zinc-600">Month</label>
+              <select className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700" value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
+                <option value={0}>All months</option>
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const m = i + 1;
+                  const d = new Date(2000, i, 1);
+                  const name = d.toLocaleString(undefined, { month: 'long' });
+                  return <option key={m} value={m}>{name}</option>;
+                })}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] text-zinc-600">Zone</label>
+              <select className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700" value={zoneId} onChange={(e) => { setZoneId(e.target.value); if (e.target.value) setSupervisorId(''); }}>
+                <option value="">All Zones</option>
+                {zones.map(z => (
+                  <option key={z.id} value={z.id}>{z.zone_name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] text-zinc-600">Supervisor</label>
+              <select className="text-xs bg-white border border-zinc-200 rounded-md px-2 py-1 text-zinc-700" value={supervisorId} onChange={(e) => { setSupervisorId(e.target.value); if (e.target.value) setZoneId(''); }}>
+                <option value="">All Supervisors</option>
+                {supervisors.map(s => (
+                  <option key={s.id} value={s.id}>{s.username}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-  {/* Chart: responsive on small screens (no forced min-width) */}
-  <div className="h-64 relative w-full">
+        <div className="h-64 relative w-full">
           {chartLoading ? (
             <div className="h-full flex items-center justify-center text-zinc-500 text-sm">Loading payments...</div>
           ) : chartData.length === 0 ? (
             <div className="h-full flex items-center justify-center text-zinc-500 text-sm">No payments to display</div>
           ) : (
-            (() => {
-              const amounts = chartData.map((d: any) => Number(d.amount) || 0);
-              const rawMax = Math.max(...amounts, 1);
-              const magnitude = Math.pow(10, Math.floor(Math.log10(rawMax)));
-              const niceMax = Math.ceil(rawMax / magnitude) * magnitude;
-              const steps = 6;
-              const ticks = Array.from({ length: steps }, (_, i) => Math.round((niceMax / (steps - 1)) * i));
-
-              // Responsive container: use full width and allow bars to shrink so
-              // the chart fits on narrow viewports instead of forcing horizontal scroll.
-              return (
-                <div className="h-full flex w-full">
-                  {/* Y Axis with ticks */}
-                  <div className="w-14 relative">
-                    {ticks.map((t, i) => {
-                      const pct = 100 - (t / niceMax) * 100;
-                      return (
-                        <div key={i} className="absolute left-0 w-full" style={{ top: `${pct}%` }}>
-                          <div className="-translate-y-1/2 flex items-center">
-                            <span className="text-[10px] text-zinc-500 w-10 text-right pr-2">{t.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Plot area */}
-                  <div className="flex-1 relative">
-                    {/* Gridlines */}
-                    {ticks.map((t, i) => {
-                      const pct = 100 - (t / niceMax) * 100;
-                      return (
-                        <div key={i} className="absolute left-0 right-0" style={{ top: `${pct}%` }}>
-                          <div className={`h-px ${i === 0 ? 'bg-zinc-300' : 'bg-zinc-100'}`}></div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Bars */}
-                    <div className="absolute inset-x-0 bottom-6 top-2">
-                      <div className="h-full flex items-end justify-between px-4 gap-2">
-                        {chartData.map((item: any, index: number) => {
-                          const amount = Number(item.amount) || 0;
-                          const height = Math.max(10, Math.min(100, (amount / niceMax) * 100)); // Minimum 10% height
-                          
-                          // Allow each bar to shrink on small screens: remove forced min-width
-                          // and ensure flex-basis can go to 0 so bars compress evenly.
-                          return (
-                            <div key={index} className="flex-1 min-w-0 flex flex-col items-center group">
-                              {/* Tooltip */}
-                              <div className="text-center mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-                                <div className="bg-zinc-800 text-white text-xs px-2 py-1 rounded-md shadow-lg">
-                                  ${amount.toLocaleString()}
-                                </div>
-                              </div>
-
-                              {/* Bar */}
-                              <div
-                                className="w-3/4 bg-gradient-to-t from-amber-500 to-yellow-500 rounded-t-md transition-all duration-300 hover:opacity-90 cursor-pointer shadow-sm"
-                                style={{ height: `${height}%` }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* X Axis labels */}
-                    <div className="absolute left-0 right-0 bottom-0">
-                      <div className="flex justify-between items-center px-4">
-                        {chartData.map((item: any, index: number) => (
-                          <div key={index} className="flex-1 text-center truncate">
-                            <p className="text-[11px] font-medium text-zinc-600">
-                              {item.month || item.week || item.year || item.day}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()
+            <ChartComponent
+              data={(chartData as any[]).map(d => ({ name: (d as any).month || (d as any).week || (d as any).year || (d as any).day, amount: Number((d as any).amount) || 0 }))}
+              xKey="name"
+              series={[{ key: 'amount', name: 'Amount' }]}
+              height={260}
+            />
           )}
         </div>
       </div>

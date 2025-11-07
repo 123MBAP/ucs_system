@@ -43,7 +43,7 @@ const Reports = () => {
   const [error, setError] = useState<string | null>(null);
   const now = new Date();
   const [year, setYear] = useState<number>(now.getFullYear());
-  const [month, setMonth] = useState<number>(now.getMonth() + 1);
+  const [month, setMonth] = useState<number>(0); // 0 = All months
 
   // Chief data
   const [chiefRows, setChiefRows] = useState<ChiefClientSummary[]>([]);
@@ -104,7 +104,7 @@ const Reports = () => {
 
   const exportZonesPdf = () => {
     const section = zonesRef.current?.innerHTML || '';
-    const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+    const monthName = month === 0 ? t('reports.filters.all') : new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
     const sup = supervisors.find(s => String(s.id) === supervisorId);
     const zone = zones.find(z => String(z.id) === zoneId);
     const zoneNamesFromRows = zoneRows.map(r => r.zone_name).filter(Boolean);
@@ -120,12 +120,13 @@ const Reports = () => {
           <div><strong>${t('reports.zones')}:</strong> ${zonesList.length ? zonesList.join(', ') : t('reports.filters.all')}</div>
         </div>
       </div>`;
-    printHtml(`${t('reports.export.zonesTitle')} ${year}-${month}`, header + section);
+    const monthSlug = month === 0 ? 'all' : String(month);
+    printHtml(`${t('reports.export.zonesTitle')} ${year}-${monthSlug}`, header + section);
   };
 
   const exportChiefClientsPdf = () => {
     const section = chiefClientsRef.current?.innerHTML || '';
-    const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+    const monthName = month === 0 ? t('reports.filters.all') : new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
     const header = `
       <div style="margin-bottom:16px">
         <div style="font-size:20px;font-weight:700;">${t('reports.company')}</div>
@@ -135,12 +136,13 @@ const Reports = () => {
           <div><strong>${t('reports.filter')}:</strong> ${chiefFilter}</div>
         </div>
       </div>`;
-    printHtml(`${t('reports.export.chiefClientsTitle')} ${year}-${month} (${chiefFilter})`, header + section);
+    const monthSlug = month === 0 ? 'all' : String(month);
+    printHtml(`${t('reports.export.chiefClientsTitle')} ${year}-${monthSlug} (${chiefFilter})`, header + section);
   };
 
   const exportChiefPaymentsPdf = () => {
     const section = chiefPaymentsRef.current?.innerHTML || '';
-    const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+    const monthName = month === 0 ? t('reports.filters.all') : new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
     const header = `
       <div style="margin-bottom:16px">
         <div style="font-size:20px;font-weight:700;">${t('reports.company')}</div>
@@ -149,12 +151,13 @@ const Reports = () => {
           <div><strong>${t('reports.period')}:</strong> ${monthName} ${year}</div>
         </div>
       </div>`;
-    printHtml(`${t('reports.export.chiefPaymentsTitle')} ${year}-${month}`, header + section);
+    const monthSlug = month === 0 ? 'all' : String(month);
+    printHtml(`${t('reports.export.chiefPaymentsTitle')} ${year}-${monthSlug}`, header + section);
   };
 
   const exportClientPaymentsPdf = () => {
     const section = clientPaymentsRef.current?.innerHTML || '';
-    const monthName = new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+    const monthName = month === 0 ? t('reports.filters.all') : new Date(2000, month - 1, 1).toLocaleString(undefined, { month: 'long' });
     const header = `
       <div style="margin-bottom:16px">
         <div style="font-size:20px;font-weight:700;">${t('reports.company')}</div>
@@ -163,7 +166,8 @@ const Reports = () => {
           <div><strong>${t('reports.period')}:</strong> ${monthName} ${year}</div>
         </div>
       </div>`;
-    printHtml(`${t('reports.export.clientPaymentsTitle')} ${year}-${month}`, header + section);
+    const monthSlug = month === 0 ? 'all' : String(month);
+    printHtml(`${t('reports.export.clientPaymentsTitle')} ${year}-${monthSlug}`, header + section);
   };
 
   // CSV helpers
@@ -191,25 +195,29 @@ const Reports = () => {
   const exportManagerSupervisorZones = () => {
     const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
     const rows = zoneRows.map(r => [r.zone_id, r.zone_name, r.clients_count, r.amount_to_pay, r.amount_paid, r.amount_remaining]);
-    downloadCsv(`zones_summary_${year}-${month}_${msFilter || 'all'}_${ts}.csv`, ['Zone ID', t('reports.columns.zone'), t('reports.columns.clients'), t('reports.columns.toPay'), t('reports.columns.paid'), t('reports.columns.remaining')], rows);
+    const monthSlug = month === 0 ? 'all' : String(month);
+    downloadCsv(`zones_summary_${year}-${monthSlug}_${msFilter || 'all'}_${ts}.csv`, ['Zone ID', t('reports.columns.zone'), t('reports.columns.clients'), t('reports.columns.toPay'), t('reports.columns.paid'), t('reports.columns.remaining')], rows);
   };
 
   const exportChiefClients = () => {
     const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
     const rows = chiefRows.map(r => [r.client_id, r.client_username ?? '', r.amount_to_pay, r.amount_paid, r.amount_remaining]);
-    downloadCsv(`chief_clients_${year}-${month}_${chiefFilter}_${ts}.csv`, ['Client ID', t('reports.client'), t('reports.columns.toPay'), t('reports.columns.paid'), t('reports.columns.remaining')], rows);
+    const monthSlug = month === 0 ? 'all' : String(month);
+    downloadCsv(`chief_clients_${year}-${monthSlug}_${chiefFilter}_${ts}.csv`, ['Client ID', t('reports.client'), t('reports.columns.toPay'), t('reports.columns.paid'), t('reports.columns.remaining')], rows);
   };
 
   const exportChiefPayments = () => {
     const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
     const rows = chiefPaymentsFiltered.map(p => [p.id, p.completed_at ?? '', p.client_username ?? (p.client_id ?? ''), p.amount, p.currency ?? '', p.status ?? '']);
-    downloadCsv(`chief_payments_${year}-${month}_${statusFilter}_${ts}.csv`, ['Payment ID', t('reports.date'), t('reports.client'), t('reports.amount'), t('reports.currency'), t('reports.status')], rows);
+    const monthSlug = month === 0 ? 'all' : String(month);
+    downloadCsv(`chief_payments_${year}-${monthSlug}_${statusFilter}_${ts}.csv`, ['Payment ID', t('reports.date'), t('reports.client'), t('reports.amount'), t('reports.currency'), t('reports.status')], rows);
   };
 
   const exportClientPayments = () => {
     const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
     const rows = clientPaymentsFiltered.map(p => [p.id, p.completed_at ?? '', p.amount, p.currency ?? '', p.status ?? '']);
-    downloadCsv(`my_payments_${year}-${month}_${statusFilter}_${ts}.csv`, ['Payment ID', t('reports.date'), t('reports.amount'), t('reports.currency'), t('reports.status')], rows);
+    const monthSlug = month === 0 ? 'all' : String(month);
+    downloadCsv(`my_payments_${year}-${monthSlug}_${statusFilter}_${ts}.csv`, ['Payment ID', t('reports.date'), t('reports.amount'), t('reports.currency'), t('reports.status')], rows);
   };
 
   // Handlers to prevent mismatched zone/supervisor combinations for manager
@@ -291,7 +299,7 @@ const Reports = () => {
     if (role === 'chief') {
       const params = new URLSearchParams();
       params.set('year', String(year));
-      params.set('month', String(month));
+      if (month > 0) params.set('month', String(month));
       params.set('filter', chiefFilter);
       fetch(`${apiBase}/api/report/clients-summary?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
         .then(async r => {
@@ -305,7 +313,7 @@ const Reports = () => {
       // Load chief payments list with same year/month filters
       const p = new URLSearchParams();
       p.set('year', String(year));
-      p.set('month', String(month));
+      if (month > 0) p.set('month', String(month));
       fetch(`${apiBase}/api/report/payments?${p.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
         .then(async r => {
           const data = await r.json();
@@ -317,7 +325,7 @@ const Reports = () => {
     } else if (role === 'manager' || role === 'supervisor') {
       const params = new URLSearchParams();
       params.set('year', String(year));
-      params.set('month', String(month));
+      if (month > 0) params.set('month', String(month));
       params.set('filter', msFilter);
       if (zoneId) params.set('zoneId', zoneId);
       if (role === 'manager' && supervisorId) params.set('supervisorId', supervisorId);
@@ -334,7 +342,7 @@ const Reports = () => {
       // Load client payments list with year/month filter
       const p = new URLSearchParams();
       p.set('year', String(year));
-      p.set('month', String(month));
+      if (month > 0) p.set('month', String(month));
       fetch(`${apiBase}/api/report/payments?${p.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
         .then(async r => {
           const data = await r.json();
@@ -395,6 +403,7 @@ const Reports = () => {
         <div>
           <label className="block text-sm text-gray-700">{t('reports.filters.month')}</label>
           <select className="mt-1 border rounded px-2 py-2" value={month} onChange={e => setMonth(Number(e.target.value))}>
+            <option value={0}>{t('reports.filters.all')}</option>
             {Array.from({ length: 12 }).map((_, i) => {
               const m = i + 1;
               const d = new Date(2000, i, 1);

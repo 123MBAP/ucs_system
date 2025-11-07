@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function Chat() {
-  const API_BASE =import.meta.env.VITE_API_URL as string;
+  const API_BASE = import.meta.env.VITE_API_URL as string;
   const [tab, setTab] = React.useState<'general' | 'workers'>('general');
   const [message, setMessage] = React.useState('');
   const [messages, setMessages] = React.useState<{
@@ -37,8 +37,8 @@ export default function Chat() {
     const el = msgRefs.current[id];
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('ring-2','ring-amber-400');
-      setTimeout(() => el.classList.remove('ring-2','ring-amber-400'), 1000);
+      el.classList.add('ring-2', 'ring-gray-300', 'ring-opacity-50');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-gray-300', 'ring-opacity-50'), 1000);
     }
   };
 
@@ -102,46 +102,59 @@ export default function Chat() {
   const filtered = messages.filter((m) => m.group === tab);
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-5xl mx-auto bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-amber-200 overflow-hidden">
+    <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-br from-gray-50 to-white min-h-screen">
+      <div className="max-w-5xl w-full mx-auto bg-white rounded-xl sm:rounded-2xl shadow-md border border-neutral-200 overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-amber-200 bg-gradient-to-r from-amber-600 to-amber-500 text-white">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200 bg-white text-neutral-900">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm opacity-90">{tab === 'general' ? 'All Users Group' : 'Workers Group'}</div>
-              <div className="text-xs opacity-90">{tab === 'general' ? 'Community chat for all users' : 'Chat for workers (hidden from clients)'}</div>
-            </div>
-            {!isClient && (
-            <div className="bg-white/15 border border-white/20 rounded-xl p-1">
-              <div className="flex text-xs">
-                <button
-                  className={`${tab === 'general' ? 'bg-white text-amber-700' : 'text-white/90'} px-3 py-1 rounded-lg transition`}
-                  onClick={() => setTab('general')}
-                >
-                  All Users
-                </button>
-                {canSeeWorkers && (
-                  <button
-                    className={`${tab === 'workers' ? 'bg-white text-amber-700' : 'text-white/90'} px-3 py-1 rounded-lg transition`}
-                    onClick={() => setTab('workers')}
-                  >
-                    Workers
-                  </button>
-                )}
+              <h1 className="text-lg sm:text-xl font-bold">Chat Messages</h1>
+              <div className="text-xs sm:text-sm text-neutral-600 mt-1">
+                {tab === 'general' ? 'Community chat for all users' : 'Chat for workers (hidden from clients)'}
               </div>
             </div>
+            {!isClient && (
+              <div className="bg-neutral-100 border border-neutral-200 rounded-lg p-1">
+                <div className="flex text-xs sm:text-sm font-medium">
+                  <button
+                    className={`${tab === 'general' ? 'bg-neutral-800 text-white shadow-sm' : 'text-neutral-700 hover:text-neutral-900'} px-3 sm:px-4 py-1.5 sm:py-2 rounded-md transition-all duration-200`}
+                    onClick={() => setTab('general')}
+                  >
+                    All Users
+                  </button>
+                  {canSeeWorkers && (
+                    <button
+                      className={`${tab === 'workers' ? 'bg-neutral-800 text-white shadow-sm' : 'text-neutral-700 hover:text-neutral-900'} px-3 sm:px-4 py-1.5 sm:py-2 rounded-md transition-all duration-200`}
+                      onClick={() => setTab('workers')}
+                    >
+                      Workers
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>
 
         {/* Body */}
-        <div className="h-[68vh] flex flex-col">
-          {/* Timeline */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gradient-to-b from-white to-amber-50/40">
-            {loading && <div className="text-center text-amber-800/70 text-sm">Loading…</div>}
-            {error && <div className="text-center text-red-600 text-sm">{error}</div>}
+        <div className="flex flex-col h-[64vh] sm:h-[66vh] md:h-[70vh]">
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-white">
+            {loading && (
+              <div className="flex justify-center">
+                <div className="animate-pulse text-gray-500 text-sm">Loading messages...</div>
+              </div>
+            )}
+            {error && (
+              <div className="text-center text-red-600 text-sm bg-red-50 py-2 rounded-lg border border-red-200">
+                {error}
+              </div>
+            )}
             {!loading && !error && filtered.length === 0 && (
-              <div className="text-center text-amber-800/70 text-sm">No messages yet.</div>
+              <div className="text-center text-gray-500 py-8">
+                <div className="text-lg font-medium mb-2">No messages yet</div>
+                <div className="text-sm">Be the first to start the conversation!</div>
+              </div>
             )}
             {!loading && !error && filtered.map((m) => {
               const mine = userId != null && m.user_id === userId;
@@ -156,55 +169,85 @@ export default function Chat() {
                 ? `${(m as any).reply_client_name.first ?? ''} ${(m as any).reply_client_name.last ?? ''}`.trim()
                 : ((m as any).reply_client_username || (m as any).reply_user_username || null);
               const replyMessage = (m as any).reply_message as string | undefined;
+
               return (
-                <div key={m.id} className={`w-full flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`flex items-end gap-2 ${mine ? 'flex-row-reverse' : ''}`}>
-                    {!mine && (
-                      <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-amber-200 bg-amber-50 flex items-center justify-center text-[11px] text-amber-700 font-semibold">
+                <div 
+                  key={m.id} 
+                  className={`flex ${mine ? 'justify-end' : 'justify-start'} group`}
+                  ref={(el) => { msgRefs.current[m.id] = el; }}
+                >
+                  <div className={`flex gap-3 max-w-[85%] ${mine ? 'flex-row-reverse' : ''}`}>
+                    {/* Avatar */}
+                    <div className={`flex flex-col items-center ${mine ? 'order-2' : ''}`}>
+                      <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white shadow-sm bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-sm font-semibold text-gray-700">
                         {avatarUrl ? (
                           <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
                         ) : (
-                          (displayName?.[0] || 'U')
+                          (displayName?.[0] || 'U').toUpperCase()
                         )}
                       </div>
-                    )}
-                    <div
-                      ref={(el) => { msgRefs.current[m.id] = el; }}
-                      className={`group relative max-w-[78%] px-4 py-2.5 rounded-2xl border shadow-sm transition ${
-                        mine ? 'bg-amber-600 text-white border-amber-500' : 'bg-white text-amber-900 border-amber-200 hover:border-amber-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3 mb-1">
-                        <div className={`text-[12px] font-semibold ${mine ? 'text-white' : 'text-amber-800'}`}>{displayName}</div>
-                        <div className={`text-[11px] ${mine ? 'text-white/80' : 'text-amber-700/70'}`}>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+
+                    {/* Message Bubble */}
+                    <div className={`flex-1 ${mine ? 'text-right' : ''}`}>
+                      {/* Sender Name and Time */}
+                      <div className={`flex items-center gap-2 mb-1 ${mine ? 'justify-end' : 'justify-start'}`}>
+                        <span className="text-sm font-semibold text-slate-700">{displayName}</span>
+                        <span className="text-xs text-slate-500">
+                          {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
-                      {/* Reply icon on hover */}
-                      <button
-                        title="Reply"
-                        onClick={() => setReplyTo({ id: m.id, name: displayName, snippet })}
-                        className={`hidden group-hover:flex absolute ${mine ? 'left-2' : 'right-2'} -top-3 items-center justify-center w-6 h-6 rounded-full shadow bg-white text-amber-700 border border-amber-200`}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                          <path d="M10 8.5V6l-6 6 6 6v-2.5l4-.5a6 6 0 004.5-3.5l.5-1-1 .2A17 17 0 0010 8.5z" />
-                        </svg>
-                      </button>
-                      {replyMessage && (
-                        <div className={`mb-2 rounded-xl border ${mine ? 'border-white/30 bg-white/10' : 'border-amber-200 bg-amber-50'}`}>
-                          <div
-                            className={`text-[12px] font-semibold px-3 pt-2 ${mine ? 'text-white' : 'text-amber-800'} cursor-pointer`}
+
+                      {/* Message Content */}
+                      <div className="relative">
+                        {/* Reply Preview */}
+                        {replyMessage && (
+                          <div 
+                            className={`mb-2 rounded-lg border-l-4 cursor-pointer transition-all hover:shadow-sm ${
+                              mine 
+                                ? 'border-l-neutral-400 bg-neutral-50 text-neutral-800' 
+                                : 'border-l-gray-300 bg-gray-50 text-neutral-800'
+                            }`}
                             onClick={() => (m as any).reply_id && scrollToMsg((m as any).reply_id)}
                           >
-                            {replyName || 'Replied message'}
+                            <div className="p-2">
+                              <div className="text-xs font-semibold mb-1">
+                                Replying to {replyName || 'User'}
+                              </div>
+                              <div className="text-xs text-gray-600 line-clamp-2">
+                                {replyMessage}
+                              </div>
+                            </div>
                           </div>
-                          <div
-                            className={`text-xs px-3 pb-2 ${mine ? 'text-white/85' : 'text-amber-800/80'} cursor-pointer`}
-                            onClick={() => (m as any).reply_id && scrollToMsg((m as any).reply_id)}
+                        )}
+
+                        {/* Message Bubble */}
+                        <div className={`relative inline-block max-w-full px-4 py-3 rounded-2xl shadow-sm transition-all ${
+                          mine 
+                            ? 'bg-neutral-800 text-white rounded-br-md' 
+                            : 'bg-white text-neutral-800 border border-neutral-200 rounded-bl-md hover:border-neutral-300'
+                        }`}>
+                          {/* Reply Button on Hover */}
+                          <button
+                            title="Reply to this message"
+                            onClick={() => setReplyTo({ id: m.id, name: displayName, snippet })}
+                            className={`absolute top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 ${
+                              mine 
+                                ? '-left-12 bg-white text-neutral-800 hover:bg-gray-50' 
+                                : '-right-12 bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            } w-8 h-8 rounded-full flex items-center justify-center shadow-md border`}
                           >
-                            {replyMessage}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                              <path d="M10 8.5V6l-6 6 6 6v-2.5l4-.5a6 6 0 004.5-3.5l.5-1-1 .2A17 17 0 0010 8.5z" />
+                            </svg>
+                          </button>
+
+                          {/* Message Text */}
+                          <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                            {m.message}
                           </div>
                         </div>
-                      )}
-                      <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.message}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -212,58 +255,60 @@ export default function Chat() {
             })}
           </div>
 
-          {/* Composer */}
-          <div className="border-t border-amber-200 bg-white/90 p-3 space-y-2">
+          {/* Message Input Area */}
+          <div className="border-t border-neutral-200 bg-white/95 backdrop-blur-sm p-4 space-y-3">
+            {/* Reply Preview */}
             {replyTo && (
-              <div className="flex items-start justify-between gap-3 p-2 rounded-lg border border-amber-200 bg-amber-50">
-                <div>
-                  <div className="text-xs font-semibold text-amber-800">Replying to {replyTo.name}</div>
-                  <div className="text-xs text-amber-700/80 line-clamp-2">{replyTo.snippet}</div>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-neutral-200 bg-neutral-50">
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                      <path d="M10 8.5V6l-6 6 6 6v-2.5l4-.5a6 6 0 004.5-3.5l.5-1-1 .2A17 17 0 0010 8.5z" />
+                    </svg>
+                    Replying to {replyTo.name}
+                  </div>
+                  <div className="text-sm text-gray-700 mt-1 line-clamp-2">{replyTo.snippet}</div>
                 </div>
                 <button
                   onClick={() => setReplyTo(null)}
-                  className="text-amber-700/70 hover:text-amber-800 text-xs font-medium"
+                  className="text-neutral-700 hover:text-neutral-900 text-sm font-medium px-3 py-1 rounded-md hover:bg-gray-100 transition-colors"
                 >
                   Cancel
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <input
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') send(); }}
-                className="flex-1 px-4 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-amber-900 placeholder-amber-700/50"
-                placeholder={tab === 'general' ? 'Message everyone…' : 'Message workers…'}
-              />
+
+            {/* Input and Send Button */}
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-neutral-700 focus:border-transparent bg-white text-neutral-900 placeholder-gray-500 resize-none"
+                  placeholder={tab === 'general' ? 'Type your message to everyone...' : 'Type your message to workers...'}
+                  rows={1}
+                  style={{ minHeight: '44px', maxHeight: '120px' }}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+                  }}
+                />
+              </div>
               <button
                 onClick={send}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 text-white font-medium hover:from-amber-700 hover:to-amber-600 shadow-sm"
+                disabled={!message.trim()}
+                className="px-6 py-3 rounded-xl bg-neutral-900 text-white font-medium hover:bg-neutral-800 shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                  <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
+                </svg>
                 Send
               </button>
             </div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        .text-charcoal {
-          color: #1E1E1E;
-        }
-        .bg-amber-600 {
-          background-color: #D97706;
-        }
-        .bg-amber-700 {
-          background-color: #B45309;
-        }
-        .bg-green-600 {
-          background-color: #15803D;
-        }
-        .bg-green-100 {
-          background-color: #DCFCE7;
-        }
-      `}</style>
     </div>
   );
 }

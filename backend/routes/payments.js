@@ -152,7 +152,7 @@ router.get('/completed', auth, requireRole(...paymentRoles), async (req, res) =>
     const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
 
     const { rows } = await db.query(
-      `SELECT pc.*, c.username AS client_username
+      `SELECT pc.*, c.username AS client_username, c.zone_id
        FROM payments_completed pc
        LEFT JOIN clients c ON c.id = pc.client_id
        ${whereSql}
