@@ -39,6 +39,7 @@ const Clients = () => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [moveTargetZone, setMoveTargetZone] = useState<string>('');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [lastSelectedId, setLastSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -159,6 +160,7 @@ const Clients = () => {
       if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
+    setLastSelectedId(id);
   }
 
   async function bulkDelete() {
@@ -305,9 +307,9 @@ const Clients = () => {
                         </td>
                       </tr>
                     );
-                    const rows = list.map(c => {
+                    const rows = list.flatMap(c => {
                       const fullName = c.name ? `${c.name.first || ''} ${c.name.last || ''}`.trim() : '';
-                      return (
+                      const row = (
                         <tr key={c.id}>
                           <td className="px-3 py-2">
                             <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelect(c.id)} />
@@ -328,6 +330,25 @@ const Clients = () => {
                           <td className="px-3 py-2">{z.zone_name}</td>
                         </tr>
                       );
+                      const inline = (lastSelectedId === c.id && selectedIds.size > 0) ? (
+                        <tr key={`actions-${c.id}`} className="bg-gray-50">
+                          <td className="px-3 py-2" colSpan={7}>
+                            <div className="flex flex-wrap items-center gap-3">
+                              <button disabled={!selectedIds.size} onClick={bulkDelete} className={`px-3 py-2 rounded text-white ${selectedIds.size ? 'bg-red-600' : 'bg-gray-300 cursor-not-allowed'}`}>Delete Selected</button>
+                              <div className="flex items-center gap-2">
+                                <select className="border rounded px-2 py-2 focus:outline-none focus:ring-2" style={{ borderColor: '#E2E8F0' }} value={moveTargetZone} onChange={e => setMoveTargetZone(e.target.value)}>
+                                  <option value="">Move to zone…</option>
+                                  {zones.map(z2 => (
+                                    <option key={z2.id} value={z2.id}>{z2.zone_name}</option>
+                                  ))}
+                                </select>
+                                <button disabled={!selectedIds.size || !moveTargetZone} onClick={bulkMove} className={`px-3 py-2 rounded text-white ${selectedIds.size && moveTargetZone ? 'bg-amber-600' : 'bg-gray-300 cursor-not-allowed'}`}>Move Selected</button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null;
+                      return inline ? [row, inline] : [row];
                     });
                     return [headerRow, ...rows];
                   })}
@@ -336,7 +357,7 @@ const Clients = () => {
                   )}
                 </tbody>
               </table>
-              {(role === 'manager' || role === 'supervisor') && (
+              {(role === 'manager' || role === 'supervisor') && !(selectedIds.size > 0 && lastSelectedId !== null) && (
                 <div className="p-3 border-t flex items-center gap-3">
                   <button disabled={!selectedIds.size} onClick={bulkDelete} className={`px-3 py-2 rounded text-white ${selectedIds.size ? 'bg-red-600' : 'bg-gray-300 cursor-not-allowed'}`}>Delete Selected</button>
                   <div className="flex items-center gap-2">

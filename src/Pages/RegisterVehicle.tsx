@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from 'src/lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 const RegisterVehicle = () => {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [plate, setPlate] = useState('');
   const [make, setMake] = useState('');
@@ -123,29 +125,29 @@ const RegisterVehicle = () => {
   return (
     <div className="p-6 max-w-xl">
       <div className="mb-2">
-        <button onClick={() => navigate(-1)} className="text-blue-600 underline text-sm">← Back</button>
+        <button onClick={() => navigate(-1)} className="text-amber-600 underline text-sm">← {t('register.common.back')}</button>
       </div>
-      <h2 className="text-2xl font-bold mb-4">Register Vehicle</h2>
-      {error && <div className="text-red-600 mb-2">{error}</div>}
-      {success && <div className="text-green-600 mb-2">{success}</div>}
+      <h2 className="text-2xl font-bold mb-4">{t('register.vehicle.title')}</h2>
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 mb-2">{error}</div>}
+      {success && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-700 mb-2">{success}</div>}
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm text-gray-700">Plate</label>
-          <input className="mt-1 w-full border rounded px-3 py-2" value={plate} onChange={e => setPlate(e.target.value)} required />
+          <label className="block text-sm text-neutral-800">{t('register.vehicle.plate')}</label>
+          <input className="mt-1 w-full border rounded px-3 py-2" style={{ borderColor: '#E5E7EB' }} value={plate} onChange={e => setPlate(e.target.value)} required />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-700">Make</label>
-            <input className="mt-1 w-full border rounded px-3 py-2" value={make} onChange={e => setMake(e.target.value)} />
+            <label className="block text-sm text-neutral-800">{t('register.vehicle.make')}</label>
+            <input className="mt-1 w-full border rounded px-3 py-2" style={{ borderColor: '#E5E7EB' }} value={make} onChange={e => setMake(e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm text-gray-700">Model</label>
-            <input className="mt-1 w-full border rounded px-3 py-2" value={model} onChange={e => setModel(e.target.value)} />
+            <label className="block text-sm text-neutral-800">{t('register.vehicle.model')}</label>
+            <input className="mt-1 w-full border rounded px-3 py-2" style={{ borderColor: '#E5E7EB' }} value={model} onChange={e => setModel(e.target.value)} />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm text-gray-700">Vehicle Image (optional)</label>
+          <label className="block text-sm text-neutral-800">{t('register.vehicle.imageOptional')}</label>
           <div className="mt-1 flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <input 
               type="file" 
@@ -161,7 +163,7 @@ const RegisterVehicle = () => {
             />
             <input 
               type="url" 
-              placeholder="Or paste image URL"
+              placeholder={t('register.vehicle.imageUrlPlaceholder')}
               value={imageUrl}
               onChange={e => setImageUrl(e.target.value)}
               className="w-full sm:w-72 border rounded px-3 py-2"
@@ -177,7 +179,7 @@ const RegisterVehicle = () => {
         <div className="pt-2">
           <label className="inline-flex items-center">
             <input type="checkbox" className="mr-2" checked={assignDriver} onChange={e => setAssignDriver(e.target.checked)} />
-            <span>Assign Driver (optional)</span>
+            <span>{t('register.vehicle.assignDriverOptional')}</span>
           </label>
         </div>
 
@@ -186,17 +188,17 @@ const RegisterVehicle = () => {
             <div className="space-x-4 mb-3">
               <label className="inline-flex items-center">
                 <input type="radio" name="assignMode" value="existing" checked={assignMode==='existing'} onChange={() => setAssignMode('existing')} className="mr-2" />
-                <span>Assign to existing driver</span>
+                <span>{t('register.vehicle.assignExistingDriver')}</span>
               </label>
               <label className="inline-flex items-center ml-4">
                 <input type="radio" name="assignMode" value="new" checked={assignMode==='new'} onChange={() => setAssignMode('new')} className="mr-2" />
-                <span>Create new driver</span>
+                <span>{t('register.vehicle.createNewDriver')}</span>
               </label>
             </div>
 
             {assignMode === 'existing' ? (
               <div>
-                <label className="block text-sm text-gray-700">Select Driver</label>
+                <label className="block text-sm text-neutral-800">{t('register.vehicle.selectDriver')}</label>
                 <select value={selectedDriverId} onChange={e => setSelectedDriverId(e.target.value)} className="mt-1 w-full border rounded px-2 py-2">
                   <option value="">-- Select driver --</option>
                   {drivers.map(d => (
@@ -207,19 +209,19 @@ const RegisterVehicle = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-700">Driver First Name</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={newDriverFirst} onChange={e => setNewDriverFirst(e.target.value)} />
+                  <label className="block text-sm text-neutral-800">{t('register.vehicle.driverFirstName')}</label>
+                  <input className="mt-1 w-full border rounded px-3 py-2" style={{ borderColor: '#E5E7EB' }} value={newDriverFirst} onChange={e => setNewDriverFirst(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-700">Driver Last Name</label>
-                  <input className="mt-1 w-full border rounded px-3 py-2" value={newDriverLast} onChange={e => setNewDriverLast(e.target.value)} />
+                  <label className="block text-sm text-neutral-800">{t('register.vehicle.driverLastName')}</label>
+                  <input className="mt-1 w-full border rounded px-3 py-2" style={{ borderColor: '#E5E7EB' }} value={newDriverLast} onChange={e => setNewDriverLast(e.target.value)} />
                 </div>
               </div>
             )}
           </div>
         )}
 
-        <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{loading ? 'Saving…' : 'Save Vehicle'}</button>
+        <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded ${loading ? 'bg-amber-400' : 'bg-amber-600 hover:bg-amber-700'}`}>{loading ? '…' : t('register.vehicle.button')}</button>
       </form>
     </div>
   );

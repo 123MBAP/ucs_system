@@ -80,6 +80,10 @@ const SupervisorDashboard = () => {
   const [totalsLoading, setTotalsLoading] = useState(false);
   const [totalsError, setTotalsError] = useState<string | null>(null);
   const [totals, setTotals] = useState<{ due_total: number; paid_total: number; remaining_total: number; year?: number; month?: number } | null>(null);
+  // Today's paid across supervisor zones
+  const [todayPaid, setTodayPaid] = useState(0);
+  const [todayLoading, setTodayLoading] = useState(false);
+  const [todayError, setTodayError] = useState<string | null>(null);
   const [pwReqs, setPwReqs] = useState<{ id: number; userId: number; username: string; emailHint: string | null; role: string; createdAt: string }[]>([]);
   const [pwBusyId, setPwBusyId] = useState<number | null>(null);
 
@@ -133,6 +137,38 @@ const SupervisorDashboard = () => {
       .catch((e: any) => setVehiclesError(e?.message || 'Failed to load vehicles'))
       .finally(() => setVehiclesLoading(false));
   }, []);
+
+  // Helper: is a timestamp today in local time
+  const isTodayLocal = (iso?: string | null) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  };
+
+  // Compute today's paid across the supervisor's zones using local filtering (avoids server TZ issues)
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    if (!zones.length) return; // wait until zones are loaded
+    const zoneIds = new Set(zones.map(z => z.id));
+    setTodayLoading(true);
+    setTodayError(null);
+    fetch(`${apiBase}/api/payments/statements`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error || 'Failed to load payments');
+        const rows = Array.isArray(data?.payments) ? data.payments : [];
+        const sum = rows
+          .filter((p: any) => !p?.status || String(p.status).toLowerCase().startsWith('success'))
+          .filter((p: any) => zoneIds.has(Number(p?.zone_id)))
+          .filter((p: any) => isTodayLocal(p?.completed_at || p?.created_at || p?.updated_at || p?.inserted_at))
+          .reduce((acc: number, p: any) => acc + Number(p.amount || 0), 0);
+        setTodayPaid(sum);
+      })
+      .catch((e: any) => setTodayError(e?.message || t('supervisor.error.generic')))
+      .finally(() => setTodayLoading(false));
+  }, [zones]);
 
   const nf = useMemo(() => new Intl.NumberFormat(lang === 'rw' ? undefined : undefined, { maximumFractionDigits: 0 }), [lang]);
 
@@ -317,22 +353,23 @@ const SupervisorDashboard = () => {
           <p className="text-stone-600 mt-2 truncate">{t('supervisor.subtitle')}</p>
         </div>
 
-      
-
         <div className="flex items-center space-x-4 mt-4 sm:mt-0 min-w-0">
           <div className="flex items-center space-x-2 text-sm text-stone-500">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
             <span className="truncate">{t('supervisor.systemsOk')}</span>
           </div>
         </div>
+      </div>
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {/* Amount Due */}
         <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-stone-600 mb-2">Amount Due</p>
+              <p className="text-sm font-semibold text-stone-600 mb-2">{t('supervisor.cards.amountDueTitle')}</p>
               <p className="text-3xl font-bold text-stone-900">{totalsLoading ? '...' : nf.format(Number(totals?.due_total || 0))}</p>
-              <p className="text-sm text-stone-500 mt-1">This month across your zones</p>
+              <p className="text-sm text-stone-500 mt-1">{t('supervisor.cards.amountDueCaption')}</p>
             </div>
             <div className="p-4 rounded-xl bg-gradient-to-br from-stone-700 to-stone-500 shadow-lg">
               <Icons.TrendUp />
@@ -341,13 +378,13 @@ const SupervisorDashboard = () => {
           {totalsError && (<div className="text-xs text-red-600 mt-2 truncate">{totalsError}</div>)}
         </div>
 
-        {/* Amount Paid */}
+        {/* Amount Paid This Month */}
         <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-stone-600 mb-2">Amount Paid</p>
+              <p className="text-sm font-semibold text-stone-600 mb-2">{t('supervisor.cards.amountPaidTitle')}</p>
               <p className="text-3xl font-bold text-stone-900">{totalsLoading ? '...' : nf.format(Number(totals?.paid_total || 0))}</p>
-              <p className="text-sm text-stone-500 mt-1">Received this month</p>
+              <p className="text-sm text-stone-500 mt-1">{t('supervisor.cards.amountPaidCaption')}</p>
             </div>
             <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-600 to-green-500 shadow-lg">
               <Icons.TrendUp />
@@ -360,9 +397,9 @@ const SupervisorDashboard = () => {
         <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-stone-600 mb-2">Remaining</p>
+              <p className="text-sm font-semibold text-stone-600 mb-2">{t('supervisor.cards.remainingTitle')}</p>
               <p className="text-3xl font-bold text-stone-900">{totalsLoading ? '...' : nf.format(Number(totals?.remaining_total || 0))}</p>
-              <p className="text-sm text-stone-500 mt-1">Due after payments</p>
+              <p className="text-sm text-stone-500 mt-1">{t('supervisor.cards.remainingCaption')}</p>
             </div>
             <div className="p-4 rounded-xl bg-gradient-to-br from-amber-600 to-orange-500 shadow-lg">
               <Icons.TrendUp />
@@ -371,6 +408,20 @@ const SupervisorDashboard = () => {
           {totalsError && (<div className="text-xs text-red-600 mt-2 truncate">{totalsError}</div>)}
         </div>
 
+        {/* Today's Paid */}
+        <div className="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-stone-600 mb-2">{t('supervisor.cards.todayPaidTitle')}</p>
+              <p className="text-3xl font-bold text-stone-900">{todayLoading ? '...' : nf.format(todayPaid)}</p>
+              <p className="text-sm text-stone-500 mt-1">{t('supervisor.cards.todayPaidCaption')}</p>
+            </div>
+            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-700 to-green-600 shadow-lg">
+              <Icons.TrendUp />
+            </div>
+          </div>
+          {todayError && (<div className="text-xs text-red-600 mt-2 truncate">{todayError}</div>)}
+        </div>
       </div>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -500,8 +551,8 @@ const SupervisorDashboard = () => {
       <div ref={zonesGridRef} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 min-w-0">
           <div className="min-w-0">
-            <h2 className="text-xl font-bold text-stone-800">Your Zones</h2>
-            <p className="text-stone-600 mt-1 truncate">Manage and supervise your assigned zones</p>
+            <h2 className="text-xl font-bold text-stone-800">{t('supervisor.yourZones.title')}</h2>
+            <p className="text-stone-600 mt-1 truncate">{t('supervisor.yourZones.subtitle')}</p>
           </div>
           <div className="flex items-center space-x-3 mt-4 md:mt-0">
             <label className="inline-flex items-center gap-2 text-sm text-stone-600">
@@ -509,7 +560,7 @@ const SupervisorDashboard = () => {
               {t('supervisor.filters.onlyWithChief')}
             </label>
             <span className="text-sm text-stone-500">
-              {nf.format(zones.length)} zone{zones.length !== 1 ? 's' : ''} assigned
+              {t('supervisor.yourZones.assignedCount', { count: zones.length })}
             </span>
             <button onClick={() => zonesGridRef.current?.scrollIntoView({ behavior: 'smooth' })} className="px-3 py-1.5 rounded-md bg-stone-100 text-stone-700 hover:bg-stone-200 text-sm">{t('supervisor.quick.viewZones')}</button>
           </div>
@@ -608,8 +659,8 @@ const SupervisorDashboard = () => {
       {/* Assigned Vehicles (moved below zones) */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-100 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-stone-800">Assigned Vehicles</h2>
-          <span className="text-sm text-stone-500">{vehicles.length} total</span>
+          <h2 className="text-xl font-bold text-stone-800">{t('supervisor.vehicles.assignedTitle')}</h2>
+          <span className="text-sm text-stone-500">{t('supervisor.vehicles.total', { count: vehicles.length })}</span>
         </div>
         {vehiclesError && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm mb-4">{vehiclesError}</div>
@@ -632,21 +683,21 @@ const SupervisorDashboard = () => {
                 type="button"
                 onClick={() => { if (v.image_url) { setVehViewerSrc(v.image_url); setVehViewerOpen(true); } }}
                 className="text-left border border-amber-100 rounded-xl p-4 hover:shadow-md transition-shadow bg-white"
-                title={v.image_url ? 'Click to view image' : 'No image available'}
+                title={v.image_url ? t('supervisor.vehicles.viewImage') : t('supervisor.vehicles.noImage')}
               >
                 <div className="font-semibold text-stone-800">{v.plate}</div>
-                <div className="text-sm text-stone-500">{v.driver_username || 'Unassigned driver'}</div>
+                <div className="text-sm text-stone-500">{v.driver_username || t('supervisor.vehicles.unassignedDriver')}</div>
                 <div className="mt-2 h-36 rounded overflow-hidden bg-stone-50 flex items-center justify-center">
                   {v.image_url ? (
                     <img src={v.image_url} alt={v.plate} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-stone-400 text-sm">No image</span>
+                    <span className="text-stone-400 text-sm">{t('supervisor.vehicles.noImage')}</span>
                   )}
                 </div>
               </button>
             ))}
             {!vehicles.length && (
-              <div className="col-span-full text-center py-8 text-stone-500">No vehicles assigned</div>
+              <div className="col-span-full text-center py-8 text-stone-500">{t('supervisor.vehicles.noneAssigned')}</div>
             )}
           </div>
         )}

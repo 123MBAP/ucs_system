@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SVGProps } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
-type Driver = { id: number; username: string; full_name?: string | null; vehicle_id?: number | null; vehicle_plate?: string | null; assigned_manpowers?: number[] };
-type Manpower = { id: number; username: string; full_name?: string | null };
-type Vehicle = { id: number; plate: string; assigned_manpower_users?: { id: number; username: string; full_name?: string | null }[] };
+type Driver = { id: number; username: string; first_name?: string | null; last_name?: string | null; full_name?: string | null; vehicle_id?: number | null; vehicle_plate?: string | null; assigned_manpowers?: number[] };
+type Manpower = { id: number; username: string; first_name?: string | null; last_name?: string | null; full_name?: string | null };
+type Vehicle = { id: number; plate: string; assigned_manpower_users?: { id: number; username: string; first_name?: string | null; last_name?: string | null; full_name?: string | null }[] };
 
 type Detail = {
   zone: { id: number; name: string };
@@ -192,11 +192,12 @@ const ZoneSupervision = () => {
   const [error, setError] = useState<string | null>(null);
   const [editDays, setEditDays] = useState<number[]>([]);
   const [daysEditMode, setDaysEditMode] = useState(false);
-  const [editVehicleDriver, setEditVehicleDriver] = useState<Record<number, string>>({});
-  const [showChangeDriver, setShowChangeDriver] = useState<Record<number, boolean>>({});
-  const [showManageMp, setShowManageMp] = useState<Record<number, boolean>>({});
-  const [mpAddSelections, setMpAddSelections] = useState<Record<number, number[]>>({});
-  const [mpMoveSelections, setMpMoveSelections] = useState<Record<number, { manpowerId: number | null; toVehicleId: number | null }>>({});
+  // Management interactions are handled in SupervisorServiceSchedule; keep supervision view informational only
+
+  const displayName = (u: { username: string; first_name?: string | null; last_name?: string | null; full_name?: string | null }) => {
+    const fn = `${u.first_name ? u.first_name : ''} ${u.last_name ? u.last_name : ''}`.trim();
+    return fn || u.full_name || u.username;
+  };
 
   function load() {
     const token = localStorage.getItem('token');
@@ -211,11 +212,7 @@ const ZoneSupervision = () => {
         setEditDays(data.serviceDays || []);
         // init edit values
         setDaysEditMode(false);
-        setEditVehicleDriver({});
-        setShowChangeDriver({});
-        setShowManageMp({});
-        setMpAddSelections({});
-        setMpMoveSelections({});
+        // reset no-op
       })
       .catch((e: any) => setError(e?.message || 'Failed to load'))
       .finally(() => setLoading(false));
@@ -238,68 +235,7 @@ const ZoneSupervision = () => {
     load();
   }
 
-  // Change driver for vehicle
-  async function assignDriverToVehicle(vehicleId: number) {
-    const token = localStorage.getItem('token');
-    if (!token || !id) return;
-    const driverUserId = Number(editVehicleDriver[vehicleId]);
-    if (!driverUserId) return;
-    await fetch(`${apiBase}/api/supervisor/zones/${id}/driver/vehicle`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ driverUserId, vehicleId })
-    });
-    load();
-  }
-
-  async function unassignDriverFromVehicle(driverUserId: number) {
-    const token = localStorage.getItem('token');
-    if (!token || !id) return;
-    await fetch(`${apiBase}/api/supervisor/zones/${id}/driver/vehicle/${driverUserId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    load();
-  }
-
-  async function addManpowerToVehicle(vehicleId: number) {
-    const token = localStorage.getItem('token');
-    if (!token || !id) return;
-    const selections = mpAddSelections[vehicleId] || [];
-    if (!selections.length) return;
-    await fetch(`${apiBase}/api/supervisor/zones/${id}/vehicle/${vehicleId}/manpower`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ manpowerIds: selections })
-    });
-    load();
-  }
-
-  async function removeManpowerFromVehicle(vehicleId: number, manpowerId: number) {
-    const token = localStorage.getItem('token');
-    if (!token || !id) return;
-    await fetch(`${apiBase}/api/supervisor/zones/${id}/vehicle/${vehicleId}/manpower/${manpowerId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    load();
-  }
-
-  async function moveManpower(manpowerId: number, toVehicleId: number) {
-    const token = localStorage.getItem('token');
-    if (!token || !id) return;
-    await fetch(`${apiBase}/api/supervisor/zones/${id}/vehicle/${toVehicleId}/manpower`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ manpowerIds: [manpowerId] })
-    });
-    load();
-  }
-
-  const driversWithoutVehicle = useMemo(() => {
-    if (!detail) return [] as Driver[];
-    return detail.drivers.filter(dr => dr.vehicle_id == null);
-  }, [detail]);
+  // all direct management actions removed from this page
 
   if (loading) {
     return (
@@ -510,7 +446,7 @@ const ZoneSupervision = () => {
                       <div className="text-sm">
                         <span className="font-medium" style={{ color: colors.text }}>Current driver:</span>{' '}
                         {currentDriver ? (
-                          <span style={{ color: colors.text }}>{currentDriver.full_name || currentDriver.username}</span>
+                          <span style={{ color: colors.text }}>{displayName(currentDriver)}</span>
                         ) : (
                           <span style={{ color: colors.error }}>None assigned</span>
                         )}
@@ -522,35 +458,8 @@ const ZoneSupervision = () => {
                           {v.assigned_manpower_users.length ? (
                             <div className="space-y-1">
                               {v.assigned_manpower_users.map(u => (
-                                <div key={u.id} className="px-2 py-1 rounded flex items-center justify-between" style={{ backgroundColor: colors.cardBg, color: colors.text }}>
-                                  <span>{u.full_name || u.username}</span>
-                                  {showManageMp[v.id] && (
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => removeManpowerFromVehicle(v.id, u.id)}
-                                        className="px-2 py-1 rounded text-sm"
-                                        style={{ backgroundColor: '#FEF2F2', color: colors.error }}
-                                      >Remove</button>
-                                      <div className="flex items-center gap-2">
-                                        <select
-                                          className="rounded px-2 py-1 border text-sm"
-                                          style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}
-                                          value={mpMoveSelections[v.id]?.toVehicleId || ''}
-                                          onChange={e => setMpMoveSelections({ ...mpMoveSelections, [v.id]: { manpowerId: u.id, toVehicleId: Number(e.target.value) || null } })}
-                                        >
-                                          <option value="">Move to vehicle…</option>
-                                          {detail.vehicles.filter(ov => ov.id !== v.id).map(ov => (
-                                            <option key={ov.id} value={ov.id}>{ov.plate}</option>
-                                          ))}
-                                        </select>
-                                        <button
-                                          onClick={() => { const sel = mpMoveSelections[v.id]; if (sel?.manpowerId && sel?.toVehicleId) moveManpower(sel.manpowerId, sel.toVehicleId); }}
-                                          className="px-2 py-1 rounded text-sm"
-                                          style={{ backgroundColor: colors.accent, color: 'white' }}
-                                        >Move</button>
-                                      </div>
-                                    </div>
-                                  )}
+                                <div key={u.id} className="px-2 py-1 rounded" style={{ backgroundColor: colors.cardBg, color: colors.text }}>
+                                  <span>{displayName(u)}</span>
                                 </div>
                               ))}
                             </div>
@@ -561,85 +470,7 @@ const ZoneSupervision = () => {
                       )}
                     </div>
 
-                    {!showChangeDriver[v.id] ? (
-                      <div className="flex gap-2">
-                        <PrimaryButton onClick={() => setShowChangeDriver({ ...showChangeDriver, [v.id]: true })} className="w-full justify-center py-3">
-                          <span>Change Driver</span>
-                        </PrimaryButton>
-                        {currentDriver && (
-                          <button
-                            onClick={() => unassignDriverFromVehicle(currentDriver.id)}
-                            className="px-4 py-2 rounded-lg font-medium border"
-                            style={{ backgroundColor: '#FEF2F2', color: colors.error, borderColor: colors.error }}
-                          >Unassign Driver</button>
-                        )}
-                      </div>
-                    ) : (
-                      <div>
-                        <select
-                          className="w-full rounded-lg px-4 py-3 mb-3 focus:outline-none focus:ring-2 border"
-                          style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}
-                          value={editVehicleDriver[v.id] || ''}
-                          onChange={e => setEditVehicleDriver({ ...editVehicleDriver, [v.id]: e.target.value })}
-                        >
-                          <option value="">Select driver…</option>
-                          {driversWithoutVehicle.map(dr => (
-                            <option key={dr.id} value={dr.id}>{dr.full_name || dr.username}</option>
-                          ))}
-                        </select>
-                        <div className="flex gap-2">
-                          <AccentButton onClick={() => assignDriverToVehicle(v.id)} className="w-full justify-center py-3">
-                            <Icons.Save />
-                            <span>Save</span>
-                          </AccentButton>
-                          <button
-                            onClick={() => { setShowChangeDriver({ ...showChangeDriver, [v.id]: false }); setEditVehicleDriver({ ...editVehicleDriver, [v.id]: '' }); }}
-                            className="px-4 py-2 rounded-lg font-medium border"
-                            style={{ backgroundColor: colors.cardBg, color: colors.text, borderColor: colors.border }}
-                          >Cancel</button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-4">
-                      {!showManageMp[v.id] ? (
-                        <button
-                          onClick={() => setShowManageMp({ ...showManageMp, [v.id]: true })}
-                          className="px-4 py-2 rounded-lg font-medium border"
-                          style={{ backgroundColor: colors.cardBg, color: colors.text, borderColor: colors.border }}
-                        >Manage Manpowers</button>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <select
-                              multiple
-                              className="w-full rounded-lg px-3 py-2 border"
-                              style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}
-                              value={(mpAddSelections[v.id] || []).map(String)}
-                              onChange={e => {
-                                const opts = Array.from(e.target.selectedOptions).map(o => Number(o.value));
-                                setMpAddSelections({ ...mpAddSelections, [v.id]: opts });
-                              }}
-                            >
-                              {(detail.unassignedManpower || []).map(mp => (
-                                <option key={mp.id} value={mp.id}>{mp.full_name || mp.username}</option>
-                              ))}
-                            </select>
-                            <AccentButton onClick={() => addManpowerToVehicle(v.id)}>
-                              <Icons.Add />
-                              <span>Add</span>
-                            </AccentButton>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setShowManageMp({ ...showManageMp, [v.id]: false })}
-                              className="px-4 py-2 rounded-lg font-medium border"
-                              style={{ backgroundColor: colors.cardBg, color: colors.text, borderColor: colors.border }}
-                            >Done</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    {/* Interactive management removed per requirement; assignments are managed in schedule UI */}
                   </div>
                 );
               })}

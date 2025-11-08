@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { SVGProps } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useI18n } from 'src/lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -56,6 +57,7 @@ const Icons = {
 };
 
 const Zones = () => {
+  const { t } = useI18n();
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,19 +89,19 @@ const Zones = () => {
               className="flex items-center space-x-2 text-gray-700 hover:text-amber-700 transition-colors duration-200"
             >
               <Icons.Back />
-              <span className="font-medium">Back</span>
+              <span className="font-medium">{t('zones.back')}</span>
             </button>
             <div className="w-px h-6 bg-gray-300"></div>
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-amber-600 bg-clip-text text-transparent">
-                Zones Management
+                {t('zones.title')}
               </h1>
-              <p className="text-gray-600 mt-1">Manage and monitor all operational zones</p>
+              <p className="text-gray-600 mt-1">{t('zones.subtitle')}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-            <span>{zones.length} zone{zones.length !== 1 ? 's' : ''} active</span>
+            <span>{t('zones.activeCount', { count: zones.length, plural: zones.length !== 1 ? 's' : '' })}</span>
           </div>
         </div>
 
@@ -131,10 +133,7 @@ const Zones = () => {
               >
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Zone</span>
-                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">#{zone.id}</span>
-                    </div>
+                    <div className="flex items-center space-x-2 mb-1"></div>
                     <h3 className="text-xl font-bold text-gray-800">{zone.zone_name}</h3>
                   </div>
                   <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow">
@@ -153,7 +152,7 @@ const Zones = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 text-gray-600">
                       <Icons.Clients />
-                      <span className="text-sm font-medium">Active Clients</span>
+                      <span className="text-sm font-medium">{t('zones.stats.activeClients')}</span>
                     </div>
                     <span className="font-bold text-gray-800">{zone.client_count}</span>
                   </div>
@@ -161,10 +160,10 @@ const Zones = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 text-gray-600">
                       <Icons.Chief />
-                      <span className="text-sm font-medium">Zone Chief</span>
+                      <span className="text-sm font-medium">{t('zones.stats.zoneChief')}</span>
                     </div>
                     <span className={`font-semibold ${zone.chief_username ? 'text-gray-800' : 'text-amber-700'}`}>
-                      {zone.chief_username ?? 'Unassigned'}
+                      {zone.chief_username ?? t('zones.unassigned')}
                     </span>
                   </div>
                 </div>
@@ -173,7 +172,7 @@ const Zones = () => {
                   to={`/zones/${zone.id}`}
                   className="flex items-center justify-center space-x-2 w-full py-3 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl font-semibold transition-all duration-200 border border-amber-200 hover:border-amber-400"
                 >
-                  <span>View Zone Details</span>
+                  <span>{t('zones.viewDetails')}</span>
                   <Icons.Arrow />
                 </Link>
               </div>

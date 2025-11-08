@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 type Vehicle = { id: number; plate: string };
-type Driver = { id: number; username: string; full_name?: string | null; vehicle_id?: number | null };
+type Driver = { id: number; username: string; first_name?: string | null; last_name?: string | null; full_name?: string | null; vehicle_id?: number | null };
 
 type ScheduleEntry = {
   id: number;
@@ -208,6 +208,7 @@ export default function SupervisorServiceSchedule() {
   const [start, setStart] = useState<string>('08:00');
   const [end, setEnd] = useState<string>('17:00');
   const [selectedManpower, setSelectedManpower] = useState<number[]>([]);
+  const [overrideOpen, setOverrideOpen] = useState<boolean>(false);
 
   // Enhanced filtering and search
   const [searchTerm, setSearchTerm] = useState('');
@@ -215,6 +216,11 @@ export default function SupervisorServiceSchedule() {
   const [filterVehicle] = useState<number | 'all'>('all');
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+  const displayName = (u: { username: string; first_name?: string | null; last_name?: string | null; full_name?: string | null }) => {
+    const fn = `${u.first_name ? u.first_name : ''} ${u.last_name ? u.last_name : ''}`.trim();
+    return fn || u.full_name || u.username;
+  };
 
   useEffect(() => {
     if (!Number.isFinite(zoneId)) return;
@@ -233,19 +239,20 @@ export default function SupervisorServiceSchedule() {
         if (!sr.ok) throw new Error(sdata?.error || 'Failed to load schedule');
         setZoneName(zdata?.zone?.name || '');
         setVehicles((zdata?.vehicles || []).map((v: any) => ({ id: Number(v.id), plate: String(v.plate) })));
-        setDrivers((zdata?.drivers || []).map((d: any) => ({ id: Number(d.id), username: String(d.username), full_name: d.full_name ?? null, vehicle_id: d.vehicle_id ?? null })));
+        setDrivers((zdata?.drivers || []).map((d: any) => ({ id: Number(d.id), username: String(d.username), first_name: d.first_name ?? null, last_name: d.last_name ?? null, full_name: d.full_name ?? null, vehicle_id: d.vehicle_id ?? null })));
         const mpName = new Map<number, string>();
         (zdata?.manpower || []).forEach((m: any) => {
-          mpName.set(Number(m.id), String(m.full_name ?? m.username));
+          mpName.set(Number(m.id), displayName(m));
         });
         setManpowerNameById(mpName);
         // Build vehicle -> driver map and names
         const vDr = new Map<number, number | null>();
         const vDrName = new Map<number, string>();
         (zdata?.vehicles || []).forEach((v: any) => {
-          const dr = (zdata?.drivers || []).find((d: any) => d.vehicle_id === v.id) || null;
+          const dr = (zdata?.drivers || []).find((d: any) => Number(d.vehicle_id) === Number(v.id));
           vDr.set(Number(v.id), dr ? Number(dr.id) : null);
-          vDrName.set(Number(v.id), dr ? String(dr.full_name || dr.username) : 'None assigned');
+          const fn = `${dr?.first_name ? dr.first_name : ''} ${dr?.last_name ? dr.last_name : ''}`.trim();
+          vDrName.set(Number(v.id), fn || dr?.full_name || dr?.username || 'None assigned');
         });
         setVehicleDriverMap(vDr);
         setVehicleDriverNameMap(vDrName);
@@ -254,7 +261,7 @@ export default function SupervisorServiceSchedule() {
         (zdata?.vehicles || []).forEach((v: any) => {
           const arr = Array.isArray(v.assigned_manpower_users) ? v.assigned_manpower_users : [];
           const ids = arr.map((u: any) => Number(u.id));
-          const names = arr.map((u: any) => String(u.full_name || u.username));
+          const names = arr.map((u: any) => displayName(u));
           vMp.set(Number(v.id), { ids, names });
         });
         setVehicleManpowerMap(vMp);
@@ -579,9 +586,35 @@ export default function SupervisorServiceSchedule() {
                       Assigned Driver
                     </label>
                     {vehicleId ? (
-                      <div className="w-full rounded-xl px-4 py-3 text-lg border" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.text }}>
-                        {vehicleDriverNameMap.get(Number(vehicleId)) || 'None assigned'}
-                      </div>
+                      <>
+                        <div className="w-full rounded-xl px-4 py-3 text-lg border" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.text }}>
+                          {vehicleDriverNameMap.get(Number(vehicleId)) || 'None assigned'}
+                        </div>
+                        <div className="mt-2 rounded-xl p-3 text-sm border" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
+                          You can temporarily change the driver for this service day without affecting permanent assignments.
+                          <button
+                            type="button"
+                            onClick={() => setOverrideOpen(v => !v)}
+                            className="ml-2 inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold shadow-sm"
+                            style={{ backgroundColor: colors.primary, color: 'white' }}
+                          >{overrideOpen ? 'Close' : 'Change'}</button>
+                        </div>
+                        {overrideOpen && (
+                          <div className="mt-3">
+                            <select
+                              value={driverId}
+                              onChange={e => setDriverId(e.target.value)}
+                              className="w-full rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-4 border transition-all duration-300"
+                              style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}
+                            >
+                              <option value="">Use default assigned driver</option>
+                              {drivers.map(d => (
+                                <option key={d.id} value={d.id}>{displayName(d)}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="p-4 rounded-xl border text-sm" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
                         Choose a vehicle to see its assigned driver.
@@ -601,15 +634,45 @@ export default function SupervisorServiceSchedule() {
                     )}
                   </label>
                   {vehicleId ? (
-                    <div className="flex flex-wrap gap-2 p-2 rounded-xl" style={{ backgroundColor: colors.background }}>
-                      {(vehicleManpowerMap.get(Number(vehicleId))?.names || []).length ? (
-                        (vehicleManpowerMap.get(Number(vehicleId))?.names || []).map((n, idx) => (
-                          <span key={idx} className="px-3 py-2 rounded-xl text-sm border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}>{n}</span>
-                        ))
-                      ) : (
-                        <span className="italic" style={{ color: colors.textLight }}>None assigned</span>
+                    <>
+                      <div className="flex flex-wrap gap-2 p-2 rounded-xl" style={{ backgroundColor: colors.background }}>
+                        {(vehicleManpowerMap.get(Number(vehicleId))?.names || []).length ? (
+                          (vehicleManpowerMap.get(Number(vehicleId))?.names || []).map((n, idx) => (
+                            <span key={idx} className="px-3 py-2 rounded-xl text-sm border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}>{n}</span>
+                          ))
+                        ) : (
+                          <span className="italic" style={{ color: colors.textLight }}>None assigned</span>
+                        )}
+                      </div>
+                      <div className="mt-2 rounded-xl p-3 text-sm border" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
+                        You can temporarily add or remove manpower for this service day without affecting permanent assignments.
+                        <button
+                          type="button"
+                          onClick={() => setOverrideOpen(v => !v)}
+                          className="ml-2 inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold shadow-sm"
+                          style={{ backgroundColor: colors.primary, color: 'white' }}
+                        >{overrideOpen ? 'Close' : 'Change'}</button>
+                      </div>
+                      {overrideOpen && (
+                        <div className="mt-3">
+                          <label className="block text-xs mb-2" style={{ color: colors.textLight }}>Select manpower for this service</label>
+                          <select
+                            multiple
+                            value={selectedManpower.map(String)}
+                            onChange={e => {
+                              const opts = Array.from(e.target.selectedOptions).map(o => Number(o.value));
+                              setSelectedManpower(opts);
+                            }}
+                            className="w-full rounded-xl px-3 py-3 text-base focus:outline-none focus:ring-4 border transition-all duration-300 min-h-[140px]"
+                            style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}
+                          >
+                            {Array.from(manpowerNameById.entries()).map(([id, name]) => (
+                              <option key={id} value={id}>{name}</option>
+                            ))}
+                          </select>
+                        </div>
                       )}
-                    </div>
+                    </>
                   ) : (
                     <div className="p-4 rounded-xl border text-sm" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
                       Choose a vehicle to work on the selected service day. The assigned driver and manpowers for that vehicle will be used.

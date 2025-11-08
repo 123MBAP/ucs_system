@@ -372,8 +372,6 @@ const Dashboard = () => {
           icon={<UserCog className="w-5 h-5" />}
           trend
           trendValue={8.2}
-          actionLabel="Manage manpower"
-          actionTo="/manpower-dashboard"
           gradient="from-zinc-700 to-neutral-800"
         />
         <StatCard

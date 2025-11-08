@@ -39,6 +39,9 @@ const Profile = () => {
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwSuccess, setPwSuccess] = useState<string | null>(null);
 
+  // Track the most recently edited field to show inline actions near it
+  const [lastEdited, setLastEdited] = useState<'first' | 'last' | 'username' | 'phone' | 'image' | null>(null);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -123,6 +126,7 @@ const Profile = () => {
   }
 
   const hasEdits = editFirst || editLast || editUsername || editPhone || editImage;
+  const inlineVisible = hasEdits && lastEdited !== null;
 
   // Change password actions
   async function verifyOldPassword() {
@@ -349,7 +353,7 @@ const Profile = () => {
                       {!editImage ? (
                         <button 
                           type="button" 
-                          onClick={() => setEditImage(true)}
+                          onClick={() => { setEditImage(true); setLastEdited('image'); }}
                           className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm"
                         >
                           Change Photo
@@ -383,6 +387,17 @@ const Profile = () => {
                           >
                             Cancel
                           </button>
+                          {lastEdited === 'image' && (
+                            <div className="mt-3">
+                              <button
+                                type="submit"
+                                disabled={loading}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                              >
+                                Save Changes
+                              </button>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
@@ -400,19 +415,32 @@ const Profile = () => {
                         <label className="block text-sm font-medium text-charcoal">First Name</label>
                         <button 
                           type="button" 
-                          onClick={() => setEditFirst(v => !v)}
+                          onClick={() => setEditFirst(v => { const nv = !v; if (nv) setLastEdited('first'); return nv; })}
                           className="text-xs text-amber-600 hover:text-amber-700 font-medium"
                         >
                           {editFirst ? 'Cancel' : 'Edit'}
                         </button>
                       </div>
                       {editFirst ? (
-                        <input
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                          value={firstName}
-                          onChange={e => setFirstName(e.target.value)}
-                          placeholder="Enter first name"
-                        />
+                        <>
+                          <input
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            value={firstName}
+                            onChange={e => setFirstName(e.target.value)}
+                            placeholder="Enter first name"
+                          />
+                          {lastEdited === 'first' && (
+                            <div className="mt-2">
+                              <button
+                                type="submit"
+                                disabled={loading}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                              >
+                                Save Changes
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="w-full px-3 py-2 rounded-lg text-charcoal">
                           {firstName || '-'}
@@ -426,19 +454,32 @@ const Profile = () => {
                         <label className="block text-sm font-medium text-charcoal">Last Name</label>
                         <button 
                           type="button" 
-                          onClick={() => setEditLast(v => !v)}
+                          onClick={() => setEditLast(v => { const nv = !v; if (nv) setLastEdited('last'); return nv; })}
                           className="text-xs text-amber-600 hover:text-amber-700 font-medium"
                         >
                           {editLast ? 'Cancel' : 'Edit'}
                         </button>
                       </div>
                       {editLast ? (
-                        <input
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                          value={lastName}
-                          onChange={e => setLastName(e.target.value)}
-                          placeholder="Enter last name"
-                        />
+                        <>
+                          <input
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            value={lastName}
+                            onChange={e => setLastName(e.target.value)}
+                            placeholder="Enter last name"
+                          />
+                          {lastEdited === 'last' && (
+                            <div className="mt-2">
+                              <button
+                                type="submit"
+                                disabled={loading}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                              >
+                                Save Changes
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="w-full px-3 py-2 rounded-lg text-charcoal">
                           {lastName || '-'}
@@ -452,19 +493,32 @@ const Profile = () => {
                         <label className="block text-sm font-medium text-charcoal">Username</label>
                         <button 
                           type="button" 
-                          onClick={() => setEditUsername(v => !v)}
+                          onClick={() => setEditUsername(v => { const nv = !v; if (nv) setLastEdited('username'); return nv; })}
                           className="text-xs text-amber-600 hover:text-amber-700 font-medium"
                         >
                           {editUsername ? 'Cancel' : 'Edit'}
                         </button>
                       </div>
                       {editUsername ? (
-                        <input
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                          value={username}
-                          onChange={e => setUsername(e.target.value)}
-                          placeholder="Enter username"
-                        />
+                        <>
+                          <input
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            value={username}
+                            onChange={e => setUsername(e.target.value)}
+                            placeholder="Enter username"
+                          />
+                          {lastEdited === 'username' && (
+                            <div className="mt-2">
+                              <button
+                                type="submit"
+                                disabled={loading}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                              >
+                                Save Changes
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="w-full px-3 py-2 rounded-lg text-charcoal">
                           {username || '-'}
@@ -478,19 +532,32 @@ const Profile = () => {
                         <label className="block text-sm font-medium text-charcoal">Phone Number</label>
                         <button 
                           type="button" 
-                          onClick={() => setEditPhone(v => !v)}
+                          onClick={() => setEditPhone(v => { const nv = !v; if (nv) setLastEdited('phone'); return nv; })}
                           className="text-xs text-amber-600 hover:text-amber-700 font-medium"
                         >
                           {editPhone ? 'Cancel' : 'Edit'}
                         </button>
                       </div>
                       {editPhone ? (
-                        <input
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                          value={phone}
-                          onChange={e => setPhone(e.target.value)}
-                          placeholder="Enter phone number"
-                        />
+                        <>
+                          <input
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            value={phone}
+                            onChange={e => setPhone(e.target.value)}
+                            placeholder="Enter phone number"
+                          />
+                          {lastEdited === 'phone' && (
+                            <div className="mt-2">
+                              <button
+                                type="submit"
+                                disabled={loading}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
+                              >
+                                Save Changes
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="w-full px-3 py-2 rounded-lg text-charcoal">
                           {phone || '-'}
@@ -674,7 +741,7 @@ const Profile = () => {
                 </div>
               </div>
             </div>
-              {hasEdits && (
+              {hasEdits && !inlineVisible && (
                 <div className="mt-8 flex justify-end space-x-3">
                   <button
                     type="button"
@@ -687,6 +754,7 @@ const Profile = () => {
                       setImageDataUrl(null);
                       setSuccess(null);
                       setError(null);
+                      setLastEdited(null);
                     }}
                     className="px-6 py-2 bg-gray-100 text-charcoal rounded-lg hover:bg-gray-200 transition-colors font-medium"
                   >

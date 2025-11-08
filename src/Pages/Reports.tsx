@@ -13,6 +13,13 @@ type ChiefClientSummary = {
   amount_remaining: number;
 };
 
+type ZoneClientsGroup = {
+  zone_id: number;
+  zone_name: string;
+  clients: ChiefClientSummary[];
+  totals: { count: number; amount_to_pay: number; amount_paid: number; amount_remaining: number };
+};
+
 type ZoneRow = {
   zone_id: number;
   zone_name: string;
@@ -55,7 +62,13 @@ const Reports = () => {
   const [zoneId, setZoneId] = useState<string>('');
   const [msFilter, setMsFilter] = useState<'all' | 'paid' | 'remaining'>('all');
   const [zoneRows, setZoneRows] = useState<ZoneRow[]>([]);
-  const [totals, setTotals] = useState<{ clients_count: number; amount_to_pay: number; amount_paid: number; amount_remaining: number } | null>(null);
+  
+  // Manager/Supervisor: clients list for a specific zone
+  const [zoneClients, setZoneClients] = useState<ChiefClientSummary[]>([]);
+  const [zoneClientsTotals, setZoneClientsTotals] = useState<{ count: number; amount_to_pay: number; amount_paid: number; amount_remaining: number } | null>(null);
+  // Manager/Supervisor: clients grouped by zones when no zone selected
+  const [zonesClients, setZonesClients] = useState<ZoneClientsGroup[]>([]);
+  const [zonesClientsTotals, setZonesClientsTotals] = useState<{ count: number; amount_to_pay: number; amount_paid: number; amount_remaining: number } | null>(null);
 
   // Client data
   const [clientPayments, setClientPayments] = useState<PaymentRow[]>([]);
@@ -323,21 +336,46 @@ const Reports = () => {
         })
         .catch((e: any) => setError(e?.message || 'Failed to load payments'));
     } else if (role === 'manager' || role === 'supervisor') {
-      const params = new URLSearchParams();
-      params.set('year', String(year));
-      if (month > 0) params.set('month', String(month));
-      params.set('filter', msFilter);
-      if (zoneId) params.set('zoneId', zoneId);
-      if (role === 'manager' && supervisorId) params.set('supervisorId', supervisorId);
-      fetch(`${apiBase}/api/report/zones-summary?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
-        .then(async r => {
-          const data = await r.json();
-          if (!r.ok) throw new Error(data?.error || 'Failed to load zones summary');
-          setZoneRows(Array.isArray(data.rows) ? data.rows : []);
-          setTotals(data.totals || null);
-        })
-        .catch((e: any) => setError(e?.message || 'Failed to load zones summary'))
-        .finally(() => setLoading(false));
+      if (zoneId) {
+        // When a specific zone is selected, load clients in that zone
+        const p = new URLSearchParams();
+        p.set('zoneId', zoneId);
+        p.set('year', String(year));
+        if (month > 0) p.set('month', String(month));
+        p.set('filter', msFilter);
+        fetch(`${apiBase}/api/report/zone-clients?${p.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(async r => {
+            const data = await r.json();
+            if (!r.ok) throw new Error(data?.error || 'Failed to load zone clients');
+            setZoneClients(Array.isArray(data.clients) ? data.clients : []);
+            setZoneClientsTotals(data.totals || null);
+            // clear zones summary to avoid dual rendering
+            setZoneRows([]);
+            
+          })
+          .catch((e: any) => setError(e?.message || 'Failed to load zone clients'))
+          .finally(() => setLoading(false));
+      } else {
+        // No specific zone: load clients grouped by zones
+        const params = new URLSearchParams();
+        params.set('year', String(year));
+        if (month > 0) params.set('month', String(month));
+        params.set('filter', msFilter);
+        if (role === 'manager' && supervisorId) params.set('supervisorId', supervisorId);
+        fetch(`${apiBase}/api/report/zones-clients?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(async r => {
+            const data = await r.json();
+            if (!r.ok) throw new Error(data?.error || 'Failed to load zones clients');
+            setZonesClients(Array.isArray(data.zones) ? data.zones : []);
+            setZonesClientsTotals(data.totals || null);
+            // clear previous summary state
+            setZoneRows([]);
+            setZoneClients([]);
+            setZoneClientsTotals(null);
+          })
+          .catch((e: any) => setError(e?.message || 'Failed to load zones clients'))
+          .finally(() => setLoading(false));
+      }
     } else if (role === 'client') {
       // Load client payments list with year/month filter
       const p = new URLSearchParams();
@@ -499,44 +537,98 @@ const Reports = () => {
         <>
           {(role === 'manager' || role === 'supervisor') && (
             <div ref={zonesRef} className="bg-white rounded-lg shadow overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left">{t('reports.columns.zone')}</th>
-                    <th className="px-4 py-3 text-right">{t('reports.columns.clients')}</th>
-                    <th className="px-4 py-3 text-right">{t('reports.columns.toPay')}</th>
-                    <th className="px-4 py-3 text-right">{t('reports.columns.paid')}</th>
-                    <th className="px-4 py-3 text-right">{t('reports.columns.remaining')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {zoneRows.map(r => (
-                    <tr key={r.zone_id} className="border-t">
-                      <td className="px-4 py-3"><NavLink className="text-amber-700 hover:underline" to={`/zones/${r.zone_id}`}>{r.zone_name}</NavLink></td>
-                      <td className="px-4 py-3 text-right">{nf.format(r.clients_count)}</td>
-                      <td className="px-4 py-3 text-right">{nf.format(r.amount_to_pay)}</td>
-                      <td className="px-4 py-3 text-right">{nf.format(r.amount_paid)}</td>
-                      <td className="px-4 py-3 text-right">{nf.format(r.amount_remaining)}</td>
-                    </tr>
-                  ))}
-                  {!zoneRows.length && (
+              {zoneId ? (
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td className="px-4 py-6 text-gray-500" colSpan={5}>{t('reports.noData')}</td>
+                      <th className="px-4 py-3 text-left">{t('reports.client')}</th>
+                      <th className="px-4 py-3 text-right">{t('reports.columns.toPay')}</th>
+                      <th className="px-4 py-3 text-right">{t('reports.columns.paid')}</th>
+                      <th className="px-4 py-3 text-right">{t('reports.columns.remaining')}</th>
                     </tr>
+                  </thead>
+                  <tbody>
+                    {zoneClients.map(c => (
+                      <tr key={c.client_id} className="border-t">
+                        <td className="px-4 py-3">{c.client_username || c.client_id}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(c.amount_to_pay)}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(c.amount_paid)}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(c.amount_remaining)}</td>
+                      </tr>
+                    ))}
+                    {!zoneClients.length && (
+                      <tr>
+                        <td className="px-4 py-6 text-gray-500" colSpan={4}>{t('reports.noData')}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                  {zoneClientsTotals && (
+                    <tfoot>
+                      <tr className="bg-gray-50 font-semibold border-t">
+                        <td className="px-4 py-3 text-right">{t('reports.totals')}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(zoneClientsTotals.amount_to_pay)}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(zoneClientsTotals.amount_paid)}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(zoneClientsTotals.amount_remaining)}</td>
+                      </tr>
+                    </tfoot>
                   )}
-                </tbody>
-                {totals && (
-                  <tfoot>
-                    <tr className="bg-gray-50 font-semibold border-t">
-                      <td className="px-4 py-3 text-right">{t('reports.totals')}</td>
-                      <td className="px-4 py-3 text-right">{nf.format(totals.clients_count)}</td>
-                      <td className="px-4 py-3 text-right">{nf.format(totals.amount_to_pay)}</td>
-                      <td className="px-4 py-3 text-right">{nf.format(totals.amount_paid)}</td>
-                      <td className="px-4 py-3 text-right">{nf.format(totals.amount_remaining)}</td>
+                </table>
+              ) : (
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left">{t('reports.columns.zone')}</th>
+                      <th className="px-4 py-3 text-left">{t('reports.client')}</th>
+                      <th className="px-4 py-3 text-right">{t('reports.columns.toPay')}</th>
+                      <th className="px-4 py-3 text-right">{t('reports.columns.paid')}</th>
+                      <th className="px-4 py-3 text-right">{t('reports.columns.remaining')}</th>
                     </tr>
-                  </tfoot>
-                )}
-              </table>
+                  </thead>
+                  <tbody>
+                    {zonesClients.flatMap(z => (
+                      [
+                        <tr key={`z-${z.zone_id}`} className="border-t bg-gray-50 font-medium">
+                          <td className="px-4 py-2" colSpan={5}>
+                            <NavLink className="text-amber-700 hover:underline" to={`/zones/${z.zone_id}`}>{z.zone_name}</NavLink>
+                          </td>
+                        </tr>,
+                        ...z.clients.map(c => (
+                          <tr key={`c-${z.zone_id}-${c.client_id}`}>
+                            <td className="px-4 py-2"></td>
+                            <td className="px-4 py-2">{c.client_username || c.client_id}</td>
+                            <td className="px-4 py-2 text-right">{nf.format(c.amount_to_pay)}</td>
+                            <td className="px-4 py-2 text-right">{nf.format(c.amount_paid)}</td>
+                            <td className="px-4 py-2 text-right">{nf.format(c.amount_remaining)}</td>
+                          </tr>
+                        )),
+                        <tr key={`zt-${z.zone_id}`} className="bg-gray-50 font-semibold">
+                          <td className="px-4 py-2 text-right">{t('reports.totals')}</td>
+                          <td className="px-4 py-2 text-right">{nf.format(z.totals.count)}</td>
+                          <td className="px-4 py-2 text-right">{nf.format(z.totals.amount_to_pay)}</td>
+                          <td className="px-4 py-2 text-right">{nf.format(z.totals.amount_paid)}</td>
+                          <td className="px-4 py-2 text-right">{nf.format(z.totals.amount_remaining)}</td>
+                        </tr>
+                      ]
+                    ))}
+                    {!zonesClients.length && (
+                      <tr>
+                        <td className="px-4 py-6 text-gray-500" colSpan={5}>{t('reports.noData')}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                  {zonesClientsTotals && (
+                    <tfoot>
+                      <tr className="bg-gray-100 font-semibold border-t">
+                        <td className="px-4 py-3 text-right">{t('reports.totals')}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(zonesClientsTotals.count)}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(zonesClientsTotals.amount_to_pay)}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(zonesClientsTotals.amount_paid)}</td>
+                        <td className="px-4 py-3 text-right">{nf.format(zonesClientsTotals.amount_remaining)}</td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              )}
             </div>
           )}
 

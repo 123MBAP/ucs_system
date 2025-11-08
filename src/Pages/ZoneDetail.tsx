@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useI18n } from 'src/lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -143,6 +144,7 @@ const PrimaryButton = ({ children, onClick, disabled = false, loading = false, s
 };
 
 const ZoneDetail = () => {
+  const { t } = useI18n();
   const { id } = useParams();
   const navigate = useNavigate();
   const [zone, setZone] = useState<Zone | null>(null);
@@ -196,7 +198,7 @@ const ZoneDetail = () => {
       <div className="min-h-screen p-6 flex items-center justify-center" style={{ backgroundColor: colors.background }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: colors.primary }}></div>
-          <div className="text-lg" style={{ color: colors.textLight }}>Loading zone details…</div>
+          <div className="text-lg" style={{ color: colors.textLight }}>{t('zoneDetail.title')}</div>
         </div>
       </div>
     );
@@ -208,11 +210,11 @@ const ZoneDetail = () => {
           <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: colors.errorLight }}>
             <div className="w-8 h-8 rounded-full" style={{ backgroundColor: colors.error }}></div>
           </div>
-          <h3 className="text-xl font-semibold mb-2" style={{ color: colors.error }}>Error Loading Zone</h3>
+          <h3 className="text-xl font-semibold mb-2" style={{ color: colors.error }}>{t('common.errorLoading')}</h3>
           <p className="mb-4" style={{ color: colors.textLight }}>{error}</p>
           <PrimaryButton onClick={loadZoneData} loading={refreshing}>
             <Icons.Refresh className="w-4 h-4" />
-            Try Again
+            {t('common.tryAgain')}
           </PrimaryButton>
         </Card>
       </div>
@@ -223,8 +225,8 @@ const ZoneDetail = () => {
       <div className="min-h-screen p-6 flex items-center justify-center" style={{ backgroundColor: colors.background }}>
         <Card className="text-center max-w-md">
           <Icons.Users className="w-16 h-16 mx-auto mb-4" style={{ color: colors.textLighter }} />
-          <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>Zone Not Found</h3>
-          <p style={{ color: colors.textLighter }}>The requested zone could not be found.</p>
+          <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>{t('zoneDetail.title')}</h3>
+          <p style={{ color: colors.textLighter }}>{t('common.na')}</p>
         </Card>
       </div>
     );
@@ -241,12 +243,12 @@ const ZoneDetail = () => {
               style={{ backgroundColor: colors.cardBg, color: colors.textLight }}
             >
               <Icons.Back className="w-5 h-5" />
-              <span className="font-semibold">Back to Zones</span>
+              <span className="font-semibold">{t('zoneDetail.backToZones')}</span>
             </button>
             <div className="w-px h-8" style={{ backgroundColor: colors.border }}></div>
             <div>
-              <h1 className="text-3xl lg:text-4xl font-bold" style={{ color: colors.text }}>Zone Details</h1>
-              <p className="text-lg mt-2" style={{ color: colors.textLight }}>Comprehensive overview and management</p>
+              <h1 className="text-3xl lg:text-4xl font-bold" style={{ color: colors.text }}>{t('zoneDetail.title')}</h1>
+              <p className="text-lg mt-2" style={{ color: colors.textLight }}>{t('zoneDetail.subtitle')}</p>
             </div>
           </div>
           
@@ -257,7 +259,7 @@ const ZoneDetail = () => {
             className="flex items-center gap-2"
           >
             <Icons.Refresh className="w-4 h-4" />
-            <span>Refresh Data</span>
+            <span>{t('zoneDetail.refresh')}</span>
           </PrimaryButton>
         </div>
 
@@ -270,9 +272,7 @@ const ZoneDetail = () => {
                 <h2 className="text-2xl lg:text-3xl font-bold" style={{ color: colors.text }}>
                   {zone.zone_name}
                 </h2>
-                <span className="px-3 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: colors.primaryLight, color: colors.text }}>
-                  Zone #{zone.id}
-                </span>
+                {/* no visible IDs */}
               </div>
               
               <div className="space-y-3">
@@ -280,13 +280,13 @@ const ZoneDetail = () => {
                   <Icons.Users className="w-5 h-5" style={{ color: colors.primary }} />
                   <div>
                     <div className="font-semibold" style={{ color: colors.text }}>{zone.cell}, {zone.village}</div>
-                    <div className="text-sm" style={{ color: colors.textLight }}>Location</div>
+                    <div className="text-sm" style={{ color: colors.textLight }}>{t('zoneDetail.location')}</div>
                   </div>
                 </div>
                 
                 {zone.description && (
                   <div className="p-4 rounded-xl" style={{ backgroundColor: colors.background }}>
-                    <div className="text-sm font-semibold mb-1" style={{ color: colors.text }}>Description</div>
+                    <div className="text-sm font-semibold mb-1" style={{ color: colors.text }}>{t('zoneDetail.description')}</div>
                     <div className="text-sm" style={{ color: colors.textLight }}>{zone.description}</div>
                   </div>
                 )}
@@ -295,7 +295,7 @@ const ZoneDetail = () => {
             
             <div className="lg:text-right">
               <div className="text-2xl font-bold mb-2" style={{ color: colors.primary }}>{zone.client_count}</div>
-              <div className="text-sm font-semibold" style={{ color: colors.textLight }}>Total Clients</div>
+              <div className="text-sm font-semibold" style={{ color: colors.textLight }}>{t('zoneDetail.totalClients')}</div>
             </div>
           </div>
         </Card>
@@ -304,33 +304,33 @@ const ZoneDetail = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <InfoCard
             icon={<Icons.Crown className="w-6 h-6" />}
-            title="Zone Chief"
-            value={zone.chief_username ?? "Unassigned"}
+            title={t('zoneDetail.zoneChief')}
+            value={zone.chief_username ?? t('common.unassigned')}
             color={colors.primary}
           />
           <InfoCard
             icon={<Icons.Users className="w-6 h-6" />}
-            title="Total Clients"
+            title={t('zoneDetail.totalClients')}
             value={zone.client_count.toString()}
             color={colors.accent}
           />
           <InfoCard
             icon={<Icons.Money className="w-6 h-6" />}
-            title="Amount To Be Paid"
+            title={t('zoneDetail.amountToBePaid')}
             value={
               payments.amountToBePaid != null
-                ? `$${payments.amountToBePaid.toLocaleString()}`
-                : "N/A"
+                ? `${payments.amountToBePaid.toLocaleString()}`
+                : t('common.na')
             }
             color={colors.warning}
           />
           <InfoCard
             icon={<Icons.Calendar className="w-6 h-6" />}
-            title="Current Month Paid"
+            title={t('zoneDetail.currentMonthPaid')}
             value={
               payments.currentMonthPaid != null
-                ? `$${payments.currentMonthPaid.toLocaleString()}`
-                : "N/A"
+                ? `${payments.currentMonthPaid.toLocaleString()}`
+                : t('common.na')
             }
             color={colors.success}
           />
@@ -340,13 +340,13 @@ const ZoneDetail = () => {
         <Card>
           <div className="flex items-center gap-3 mb-4">
             <Icons.Today className="w-6 h-6" style={{ color: colors.primary }} />
-            <h3 className="text-xl font-semibold" style={{ color: colors.text }}>Today's Payments</h3>
+            <h3 className="text-xl font-semibold" style={{ color: colors.text }}>{t('zoneDetail.todaysPayments')}</h3>
           </div>
           <div className="text-3xl font-bold" style={{ color: colors.primary }}>
-            {payments.todayPaid != null ? `$${payments.todayPaid.toLocaleString()}` : "N/A"}
+            {payments.todayPaid != null ? `${payments.todayPaid.toLocaleString()}` : t('common.na')}
           </div>
           <div className="text-sm mt-2" style={{ color: colors.textLight }}>
-            Total payments collected today
+            {t('zoneDetail.todaysPaymentsCaption')}
           </div>
         </Card>
 
@@ -355,7 +355,7 @@ const ZoneDetail = () => {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Icons.Settings className="w-6 h-6" style={{ color: colors.primary }} />
-              <h3 className="text-xl font-semibold" style={{ color: colors.text }}>Zone Management</h3>
+              <h3 className="text-xl font-semibold" style={{ color: colors.text }}>{t('zoneDetail.manage.title')}</h3>
             </div>
             
             <button
@@ -367,7 +367,7 @@ const ZoneDetail = () => {
               }}
             >
               <Icons.Settings className="w-4 h-4" />
-              <span>{manageOpen ? "Hide Options" : "Manage Zone"}</span>
+              <span>{manageOpen ? t('zoneDetail.manage.toggleHide') : t('zoneDetail.manage.toggleShow')}</span>
             </button>
           </div>
 
@@ -375,26 +375,26 @@ const ZoneDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <ManagementCard
                 icon={<Icons.Users className="w-8 h-8" />}
-                title="Reassign Supervisor"
-                description="Assign a new supervisor to manage this zone"
+                title={t('zoneDetail.manage.reassignSupervisor')}
+                description={t('zoneDetail.manage.reassignSupervisorDesc')}
                 onClick={() => navigate(`/register-supervisor?zoneId=${id}&reassign=1`)}
-                buttonText="Reassign"
+                buttonText={t('zoneDetail.manage.reassignSupervisor')}
                 color={colors.primary}
               />
               <ManagementCard
                 icon={<Icons.Crown className="w-8 h-8" />}
-                title="Reassign Zone Chief"
-                description="Assign a new chief to oversee daily operations"
+                title={t('zoneDetail.manage.reassignChief')}
+                description={t('zoneDetail.manage.reassignChiefDesc')}
                 onClick={() => navigate(`/register-chief?zoneId=${id}&reassign=1`)}
-                buttonText="Reassign"
+                buttonText={t('zoneDetail.manage.reassignChief')}
                 color={colors.accent}
               />
               <ManagementCard
                 icon={<Icons.UserPlus className="w-8 h-8" />}
-                title="Add New Client"
-                description="Register a new client in this zone"
+                title={t('zoneDetail.manage.addClient')}
+                description={t('zoneDetail.manage.addClientDesc')}
                 onClick={() => navigate(`/register-client?zoneId=${id}`)}
-                buttonText="Add Client"
+                buttonText={t('zoneDetail.manage.addClient')}
                 color={colors.success}
               />
             </div>

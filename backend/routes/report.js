@@ -62,6 +62,171 @@ router.get('/clients-summary', auth, requireRole('chief'), async (req, res) => {
   }
 });
 
+// GET /api/report/zones-clients?year=YYYY&month=MM&filter=all|paid|remaining&supervisorId=optional
+// manager: all zones or filtered by supervisor; supervisor: only their zones
+router.get('/zones-clients', auth, requireRole('manager', 'supervisor'), async (req, res) => {
+  try {
+    const role = req.user.role;
+    const userId = req.user.id;
+    const year = Number(req.query.year) || new Date().getFullYear();
+    const month = Number(req.query.month) || (new Date().getMonth() + 1);
+    const filter = String(req.query.filter || 'all').toLowerCase();
+    const supervisorId = req.query.supervisorId ? Number(req.query.supervisorId) : null;
+
+    if (!Number.isFinite(year) || year < 2000 || year > 3000) {
+      return res.status(400).json({ error: 'Invalid year' });
+    }
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      return res.status(400).json({ error: 'Invalid month' });
+    }
+
+    const params = [];
+    const whereParts = [];
+    if (role === 'supervisor') {
+      params.push(userId);
+      whereParts.push(`z.supervisor_id = $${params.length}`);
+    }
+    if (role === 'manager' && Number.isFinite(supervisorId)) {
+      params.push(supervisorId);
+      whereParts.push(`z.supervisor_id = $${params.length}`);
+    }
+    const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+    // Zones in scope
+    const zonesRes = await db.query(`SELECT z.id, z.zone_name FROM zones z ${whereSql} ORDER BY z.zone_name ASC`, params);
+    const zoneList = zonesRes.rows.map(r => ({ id: r.id, zone_name: r.zone_name }));
+    if (!zoneList.length) return res.json({ zones: [], totals: { count: 0, amount_to_pay: 0, amount_paid: 0, amount_remaining: 0 } });
+
+    const zoneIds = zoneList.map(z => z.id);
+    const sql = `
+      SELECT 
+        c.zone_id,
+        c.id as client_id,
+        c.username as client_username,
+        COALESCE(c.monthly_amount, 0) as amount_to_pay,
+        COALESCE(SUM(CASE WHEN pc.status = 'success' 
+                     AND EXTRACT(YEAR FROM pc.completed_at) = $1 
+                     AND EXTRACT(MONTH FROM pc.completed_at) = $2
+                     THEN pc.amount ELSE 0 END), 0) AS amount_paid
+      FROM clients c
+      LEFT JOIN payments_completed pc ON pc.client_id = c.id
+      WHERE c.zone_id = ANY($3)
+      GROUP BY c.zone_id, c.id, c.username, c.monthly_amount
+      ORDER BY c.zone_id ASC, c.username ASC`;
+
+    const r = await db.query(sql, [year, month, zoneIds]);
+    let all = r.rows.map(row => ({
+      zone_id: row.zone_id,
+      client_id: row.client_id,
+      client_username: row.client_username,
+      amount_to_pay: Number(row.amount_to_pay || 0),
+      amount_paid: Number(row.amount_paid || 0),
+      amount_remaining: Math.max(0, Number(row.amount_to_pay || 0) - Number(row.amount_paid || 0)),
+    }));
+
+    if (filter === 'paid') all = all.filter(c => c.amount_paid > 0);
+    else if (filter === 'remaining') all = all.filter(c => c.amount_remaining > 0);
+
+    // Group by zone
+    const byZone = new Map();
+    for (const z of zoneList) byZone.set(z.id, { zone_id: z.id, zone_name: z.zone_name, clients: [], totals: { count: 0, amount_to_pay: 0, amount_paid: 0, amount_remaining: 0 } });
+    for (const c of all) {
+      const g = byZone.get(c.zone_id);
+      if (!g) continue;
+      g.clients.push({ client_id: c.client_id, client_username: c.client_username, amount_to_pay: c.amount_to_pay, amount_paid: c.amount_paid, amount_remaining: c.amount_remaining });
+      g.totals.count += 1;
+      g.totals.amount_to_pay += c.amount_to_pay;
+      g.totals.amount_paid += c.amount_paid;
+      g.totals.amount_remaining += c.amount_remaining;
+    }
+
+    const zonesOut = zoneList.map(z => byZone.get(z.id)).filter(Boolean);
+    const totals = zonesOut.reduce((acc, z) => {
+      acc.count += z.totals.count;
+      acc.amount_to_pay += z.totals.amount_to_pay;
+      acc.amount_paid += z.totals.amount_paid;
+      acc.amount_remaining += z.totals.amount_remaining;
+      return acc;
+    }, { count: 0, amount_to_pay: 0, amount_paid: 0, amount_remaining: 0 });
+
+    return res.json({ zones: zonesOut, totals });
+  } catch (err) {
+    console.error('Zones clients error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/report/zone-clients?zoneId=Z&year=YYYY&month=MM&filter=all|paid|remaining
+// manager: any zone; supervisor: only zones assigned to him
+router.get('/zone-clients', auth, requireRole('manager', 'supervisor'), async (req, res) => {
+  try {
+    const role = req.user.role;
+    const userId = req.user.id;
+    const zoneId = req.query.zoneId ? Number(req.query.zoneId) : null;
+    const year = Number(req.query.year) || new Date().getFullYear();
+    const month = Number(req.query.month) || (new Date().getMonth() + 1);
+    const filter = String(req.query.filter || 'all').toLowerCase();
+
+    if (!Number.isFinite(zoneId)) return res.status(400).json({ error: 'zoneId required' });
+    if (!Number.isFinite(year) || year < 2000 || year > 3000) {
+      return res.status(400).json({ error: 'Invalid year' });
+    }
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      return res.status(400).json({ error: 'Invalid month' });
+    }
+
+    if (role === 'supervisor') {
+      // Ensure supervisor has access to this zone
+      const r = await db.query('SELECT 1 FROM zones WHERE id = $1 AND supervisor_id = $2', [zoneId, userId]);
+      if (!r.rows.length) return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT 
+         c.id as client_id,
+         c.username as client_username,
+         COALESCE(c.monthly_amount, 0) as amount_to_pay,
+         COALESCE(SUM(CASE WHEN pc.status = 'success' 
+                     AND EXTRACT(YEAR FROM pc.completed_at) = $2 
+                     AND EXTRACT(MONTH FROM pc.completed_at) = $3
+                     THEN pc.amount ELSE 0 END), 0) AS amount_paid
+       FROM clients c
+       LEFT JOIN payments_completed pc ON pc.client_id = c.id
+       WHERE c.zone_id = $1
+       GROUP BY c.id, c.username, c.monthly_amount
+       ORDER BY c.username ASC`,
+      [zoneId, year, month]
+    );
+
+    let clients = rows.map(r => ({
+      client_id: r.client_id,
+      client_username: r.client_username,
+      amount_to_pay: Number(r.amount_to_pay || 0),
+      amount_paid: Number(r.amount_paid || 0),
+      amount_remaining: Math.max(0, Number(r.amount_to_pay || 0) - Number(r.amount_paid || 0)),
+    }));
+
+    if (filter === 'paid') {
+      clients = clients.filter(c => c.amount_paid > 0);
+    } else if (filter === 'remaining') {
+      clients = clients.filter(c => c.amount_remaining > 0);
+    }
+
+    const totals = clients.reduce((acc, c) => {
+      acc.count += 1;
+      acc.amount_to_pay += c.amount_to_pay;
+      acc.amount_paid += c.amount_paid;
+      acc.amount_remaining += c.amount_remaining;
+      return acc;
+    }, { count: 0, amount_to_pay: 0, amount_paid: 0, amount_remaining: 0 });
+
+    return res.json({ year, month, clients, totals });
+  } catch (err) {
+    console.error('Zone clients error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/report/zones-summary?year=YYYY&month=MM&zoneId=optional&filter=all|paid|remaining
 // manager: all zones; supervisor: only zones assigned to him
 router.get('/zones-summary', auth, requireRole('manager', 'supervisor'), async (req, res) => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { useI18n } from 'src/lib/i18n';
 
 type ZoneOption = { id: string; name: string };
 type UserOption = { id: string; username: string };
@@ -7,6 +8,7 @@ type UserOption = { id: string; username: string };
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 const RegisterChiefOfZone = () => {
+  const { t } = useI18n();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -168,32 +170,32 @@ const RegisterChiefOfZone = () => {
     <div className="p-6 max-w-2xl">
       {isReassign && zoneParam && (
         <div className="mb-2">
-          <Link to={`/zones/${zoneParam}`} className="text-blue-600 underline text-sm">← Back to Zone</Link>
+          <Link to={`/zones/${zoneParam}`} className="text-amber-600 underline text-sm">← {t('register.common.back')}</Link>
         </div>
       )}
-      <h2 className="text-2xl font-bold mb-4">{isReassign ? 'Reassign Chief of the Zone' : 'Register Chief of Zone'}</h2>
+      <h2 className="text-2xl font-bold mb-4">{isReassign ? t('register.chief.reassignTitle') : t('register.chief.title')}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="text-red-600">{error}</div>}
-        {success && <div className="text-green-600">{success}</div>}
+        {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">{error}</div>}
+        {success && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{success}</div>}
 
         {!(isReassign && mode === 'existing') && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">First Name</label>
-              <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+              <label className="block text-sm font-medium text-neutral-800">{t('register.common.firstName')}</label>
+              <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={firstName} onChange={e => setFirstName(e.target.value)} required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Last Name</label>
-              <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={lastName} onChange={e => setLastName(e.target.value)} required />
+              <label className="block text-sm font-medium text-neutral-800">{t('register.common.lastName')}</label>
+              <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={lastName} onChange={e => setLastName(e.target.value)} required />
             </div>
           </div>
         )}
 
         {!isReassign && (
           <div>
-            <label className="block text-sm font-medium text-gray-700">Username or Email</label>
-            <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={username} onChange={e => setUsername(e.target.value)} required />
+            <label className="block text-sm font-medium text-neutral-800">{t('register.common.usernameOrEmail')}</label>
+            <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={username} onChange={e => setUsername(e.target.value)} required />
           </div>
         )}
 
@@ -202,16 +204,16 @@ const RegisterChiefOfZone = () => {
             <div className="mb-3">
               <label className="inline-flex items-center">
                 <input type="radio" name="mode" value="existing" checked={mode === 'existing'} onChange={() => setMode('existing')} className="mr-2" />
-                <span>Assign to an existing chief</span>
+                <span>{'Assign to an existing chief'}</span>
               </label>
               <label className="inline-flex items-center ml-6">
                 <input type="radio" name="mode" value="new" checked={mode === 'new'} onChange={() => setMode('new')} className="mr-2" />
-                <span>Create a new chief</span>
+                <span>{'Create a new chief'}</span>
               </label>
             </div>
             {mode === 'existing' ? (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Select Chief</label>
+                <label className="block text-sm font-medium text-neutral-800">{t('register.chief.selectChief')}</label>
                 <select value={selectedChief} onChange={e => setSelectedChief(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                   <option value="">-- Select chief --</option>
                   {chiefs.map(c => <option key={c.id} value={c.id}>{c.username}</option>)}
@@ -219,8 +221,8 @@ const RegisterChiefOfZone = () => {
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Username or Email</label>
-                <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={username} onChange={e => setUsername(e.target.value)} />
+                <label className="block text-sm font-medium text-neutral-800">{t('register.common.usernameOrEmail')}</label>
+                <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={username} onChange={e => setUsername(e.target.value)} />
               </div>
             )}
           </div>
@@ -229,7 +231,7 @@ const RegisterChiefOfZone = () => {
         <div className="pt-2">
           <label className="inline-flex items-center">
             <input type="checkbox" checked={assignZone} onChange={e => setAssignZone(e.target.checked)} className="mr-2" />
-            <span>Assign Zone (optional)</span>
+            <span>{t('register.chief.assignZoneOptional')}</span>
           </label>
         </div>
 
@@ -238,17 +240,17 @@ const RegisterChiefOfZone = () => {
             <div className="space-x-4 mb-3">
               <label className="inline-flex items-center">
                 <input type="radio" name="assignMode" value="existing" checked={assignMode === 'existing'} onChange={() => setAssignMode('existing')} className="mr-2" />
-                <span>Assign to existing zone</span>
+                <span>{t('register.chief.assignExisting')}</span>
               </label>
               <label className="inline-flex items-center ml-4">
                 <input type="radio" name="assignMode" value="new" checked={assignMode === 'new'} onChange={() => setAssignMode('new')} className="mr-2" />
-                <span>Assign to new zone</span>
+                <span>{t('register.chief.assignNew')}</span>
               </label>
             </div>
 
             {assignMode === 'existing' ? (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Select Zone</label>
+                <label className="block text-sm font-medium text-neutral-800">{t('register.common.selectZone')}</label>
                 <select value={selectedZone ?? ''} onChange={e => setSelectedZone(e.target.value || null)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                   <option value="">-- Select zone --</option>
                   {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
@@ -257,22 +259,22 @@ const RegisterChiefOfZone = () => {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Zone Name</label>
-                  <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={newZoneName} onChange={e => setNewZoneName(e.target.value)} />
+                  <label className="block text-sm font-medium text-neutral-800">{t('register.chief.zoneName')}</label>
+                  <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={newZoneName} onChange={e => setNewZoneName(e.target.value)} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Cell</label>
-                    <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={newCell} onChange={e => setNewCell(e.target.value)} />
+                    <label className="block text-sm font-medium text-neutral-800">{t('register.chief.cell')}</label>
+                    <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={newCell} onChange={e => setNewCell(e.target.value)} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Village</label>
-                    <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={newVillage} onChange={e => setNewVillage(e.target.value)} />
+                    <label className="block text-sm font-medium text-neutral-800">{t('register.chief.village')}</label>
+                    <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={newVillage} onChange={e => setNewVillage(e.target.value)} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Location Description</label>
-                  <textarea rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={newDescription} onChange={e => setNewDescription(e.target.value)} />
+                  <label className="block text-sm font-medium text-neutral-800">{t('register.chief.locationDescription')}</label>
+                  <textarea rows={3} className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={newDescription} onChange={e => setNewDescription(e.target.value)} />
                 </div>
               </div>
             )}
@@ -280,7 +282,7 @@ const RegisterChiefOfZone = () => {
         )}
 
         <div>
-          <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded-md ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{loading ? 'Creating…' : 'Create Chief'}</button>
+          <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded-md ${loading ? 'bg-amber-400' : 'bg-amber-600 hover:bg-amber-700'}`}>{loading ? '…' : t('register.chief.button')}</button>
         </div>
       </form>
     </div>

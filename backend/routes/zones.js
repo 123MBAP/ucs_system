@@ -135,13 +135,56 @@ router.get('/:id', auth, async (req, res) => {
 
     if (!rows.length) return res.status(404).json({ error: 'Zone not found' });
 
-    // Payment placeholders until schema exists
+    // Compute real payments from DB
+    const year = new Date().getFullYear();
+    const month = new Date().getMonth() + 1; // 1-12
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = today.getMonth();
+    const d = today.getDate();
+    const startOfDay = new Date(y, m, d, 0, 0, 0, 0);
+    const endOfDay = new Date(y, m, d, 23, 59, 59, 999);
+
+    // Total to be paid = sum of clients.monthly_amount in this zone
+    const amtToPayRes = await db.query(
+      `SELECT COALESCE(SUM(COALESCE(monthly_amount,0)),0) AS amount_to_pay
+       FROM clients WHERE zone_id = $1`,
+      [id]
+    );
+    const amountToBePaid = Number(amtToPayRes.rows[0]?.amount_to_pay || 0);
+
+    // Current month paid = sum of payments_completed.amount with status success for this month
+    const monthPaidRes = await db.query(
+      `SELECT COALESCE(SUM(pc.amount),0) AS amount_paid
+       FROM payments_completed pc
+       JOIN clients c ON c.id = pc.client_id
+       WHERE c.zone_id = $1
+         AND pc.status = 'success'
+         AND EXTRACT(YEAR FROM pc.completed_at) = $2
+         AND EXTRACT(MONTH FROM pc.completed_at) = $3`,
+      [id, year, month]
+    );
+    const currentMonthPaid = Number(monthPaidRes.rows[0]?.amount_paid || 0);
+
+    // Today's paid = sum of payments_completed.amount today
+    const todayPaidRes = await db.query(
+      `SELECT COALESCE(SUM(pc.amount),0) AS amount_paid
+       FROM payments_completed pc
+       JOIN clients c ON c.id = pc.client_id
+       WHERE c.zone_id = $1
+         AND pc.status = 'success'
+         AND pc.completed_at >= $2
+         AND pc.completed_at <= $3`,
+      [id, startOfDay, endOfDay]
+    );
+    const todayPaid = Number(todayPaidRes.rows[0]?.amount_paid || 0);
+
     return res.json({
       zone: rows[0],
       payments: {
-        amountToBePaid: null,
-        currentMonthPaid: null,
-        todayPaid: null,
+        amountToBePaid,
+        currentMonthPaid,
+        todayPaid,
       }
     });
   } catch (err) {

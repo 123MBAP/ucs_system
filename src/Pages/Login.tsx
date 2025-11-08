@@ -15,7 +15,10 @@ const colors = {
   text: '#FFFFFF',
   textLight: '#9CA3AF',
   error: '#DC2626',
-  success: '#15803D'
+  success: '#15803D',
+  // Stronger backgrounds for modal to avoid transparency issues
+  modalBg: 'rgba(17, 24, 39, 0.95)',
+  modalInputBg: 'rgba(255, 255, 255, 0.12)'
 };
 
 const Login = () => {
@@ -357,7 +360,7 @@ const Login = () => {
           {/* Reset Password Modal */}
           {showReset && (
             <div className="absolute inset-0 rounded-2xl flex items-center justify-center p-6" style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
-              <div className="rounded-2xl p-6 w-full border shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+              <div className="rounded-2xl p-6 w-full border shadow-2xl" style={{ backgroundColor: colors.modalBg, borderColor: colors.border }}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Reset Password</h3>
                   <button 
@@ -387,7 +390,7 @@ const Login = () => {
                           value={fpUsernameOrEmail}
                           onChange={e => setFpUsernameOrEmail(e.target.value)}
                           className="block w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2"
-                          style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: colors.border, color: colors.text }}
+                          style={{ backgroundColor: colors.modalInputBg, borderColor: colors.border, color: colors.text }}
                           placeholder="Enter your username or email"
                         />
                       </div>
@@ -439,7 +442,7 @@ const Login = () => {
                           value={fpCode}
                           onChange={e => setFpCode(e.target.value)}
                           className="block w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2"
-                          style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: colors.border, color: colors.text }}
+                          style={{ backgroundColor: colors.modalInputBg, borderColor: colors.border, color: colors.text }}
                           placeholder="6-digit code"
                         />
                       </div>

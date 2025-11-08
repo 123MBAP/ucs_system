@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { useI18n } from 'src/lib/i18n';
 
 type ZoneOption = { id: string; name: string };
 type UserOption = { id: string; username: string };
@@ -7,6 +8,7 @@ type UserOption = { id: string; username: string };
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 const RegisterSupervisor = () => {
+  const { t } = useI18n();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -135,32 +137,32 @@ const RegisterSupervisor = () => {
     <div className="p-6 max-w-2xl">
       {isReassign && params.get('zoneId') && (
         <div className="mb-2">
-          <Link to={`/zones/${params.get('zoneId')}`} className="text-blue-600 underline text-sm">← Back to Zone</Link>
+          <Link to={`/zones/${params.get('zoneId')}`} className="text-amber-600 underline text-sm">← {t('register.common.back')}</Link>
         </div>
       )}
-      <h2 className="text-2xl font-bold mb-4">{isReassign ? 'Reassign Supervisor' : 'Create the supervisor'}</h2>
+      <h2 className="text-2xl font-bold mb-4">{isReassign ? t('register.supervisor.reassignTitle') : t('register.supervisor.title')}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="text-red-600">{error}</div>}
-        {success && <div className="text-green-600">{success}</div>}
+        {error && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-700">{error}</div>}
+        {success && <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-700">{success}</div>}
 
         {!(isReassign && mode === 'existing') && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">First Name</label>
-              <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+              <label className="block text-sm font-medium text-neutral-800">{t('register.common.firstName')}</label>
+              <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={firstName} onChange={e => setFirstName(e.target.value)} required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Last Name</label>
-              <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={lastName} onChange={e => setLastName(e.target.value)} required />
+              <label className="block text-sm font-medium text-neutral-800">{t('register.common.lastName')}</label>
+              <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={lastName} onChange={e => setLastName(e.target.value)} required />
             </div>
           </div>
         )}
 
         {!isReassign && (
           <div>
-            <label className="block text-sm font-medium text-gray-700">Username or Email</label>
-            <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={username} onChange={e => setUsername(e.target.value)} required />
+            <label className="block text-sm font-medium text-neutral-800">{t('register.common.usernameOrEmail')}</label>
+            <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={username} onChange={e => setUsername(e.target.value)} required />
           </div>
         )}
 
@@ -169,16 +171,16 @@ const RegisterSupervisor = () => {
             <div className="mb-3">
               <label className="inline-flex items-center">
                 <input type="radio" name="mode" value="existing" checked={mode === 'existing'} onChange={() => setMode('existing')} className="mr-2" />
-                <span>Assign to an existing supervisor</span>
+                <span>{'Assign to an existing supervisor'}</span>
               </label>
               <label className="inline-flex items-center ml-6">
                 <input type="radio" name="mode" value="new" checked={mode === 'new'} onChange={() => setMode('new')} className="mr-2" />
-                <span>Create a new supervisor</span>
+                <span>{'Create a new supervisor'}</span>
               </label>
             </div>
             {mode === 'existing' ? (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Select Supervisor</label>
+                <label className="block text-sm font-medium text-neutral-800">{t('register.vehicle.selectDriver').replace('Driver','Supervisor')}</label>
                 <select value={selectedSupervisor} onChange={e => setSelectedSupervisor(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                   <option value="">-- Select supervisor --</option>
                   {supervisors.map(s => <option key={s.id} value={s.id}>{s.username}</option>)}
@@ -186,15 +188,15 @@ const RegisterSupervisor = () => {
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Username or Email</label>
-                <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={username} onChange={e => setUsername(e.target.value)} />
+                <label className="block text-sm font-medium text-neutral-800">{t('register.common.usernameOrEmail')}</label>
+                <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={username} onChange={e => setUsername(e.target.value)} />
               </div>
             )}
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Assign Zones (optional)</label>
+          <label className="block text-sm font-medium text-neutral-800">{t('register.supervisor.assignZonesOptional')}</label>
           <div className="mt-2 space-y-2">
             {zones.map(z => (
               <label key={z.id} className="flex items-center space-x-2">
@@ -206,7 +208,7 @@ const RegisterSupervisor = () => {
         </div>
 
         <div>
-          <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded-md ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{loading ? 'Creating…' : 'Create Supervisor'}</button>
+          <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded-md ${loading ? 'bg-amber-400' : 'bg-amber-600 hover:bg-amber-700'}`}>{loading ? '…' : t('register.supervisor.button')}</button>
         </div>
       </form>
     </div>

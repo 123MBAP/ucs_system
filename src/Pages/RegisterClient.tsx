@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useI18n } from 'src/lib/i18n';
 
 type ZoneOption = { id: string; name: string };
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 const RegisterClient = () => {
+  const { t } = useI18n();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -99,47 +101,47 @@ const RegisterClient = () => {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6 p-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-zinc-800 to-indigo-600 bg-clip-text text-transparent">Register Client</h1>
-        <p className="text-zinc-600 mt-1">Create a new client and assign them to a zone</p>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">{t('register.client.title')}</h1>
+        <p className="text-neutral-600 mt-1">{t('register.client.subtitle')}</p>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+      <div className="rounded-2xl shadow-sm border p-6 bg-white" style={{ borderColor: '#E5E7EB' }}>
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">{error}</div>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">{error}</div>
           )}
           {success && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{success}</div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{success}</div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-zinc-700 mb-1">First Name</label>
-              <input className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+              <label className="block text-sm font-medium text-neutral-800 mb-1">{t('register.common.firstName')}</label>
+              <input className="w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2" style={{ borderColor: '#E5E7EB' }} value={firstName} onChange={e => setFirstName(e.target.value)} required />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-zinc-700 mb-1">Last Name</label>
-              <input className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={lastName} onChange={e => setLastName(e.target.value)} required />
+              <label className="block text-sm font-medium text-neutral-800 mb-1">{t('register.common.lastName')}</label>
+              <input className="w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2" style={{ borderColor: '#E5E7EB' }} value={lastName} onChange={e => setLastName(e.target.value)} required />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-zinc-700 mb-1">Username or Email</label>
-            <input className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={username} onChange={e => setUsername(e.target.value)} required />
+            <label className="block text-sm font-medium text-neutral-800 mb-1">{t('register.common.usernameOrEmail')}</label>
+            <input className="w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2" style={{ borderColor: '#E5E7EB' }} value={username} onChange={e => setUsername(e.target.value)} required />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-zinc-700 mb-1">Phone Number</label>
-            <input className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={phone} onChange={e => setPhone(e.target.value)} required />
+            <label className="block text-sm font-medium text-neutral-800 mb-1">{t('register.common.phoneNumber')}</label>
+            <input className="w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2" style={{ borderColor: '#E5E7EB' }} value={phone} onChange={e => setPhone(e.target.value)} required />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-zinc-700 mb-1">Assign Zone</label>
-            <select value={selectedZone} onChange={e => setSelectedZone(e.target.value)} className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" required>
-              <option value="">-- Select zone --</option>
+            <label className="block text-sm font-medium text-neutral-800 mb-1">{t('register.common.assignZone')}</label>
+            <select value={selectedZone} onChange={e => setSelectedZone(e.target.value)} className="w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2" style={{ borderColor: '#E5E7EB' }} required>
+              <option value="">{t('register.common.selectZone')}</option>
               {zones.map(z => (
                 <option key={z.id} value={z.id}>{z.name}</option>
               ))}
@@ -147,13 +149,13 @@ const RegisterClient = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-zinc-700 mb-1">Amount to Pay Per Month</label>
-            <input type="number" min="0" step="0.01" className="w-full px-3 py-2 bg-white border border-zinc-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" value={monthlyAmount} onChange={e => setMonthlyAmount(e.target.value)} required />
+            <label className="block text-sm font-medium text-neutral-800 mb-1">{t('register.client.amountPerMonth')}</label>
+            <input type="number" min="0" step="0.01" className="w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2" style={{ borderColor: '#E5E7EB' }} value={monthlyAmount} onChange={e => setMonthlyAmount(e.target.value)} required />
           </div>
 
           <div className="pt-2">
-            <button type="submit" disabled={loading} className={`inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-semibold text-white shadow-sm transition-all ${loading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-              {loading ? 'Registering…' : 'Register Client'}
+            <button type="submit" disabled={loading} className={`inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-semibold text-white shadow-sm transition-colors ${loading ? 'bg-amber-400 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700'}`}>
+              {loading ? '…' : t('register.client.button')}
             </button>
           </div>
         </form>

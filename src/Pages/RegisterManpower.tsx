@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from 'src/lib/i18n';
 import { useLocation } from 'react-router-dom';
 
 type VehicleOption = { id: string; plate: string };
@@ -7,6 +8,7 @@ type SupervisorOption = { id: string; username: string };
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 const RegisterManpower = () => {
+  const { t } = useI18n();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -109,37 +111,37 @@ const RegisterManpower = () => {
 
   return (
     <div className="p-6 max-w-2xl">
-      <h2 className="text-2xl font-bold mb-4">Register Manpower</h2>
+      <h2 className="text-2xl font-bold mb-4">{t('register.manpower.title')}</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="text-red-600">{error}</div>}
-        {success && <div className="text-green-600">{success}</div>}
+        {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">{error}</div>}
+        {success && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{success}</div>}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">First Name</label>
-            <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={firstName} onChange={e => setFirstName(e.target.value)} required />
+            <label className="block text-sm font-medium text-neutral-800">{t('register.common.firstName')}</label>
+            <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={firstName} onChange={e => setFirstName(e.target.value)} required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Last Name</label>
-            <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={lastName} onChange={e => setLastName(e.target.value)} required />
+            <label className="block text-sm font-medium text-neutral-800">{t('register.common.lastName')}</label>
+            <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={lastName} onChange={e => setLastName(e.target.value)} required />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Username</label>
-          <input className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={username} onChange={e => setUsername(e.target.value)} required />
+          <label className="block text-sm font-medium text-neutral-800">{t('register.common.username')}</label>
+          <input className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={username} onChange={e => setUsername(e.target.value)} required />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Salary</label>
-          <input type="number" min="0" step="0.01" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value={salary} onChange={e => setSalary(e.target.value)} required />
+          <label className="block text-sm font-medium text-neutral-800">{t('register.common.salary')}</label>
+          <input type="number" min="0" step="0.01" className="mt-1 block w-full rounded-md border" style={{ borderColor: '#E5E7EB' }} value={salary} onChange={e => setSalary(e.target.value)} required />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Assign Vehicle</label>
+          <label className="block text-sm font-medium text-neutral-800">{t('register.common.assignVehicle')}</label>
           <select value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-            <option value="">-- Select vehicle --</option>
+            <option value="">{t('register.common.selectVehicle')}</option>
             {vehicles.map(v => (
               <option key={v.id} value={v.id}>{v.plate}</option>
             ))}
@@ -147,18 +149,18 @@ const RegisterManpower = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Assign Supervisor (optional)</label>
+          <label className="block text-sm font-medium text-neutral-800">{t('register.manpower.assignSupervisorOptional')}</label>
           <select value={selectedSupervisor} onChange={e => setSelectedSupervisor(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-            <option value="">-- Select supervisor (optional) --</option>
+            <option value="">{t('register.common.selectSupervisor')}</option>
             {supervisors.map(s => (
               <option key={s.id} value={s.id}>{s.username}</option>
             ))}
           </select>
-          <p className="text-xs text-gray-500 mt-1">If not selected, we will use the vehicle's supervisor automatically (if set).</p>
+          <p className="text-xs text-gray-500 mt-1">{t('register.manpower.hintUseVehicleSupervisor')}</p>
         </div>
 
         <div>
-          <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded-md ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>{loading ? 'Registering…' : 'Register Manpower'}</button>
+          <button type="submit" disabled={loading} className={`px-4 py-2 text-white rounded-md ${loading ? 'bg-amber-400' : 'bg-amber-600 hover:bg-amber-700'}`}>{loading ? '…' : t('register.manpower.button')}</button>
         </div>
       </form>
     </div>
