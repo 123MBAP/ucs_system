@@ -1,10 +1,11 @@
 import React from 'react';
+import { useI18n } from '../lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 type Zone = { id: number; name: string };
 
-type ManpowerUser = { id: number; username: string };
+type ManpowerUser = { id: number; username: string; phone?: string | null };
 
 type ScheduleEntry = {
   id: number;
@@ -15,6 +16,7 @@ type ScheduleEntry = {
   vehicle_plate: string | null;
   driver_id: number | null;
   driver_username: string | null;
+  driver_phone?: string | null;
   service_day: number; // 1..7
   service_start: string; // HH:MM:SS
   service_end: string; // HH:MM:SS
@@ -30,6 +32,7 @@ type ScheduleEntry = {
 
 
 export default function ChiefServicePlan() {
+  const { t, lang, setLang } = useI18n();
   const [selectedZoneId, setSelectedZoneId] = React.useState<number | null>(null);
   const [selectedZoneName, setSelectedZoneName] = React.useState<string>('');
   const [schedule, setSchedule] = React.useState<ScheduleEntry[]>([]);
@@ -186,11 +189,24 @@ export default function ChiefServicePlan() {
 
   return (
     <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-800">Day of Service Plan</h2>
-        {selectedZoneName && (
-          <div className="text-sm text-slate-600">Zone: <span className="font-medium text-slate-800">{selectedZoneName}</span></div>
-        )}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">{t('chiefPlan.title')}</h2>
+          {selectedZoneName && (
+            <div className="text-sm text-slate-600">{t('chiefPlan.zoneLabel')} <span className="font-medium text-slate-800">{selectedZoneName}</span></div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-slate-600">{t('common.language')}</label>
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value as any)}
+            className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm"
+          >
+            <option value="en">{t('lang.english')}</option>
+            <option value="rw">{t('lang.kinyarwanda')}</option>
+          </select>
+        </div>
       </div>
 
       {error && (
@@ -199,42 +215,42 @@ export default function ChiefServicePlan() {
 
       <div className="lg:col-span-2 space-y-4">
         {loading ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">Loading…</div>
+          <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">{t('chiefPlan.loading')}</div>
         ) : schedule.length === 0 ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">No entries</div>
+          <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">{t('chiefPlan.noEntries')}</div>
         ) : (
           <div className="space-y-4">
             {schedule.filter((row) => !row.supervisor_status).map((row) => (
               <div key={row.id} className="rounded-lg border border-slate-200 bg-white p-4">
-                <div className="text-xs text-slate-500">Created at: {new Date(row.created_at).toLocaleString()}</div>
+                <div className="text-xs text-slate-500">{t('chiefPlan.createdAt')} {new Date(row.created_at).toLocaleString()}</div>
 
                 <div className="mt-2 space-y-1 text-sm">
-                  <div><span className="font-medium">Vehicle:</span> {row.vehicle_plate ?? '—'}</div>
-                  <div><span className="font-medium">Driver:</span> {row.driver_username ?? '—'}</div>
+                  <div><span className="font-medium">{t('chiefPlan.vehicle')}</span> {row.vehicle_plate ?? t('chiefPlan.none')}</div>
+                  <div><span className="font-medium">{t('chiefPlan.driver')}</span> {row.driver_username ? `${row.driver_username}${row.driver_phone ? ` (${row.driver_phone})` : ''}` : t('chiefPlan.none')}</div>
                 </div>
 
                 <div className="mt-3">
-                  <div className="font-medium text-sm">Assigned Manpowers</div>
+                  <div className="font-medium text-sm">{t('chiefPlan.assignedManpowers')}</div>
                   {Array.isArray(row.assigned_manpower_users) && row.assigned_manpower_users.length ? (
                     <ul className="mt-1 list-disc pl-5 text-sm text-slate-700">
                       {row.assigned_manpower_users.map((m) => (
-                        <li key={m.id}>{m.username}</li>
+                        <li key={m.id}>{m.username}{m.phone ? ` (${m.phone})` : ''}</li>
                       ))}
                     </ul>
                   ) : (
-                    <div className="mt-1 text-sm text-slate-500">—</div>
+                    <div className="mt-1 text-sm text-slate-500">{t('chiefPlan.none')}</div>
                   )}
                 </div>
 
                 <div className="mt-3 space-y-1 text-sm">
-                  <div>The service will start at: {row.service_start?.slice(0, 5)}</div>
-                  <div>The service will end at: {row.service_end?.slice(0, 5)}</div>
+                  <div>{t('chiefPlan.serviceStart')} {row.service_start?.slice(0, 5)}</div>
+                  <div>{t('chiefPlan.serviceEnd')} {row.service_end?.slice(0, 5)}</div>
                 </div>
 
                 {row.chief_report_status ? (
                   <div className="mt-4 inline-flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 border border-amber-200">
                     <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" />
-                    Report sent to supervisor — waiting for confirmation
+                    {t('chiefPlan.report.waiting')}
                   </div>
                 ) : (
                   <div className="mt-4 flex items-center gap-2">
@@ -243,14 +259,14 @@ export default function ChiefServicePlan() {
                       disabled={reportingId === row.id}
                       className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-white text-sm hover:bg-emerald-700 disabled:opacity-60"
                     >
-                      Report service complete
+                      {t('chiefPlan.report.complete')}
                     </button>
                     <button
                       onClick={() => openReason(row.id)}
                       disabled={reportingId === row.id}
                       className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-white text-sm hover:bg-red-700 disabled:opacity-60"
                     >
-                      Report service not complete
+                      {t('chiefPlan.report.notComplete')}
                     </button>
                   </div>
                 )}
@@ -263,7 +279,7 @@ export default function ChiefServicePlan() {
       <div className="lg:col-span-1">
         <div className="rounded-lg border border-slate-200 bg-white p-4 lg:sticky lg:top-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800">Completed services</h3>
+            <h3 className="text-base font-semibold text-slate-800">{t('chiefPlan.completedServices')}</h3>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <select
@@ -294,9 +310,9 @@ export default function ChiefServicePlan() {
 
           <div className="mt-3 space-y-2">
             {completedLoading ? (
-              <div className="text-sm text-slate-500">Loading…</div>
+              <div className="text-sm text-slate-500">{t('chiefPlan.completed.loading')}</div>
             ) : completed.length === 0 ? (
-              <div className="text-sm text-slate-500">No completed services</div>
+              <div className="text-sm text-slate-500">{t('chiefPlan.completed.none')}</div>
             ) : (
               completed.map((c) => (
                 <button
@@ -307,9 +323,29 @@ export default function ChiefServicePlan() {
                   <div className="text-sm font-medium text-slate-800">{c.vehicle_plate ?? '—'} • {c.driver_username ?? '—'}</div>
                   <div className="text-xs text-slate-500">{new Date(c.supervisor_decided_at || c.created_at).toLocaleString()}</div>
                   {selectedCompletedId === c.id && (
-                    <div className="mt-2 text-xs text-slate-700 space-y-1">
-                      <div>Start: {String(c.service_start).slice(0,5)} • End: {String(c.service_end).slice(0,5)}</div>
-                      {c.supervisor_reason ? <div>Supervisor note: {c.supervisor_reason}</div> : null}
+                    <div className="mt-2 text-xs text-slate-700 space-y-2">
+                      <div>{t('chiefPlan.details.startEnd', { start: String(c.service_start).slice(0,5), end: String(c.service_end).slice(0,5) })}</div>
+                      <div>
+                        <span className="font-semibold">{t('chiefPlan.vehicle')} </span>
+                        <span>{c.vehicle_plate ?? t('chiefPlan.none')}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold">{t('chiefPlan.driver')} </span>
+                        <span>{c.driver_username ? `${c.driver_username}${c.driver_phone ? ` (${c.driver_phone})` : ''}` : t('chiefPlan.none')}</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold mb-0.5">{t('chiefPlan.assignedManpowers')}</div>
+                        {Array.isArray(c.assigned_manpower_users) && c.assigned_manpower_users.length ? (
+                          <ul className="list-disc pl-5 space-y-0.5">
+                            {c.assigned_manpower_users.map((m: any) => (
+                              <li key={m.id}>{m.username}{m.phone ? ` (${m.phone})` : ''}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div>{t('chiefPlan.none')}</div>
+                        )}
+                      </div>
+                      {c.supervisor_reason ? <div>{t('chiefPlan.details.supervisorNote', { note: c.supervisor_reason })}</div> : null}
                     </div>
                   )}
                 </button>
@@ -322,13 +358,13 @@ export default function ChiefServicePlan() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => (!reasonSubmitting ? setReasonOpen(false) : null)} />
           <div className="relative z-10 w-full max-w-md rounded-lg border border-slate-200 bg-white p-4 shadow-lg">
-            <div className="text-base font-semibold text-slate-800">Report service not complete</div>
-            <div className="mt-2 text-sm text-slate-600">Provide a reason</div>
+            <div className="text-base font-semibold text-slate-800">{t('chiefPlan.modal.title')}</div>
+            <div className="mt-2 text-sm text-slate-600">{t('chiefPlan.modal.subtitle')}</div>
             <textarea
               value={reasonText}
               onChange={(e) => setReasonText(e.target.value)}
               className="mt-3 h-28 w-full resize-none rounded-md border border-slate-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-              placeholder="Reason (optional)"
+              placeholder={t('chiefPlan.modal.placeholder')}
               disabled={reasonSubmitting}
             />
             <div className="mt-4 flex justify-end gap-2">
@@ -337,14 +373,14 @@ export default function ChiefServicePlan() {
                 className="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
                 disabled={reasonSubmitting}
               >
-                Cancel
+                {t('chiefPlan.cancel')}
               </button>
               <button
                 onClick={submitReason}
                 className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-white text-sm hover:bg-red-700 disabled:opacity-60"
                 disabled={reasonSubmitting}
               >
-                Submit
+                {t('chiefPlan.submit')}
               </button>
             </div>
           </div>

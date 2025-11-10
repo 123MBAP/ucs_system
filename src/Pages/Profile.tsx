@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useI18n } from '../lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
 const Profile = () => {
+  const { t, lang, setLang } = useI18n();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -291,9 +293,22 @@ const Profile = () => {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-charcoal">Profile Settings</h1>
-          <p className="text-gray-600 mt-2">Manage your personal information and account details</p>
+        <div className="mb-8 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-charcoal">{t('profile.title')}</h1>
+            <p className="text-gray-600 mt-2">{t('profile.subtitle')}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">{t('common.language')}</label>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value as any)}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value="en">{t('lang.english')}</option>
+              <option value="rw">{t('lang.kinyarwanda')}</option>
+            </select>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -321,7 +336,7 @@ const Profile = () => {
               {/* Profile Image Section */}
               <div className="lg:col-span-1">
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                  <h3 className="text-lg font-semibold text-charcoal mb-4">Profile Photo</h3>
+                  <h3 className="text-lg font-semibold text-charcoal mb-4">{t('profile.photo.title')}</h3>
                   
                   <div className="flex flex-col items-center space-y-4">
                     <div className="w-32 h-32 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center border-4 border-white shadow-lg">
@@ -344,7 +359,7 @@ const Profile = () => {
                           <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          <span className="text-xs mt-1">No image</span>
+                          <span className="text-xs mt-1">{t('profile.photo.noImage')}</span>
                         </div>
                       )}
                     </div>
@@ -356,7 +371,7 @@ const Profile = () => {
                           onClick={() => { setEditImage(true); setLastEdited('image'); }}
                           className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm"
                         >
-                          Change Photo
+                          {t('profile.photo.change')}
                         </button>
                       ) : (
                         <>
@@ -365,12 +380,12 @@ const Profile = () => {
                             onClick={onPickFile}
                             className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm"
                           >
-                            Choose File
+                            {t('profile.photo.chooseFile')}
                           </button>
                           <input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} className="hidden" />
                           
                           <div className="mt-3">
-                            <label className="block text-sm font-medium text-charcoal mb-2">Or enter image URL</label>
+                            <label className="block text-sm font-medium text-charcoal mb-2">{t('profile.photo.orUrl')}</label>
                             <input 
                               type="url" 
                               value={imageUrl} 
@@ -385,7 +400,7 @@ const Profile = () => {
                             onClick={() => { setEditImage(false); setImageDataUrl(null); }}
                             className="px-4 py-2 bg-gray-100 text-charcoal rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm mt-2"
                           >
-                            Cancel
+                            {t('profile.cancel')}
                           </button>
                           {lastEdited === 'image' && (
                             <div className="mt-3">
@@ -394,7 +409,7 @@ const Profile = () => {
                                 disabled={loading}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                               >
-                                Save Changes
+                                {t('profile.saveChanges')}
                               </button>
                             </div>
                           )}
@@ -408,17 +423,17 @@ const Profile = () => {
               {/* Profile Details Section (move this up so password/email appear below) */}
               <div className="lg:col-span-3">
                 <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                  <h3 className="text-lg font-semibold text-charcoal mb-6">Personal Information</h3>
+                  <h3 className="text-lg font-semibold text-charcoal mb-6">{t('profile.personalInfo')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium text-charcoal">First Name</label>
+                        <label className="block text-sm font-medium text-charcoal">{t('profile.firstName')}</label>
                         <button 
                           type="button" 
                           onClick={() => setEditFirst(v => { const nv = !v; if (nv) setLastEdited('first'); return nv; })}
                           className="text-xs text-amber-600 hover:text-amber-700 font-medium"
                         >
-                          {editFirst ? 'Cancel' : 'Edit'}
+                          {editFirst ? t('profile.cancel') : t('profile.edit')}
                         </button>
                       </div>
                       {editFirst ? (
@@ -427,7 +442,7 @@ const Profile = () => {
                             className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={firstName}
                             onChange={e => setFirstName(e.target.value)}
-                            placeholder="Enter first name"
+                            placeholder={t('profile.placeholder.firstName')}
                           />
                           {lastEdited === 'first' && (
                             <div className="mt-2">
@@ -436,7 +451,7 @@ const Profile = () => {
                                 disabled={loading}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                               >
-                                Save Changes
+                                {t('profile.saveChanges')}
                               </button>
                             </div>
                           )}
@@ -451,13 +466,13 @@ const Profile = () => {
                     {/* Last Name */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium text-charcoal">Last Name</label>
+                        <label className="block text-sm font-medium text-charcoal">{t('profile.lastName')}</label>
                         <button 
                           type="button" 
                           onClick={() => setEditLast(v => { const nv = !v; if (nv) setLastEdited('last'); return nv; })}
                           className="text-xs text-amber-600 hover:text-amber-700 font-medium"
                         >
-                          {editLast ? 'Cancel' : 'Edit'}
+                          {editLast ? t('profile.cancel') : t('profile.edit')}
                         </button>
                       </div>
                       {editLast ? (
@@ -466,7 +481,7 @@ const Profile = () => {
                             className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={lastName}
                             onChange={e => setLastName(e.target.value)}
-                            placeholder="Enter last name"
+                            placeholder={t('profile.placeholder.lastName')}
                           />
                           {lastEdited === 'last' && (
                             <div className="mt-2">
@@ -475,7 +490,7 @@ const Profile = () => {
                                 disabled={loading}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                               >
-                                Save Changes
+                                {t('profile.saveChanges')}
                               </button>
                             </div>
                           )}
@@ -490,13 +505,13 @@ const Profile = () => {
                     {/* Username */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium text-charcoal">Username</label>
+                        <label className="block text-sm font-medium text-charcoal">{t('profile.username')}</label>
                         <button 
                           type="button" 
                           onClick={() => setEditUsername(v => { const nv = !v; if (nv) setLastEdited('username'); return nv; })}
                           className="text-xs text-amber-600 hover:text-amber-700 font-medium"
                         >
-                          {editUsername ? 'Cancel' : 'Edit'}
+                          {editUsername ? t('profile.cancel') : t('profile.edit')}
                         </button>
                       </div>
                       {editUsername ? (
@@ -505,7 +520,7 @@ const Profile = () => {
                             className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={username}
                             onChange={e => setUsername(e.target.value)}
-                            placeholder="Enter username"
+                            placeholder={t('profile.placeholder.username')}
                           />
                           {lastEdited === 'username' && (
                             <div className="mt-2">
@@ -514,7 +529,7 @@ const Profile = () => {
                                 disabled={loading}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                               >
-                                Save Changes
+                                {t('profile.saveChanges')}
                               </button>
                             </div>
                           )}
@@ -529,13 +544,13 @@ const Profile = () => {
                     {/* Phone Number */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium text-charcoal">Phone Number</label>
+                        <label className="block text-sm font-medium text-charcoal">{t('profile.phoneNumber')}</label>
                         <button 
                           type="button" 
                           onClick={() => setEditPhone(v => { const nv = !v; if (nv) setLastEdited('phone'); return nv; })}
                           className="text-xs text-amber-600 hover:text-amber-700 font-medium"
                         >
-                          {editPhone ? 'Cancel' : 'Edit'}
+                          {editPhone ? t('profile.cancel') : t('profile.edit')}
                         </button>
                       </div>
                       {editPhone ? (
@@ -544,7 +559,7 @@ const Profile = () => {
                             className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={phone}
                             onChange={e => setPhone(e.target.value)}
-                            placeholder="Enter phone number"
+                            placeholder={t('profile.placeholder.phone')}
                           />
                           {lastEdited === 'phone' && (
                             <div className="mt-2">
@@ -553,7 +568,7 @@ const Profile = () => {
                                 disabled={loading}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium ${loading ? 'bg-amber-400 cursor-not-allowed text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                               >
-                                Save Changes
+                                {t('profile.saveChanges')}
                               </button>
                             </div>
                           )}
@@ -572,8 +587,8 @@ const Profile = () => {
               <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 lg:col-span-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-charcoal">Change Password</h3>
-                    <p className="text-sm text-gray-600 mt-1">Verify your current password, then set a new password.</p>
+                    <h3 className="text-lg font-semibold text-charcoal">{t('profile.changePassword.title')}</h3>
+                    <p className="text-sm text-gray-600 mt-1">{t('profile.changePassword.subtitle')}</p>
                   </div>
                 </div>
                 <div className="mt-4 space-y-3">
@@ -585,13 +600,13 @@ const Profile = () => {
                   )}
                   {pwStep === 'verify' ? (
                     <div className="space-y-3">
-                      <label className="block text-sm font-medium text-charcoal">Current Password</label>
+                      <label className="block text-sm font-medium text-charcoal">{t('profile.password.current')}</label>
                       <input
                         type="password"
                         className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                         value={oldPassword}
                         onChange={e => setOldPassword(e.target.value)}
-                        placeholder="Enter current password"
+                        placeholder={t('profile.password.placeholder.current')}
                       />
                       <div className="flex items-center gap-2">
                         <button
@@ -600,37 +615,37 @@ const Profile = () => {
                           disabled={pwBusy || !oldPassword}
                           className={`px-4 py-2 rounded-lg text-sm font-medium ${pwBusy || !oldPassword ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                         >
-                          {pwBusy ? 'Verifying…' : 'Verify'}
+                          {pwBusy ? t('profile.password.verifying') : t('profile.password.verify')}
                         </button>
                         <button
                           type="button"
                           onClick={() => { setOldPassword(''); setPwError(null); setPwSuccess(null); }}
                           className="px-4 py-2 rounded-lg bg-gray-100 text-charcoal hover:bg-gray-200 text-sm font-medium"
                         >
-                          Clear
+                          {t('profile.clear')}
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-charcoal">New Password</label>
+                        <label className="block text-sm font-medium text-charcoal">{t('profile.password.new')}</label>
                         <input
                           type="password"
                           className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                           value={newPassword}
                           onChange={e => setNewPassword(e.target.value)}
-                          placeholder="Enter new password"
+                          placeholder={t('profile.password.placeholder.new')}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-charcoal">Confirm New Password</label>
+                        <label className="block text-sm font-medium text-charcoal">{t('profile.password.confirm')}</label>
                         <input
                           type="password"
                           className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                           value={confirmPassword}
                           onChange={e => setConfirmPassword(e.target.value)}
-                          placeholder="Re-enter new password"
+                          placeholder={t('profile.password.placeholder.confirm')}
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -640,14 +655,14 @@ const Profile = () => {
                           disabled={pwBusy || !newPassword || !confirmPassword}
                           className={`px-4 py-2 rounded-lg text-sm font-medium ${pwBusy || !newPassword || !confirmPassword ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                         >
-                          {pwBusy ? 'Saving…' : 'Change Password'}
+                          {pwBusy ? t('profile.password.saving') : t('profile.password.change')}
                         </button>
                         <button
                           type="button"
                           onClick={() => { setPwStep('verify'); setNewPassword(''); setConfirmPassword(''); setPwError(null); setPwSuccess(null); }}
                           className="px-4 py-2 rounded-lg bg-gray-100 text-charcoal hover:bg-gray-200 text-sm font-medium"
                         >
-                          Back
+                          {t('profile.back')}
                         </button>
                       </div>
                     </div>
@@ -659,11 +674,11 @@ const Profile = () => {
               <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 lg:col-span-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-charcoal">Account Email</h3>
-                    <p className="text-sm text-gray-600 mt-1">This email will be used to verify your account, reset your password, and recover access.</p>
+                    <h3 className="text-lg font-semibold text-charcoal">{t('profile.email.title')}</h3>
+                    <p className="text-sm text-gray-600 mt-1">{t('profile.email.subtitle')}</p>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full border ${emailVerified ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                    {emailVerified ? 'Verified' : 'Unverified'}
+                    {emailVerified ? t('profile.verified') : t('profile.unverified')}
                   </span>
                 </div>
 
@@ -674,7 +689,7 @@ const Profile = () => {
                         className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
-                        placeholder="name@example.com"
+                        placeholder={t('profile.email.placeholder')}
                         type="email"
                       />
                       <button
@@ -682,14 +697,14 @@ const Profile = () => {
                         onClick={saveEmail}
                         className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium"
                       >
-                        Save Email
+                        {t('profile.email.save')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditEmail(false)}
                         className="px-4 py-2 rounded-lg bg-gray-100 text-charcoal hover:bg-gray-200 text-sm font-medium"
                       >
-                        Cancel
+                        {t('profile.cancel')}
                       </button>
                     </div>
                   ) : (
@@ -702,7 +717,7 @@ const Profile = () => {
                         onClick={() => setEditEmail(true)}
                         className="shrink-0 px-4 py-2 rounded-lg bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 text-sm font-medium"
                       >
-                        {email ? 'Edit' : 'Add Email'}
+                        {email ? t('profile.email.edit') : t('profile.email.add')}
                       </button>
                     </div>
                   )}
@@ -716,14 +731,14 @@ const Profile = () => {
                           disabled={sendingCode || resendSecs > 0 || !email}
                           className={`px-4 py-2 rounded-lg text-sm font-medium border ${sendingCode || resendSecs > 0 || !email ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'}`}
                         >
-                          {resendSecs > 0 ? `Resend in ${resendSecs}s` : 'Send verification code'}
+                          {resendSecs > 0 ? t('profile.email.resendIn', { secs: resendSecs }) : t('profile.email.sendCode')}
                         </button>
                         <div className="flex-1 flex items-stretch gap-2">
                           <input
                             className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={emailCode}
                             onChange={e => setEmailCode(e.target.value)}
-                            placeholder="Enter code"
+                            placeholder={t('profile.email.codePlaceholder')}
                           />
                           <button
                             type="button"
@@ -731,11 +746,11 @@ const Profile = () => {
                             disabled={verifyingCode || !emailCode.trim()}
                             className={`px-4 py-2 rounded-lg text-sm font-medium ${verifyingCode || !emailCode.trim() ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700 text-white'}`}
                           >
-                            {verifyingCode ? 'Verifying…' : 'Verify'}
+                            {verifyingCode ? t('profile.email.verifying') : t('profile.email.verify')}
                           </button>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500">You can verify either by entering the code received or by clicking the link in the email.</div>
+                      <div className="text-xs text-gray-500">{t('profile.email.tip')}</div>
                     </div>
                   )}
                 </div>
@@ -758,7 +773,7 @@ const Profile = () => {
                     }}
                     className="px-6 py-2 bg-gray-100 text-charcoal rounded-lg hover:bg-gray-200 transition-colors font-medium"
                   >
-                    Cancel
+                    {t('profile.cancel')}
                   </button>
                   <button 
                     type="submit" 
@@ -774,10 +789,10 @@ const Profile = () => {
                         <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m8-10h-4M6 12H2" />
                         </svg>
-                        <span>Saving...</span>
+                        <span>{t('profile.password.saving')}</span>
                       </div>
                     ) : (
-                      'Save Changes'
+                      t('profile.saveChanges')
                     )}
                   </button>
                 </div>

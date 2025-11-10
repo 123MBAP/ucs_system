@@ -11,9 +11,8 @@ router.get('/dashboard', auth, requireDriver, async (req, res) => {
     const userId = req.user.id;
 
     const profileQ = await db.query(
-      `SELECT u.username, up.first_name, up.last_name
+      `SELECT u.username, u.first_name, u.last_name, u.phone_number AS driver_phone
        FROM users u
-       LEFT JOIN user_profiles up ON up.user_id = u.id
        WHERE u.id = $1`,
       [userId]
     );

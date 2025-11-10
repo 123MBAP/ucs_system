@@ -176,6 +176,7 @@ router.get('/zones/:id/service-plan', auth, requireRole('chief'), async (req, re
          v.plate AS vehicle_plate,
          s.driver_id,
          ud.username AS driver_username,
+         ud.phone_number AS driver_phone,
          s.service_day,
          s.service_start,
          s.service_end,
@@ -188,7 +189,7 @@ router.get('/zones/:id/service-plan', auth, requireRole('chief'), async (req, re
          s.supervisor_decided_at,
          COALESCE(
            (
-             SELECT json_agg(json_build_object('id', u.id, 'username', u.username) ORDER BY u.username)
+             SELECT json_agg(json_build_object('id', u.id, 'username', u.username, 'phone', u.phone_number) ORDER BY u.username)
              FROM unnest(s.assigned_manpower_ids) mid
              JOIN users u ON u.id = mid
            ),
@@ -267,13 +268,22 @@ router.get('/completed-services', auth, requireRole('chief'), async (req, res) =
          v.plate AS vehicle_plate,
          s.driver_id,
          ud.username AS driver_username,
+         ud.phone_number AS driver_phone,
          s.service_day,
          s.service_start,
          s.service_end,
          s.created_at,
          s.supervisor_status,
          s.supervisor_reason,
-         s.supervisor_decided_at
+         s.supervisor_decided_at,
+         COALESCE(
+           (
+             SELECT json_agg(json_build_object('id', u.id, 'username', u.username, 'phone', u.phone_number) ORDER BY u.username)
+             FROM unnest(s.assigned_manpower_ids) mid
+             JOIN users u ON u.id = mid
+           ),
+           '[]'::json
+         ) AS assigned_manpower_users
        FROM supervisor_service_schedule s
        JOIN zones z ON z.id = s.zone_id
        LEFT JOIN vehicles v ON v.id = s.vehicle_id

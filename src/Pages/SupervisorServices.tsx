@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useI18n } from '../lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -185,6 +186,7 @@ const Card = ({ children, className = '', padding = 'p-6' }: { children: React.R
 );
 
 export default function SupervisorServices() {
+  const { t, lang, setLang } = useI18n();
   const [zones, setZones] = useState<Array<{id:number; name:string}>>([]);
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -374,6 +376,15 @@ export default function SupervisorServices() {
     }
   };
 
+  function driverDisplay(row: any) {
+    const fn = `${row?.driver_first_name ? row.driver_first_name : ''} ${row?.driver_last_name ? row.driver_last_name : ''}`.trim();
+    const full = fn || row?.driver_full_name || '';
+    const username = row?.driver_username || '';
+    const name = full || username || '—';
+    const usedUsernameOnly = !full && !!username;
+    return { name, usedUsernameOnly };
+  }
+
   return (
     <div className="min-h-screen p-4 lg:p-6" style={{ backgroundColor: colors.background }}>
       <div className="max-w-7xl mx-auto space-y-8">
@@ -381,17 +392,17 @@ export default function SupervisorServices() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-3xl lg:text-4xl font-bold" style={{ color: colors.text }}>
-              Services Supervision
+              {t('supSvc.title')}
             </h1>
             <p className="text-lg mt-2" style={{ color: colors.textLight }}>
-              Monitor and verify service completion across your zones
+              {t('supSvc.subtitle')}
             </p>
           </div>
           
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="text-2xl font-bold" style={{ color: colors.primary }}>{schedule.length}</div>
-              <div className="text-sm" style={{ color: colors.textLight }}>Pending Verification</div>
+              <div className="text-sm" style={{ color: colors.textLight }}>{t('supSvc.pendingCount')}</div>
             </div>
             <PrimaryButton 
               onClick={refreshAll}
@@ -399,8 +410,20 @@ export default function SupervisorServices() {
               className="flex items-center gap-2"
             >
               <Icons.Refresh className="w-4 h-4" />
-              <span>Refresh All</span>
+              <span>{t('supSvc.refreshAll')}</span>
             </PrimaryButton>
+            <div className="flex items-center gap-2">
+              <label className="text-sm" style={{ color: colors.textLight }}>{t('common.language')}</label>
+              <select
+                value={lang}
+                onChange={(e) => setLang(e.target.value as any)}
+                className="rounded-xl px-3 py-2 border text-sm"
+                style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}
+              >
+                <option value="en">{t('lang.english')}</option>
+                <option value="rw">{t('lang.kinyarwanda')}</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -411,12 +434,12 @@ export default function SupervisorServices() {
             <Card padding="p-6 lg:p-8">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold" style={{ color: colors.text }}>
-                  Pending Verification
+                  {t('supSvc.pendingVerification')}
                 </h2>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ backgroundColor: colors.primaryLight }}>
                   <Icons.Info className="w-4 h-4" style={{ color: colors.primary }} />
                   <span className="text-sm font-semibold" style={{ color: colors.text }}>
-                    Awaiting your confirmation
+                    {t('supSvc.awaitingYourConfirmation')}
                   </span>
                 </div>
               </div>
@@ -441,8 +464,8 @@ export default function SupervisorServices() {
               ) : schedule.length === 0 ? (
                 <div className="text-center py-12 rounded-2xl border-2 border-dashed" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
                   <Icons.Check className="w-16 h-16 mx-auto mb-4" style={{ color: colors.textLighter }} />
-                  <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>All caught up!</h3>
-                  <p className="text-lg" style={{ color: colors.textLighter }}>No services pending verification</p>
+                  <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>{t('supSvc.caughtUpTitle')}</h3>
+                  <p className="text-lg" style={{ color: colors.textLighter }}>{t('supSvc.caughtUpDesc')}</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -465,9 +488,9 @@ export default function SupervisorServices() {
                               <Icons.Vehicle className="w-5 h-5 flex-shrink-0" style={{ color: colors.primary }} />
                               <div>
                                 <div className="font-semibold" style={{ color: colors.text }}>
-                                  {row.vehicle_plate ?? 'No vehicle assigned'}
+                                  {row.vehicle_plate ?? t('supSvc.noVehicle')}
                                 </div>
-                                <div className="text-sm" style={{ color: colors.textLight }}>Vehicle</div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>{t('supSvc.vehicle')}</div>
                               </div>
                             </div>
 
@@ -475,9 +498,9 @@ export default function SupervisorServices() {
                               <Icons.Driver className="w-5 h-5 flex-shrink-0" style={{ color: colors.primary }} />
                               <div>
                                 <div className="font-semibold" style={{ color: colors.text }}>
-                                  {row.driver_username ?? 'No driver assigned'}
+                                  {(() => { const dd = driverDisplay(row); return dd.name || t('supSvc.noDriver'); })()}
                                 </div>
-                                <div className="text-sm" style={{ color: colors.textLight }}>Driver</div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>{t('supSvc.driver')}</div>
                               </div>
                             </div>
                           </div>
@@ -490,14 +513,14 @@ export default function SupervisorServices() {
                                 <div className="font-semibold" style={{ color: colors.text }}>
                                   {row.service_start?.slice(0, 5)}
                                 </div>
-                                <div className="text-sm" style={{ color: colors.textLight }}>Start Time</div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>{t('supSvc.startTime')}</div>
                               </div>
                               <div className="w-px h-8" style={{ backgroundColor: colors.border }}></div>
                               <div>
                                 <div className="font-semibold" style={{ color: colors.text }}>
                                   {row.service_end?.slice(0, 5)}
                                 </div>
-                                <div className="text-sm" style={{ color: colors.textLight }}>End Time</div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>{t('supSvc.endTime')}</div>
                               </div>
                             </div>
                           </div>
@@ -505,7 +528,7 @@ export default function SupervisorServices() {
                           {/* Chief Note if exists */}
                           {row.chief_report_reason && (
                             <div className="p-3 rounded-xl border" style={{ backgroundColor: colors.warningLight, borderColor: colors.warning }}>
-                              <div className="text-sm font-semibold mb-1" style={{ color: colors.warning }}>Chief's Note:</div>
+                              <div className="text-sm font-semibold mb-1" style={{ color: colors.warning }}>{t('supSvc.chiefNote')}</div>
                               <div className="text-sm" style={{ color: colors.text }}>{row.chief_report_reason}</div>
                             </div>
                           )}
@@ -522,7 +545,7 @@ export default function SupervisorServices() {
                                 className="w-full"
                               >
                                 <Icons.Check className="w-4 h-4" />
-                                <span>Confirm Complete</span>
+                                <span>{t('supSvc.confirmComplete')}</span>
                               </AccentButton>
                               <button
                                 onClick={() => openVerifyNotComplete(row.id)}
@@ -531,13 +554,13 @@ export default function SupervisorServices() {
                                 style={{ backgroundColor: colors.error }}
                               >
                                 <Icons.Close className="w-4 h-4" />
-                                <span>Mark Incomplete</span>
+                                <span>{t('supSvc.markIncomplete')}</span>
                               </button>
                             </>
                           ) : (
                             <div className="p-4 rounded-xl text-center border" style={{ backgroundColor: colors.warningLight, borderColor: colors.warning }}>
                               <Icons.Clock className="w-6 h-6 mx-auto mb-2" style={{ color: colors.warning }} />
-                              <div className="text-sm font-semibold" style={{ color: colors.warning }}>Waiting for Chief Report</div>
+                              <div className="text-sm font-semibold" style={{ color: colors.warning }}>{t('supSvc.waitingChief')}</div>
                             </div>
                           )}
                         </div>
@@ -553,14 +576,14 @@ export default function SupervisorServices() {
           <div className="space-y-6">
             <Card padding="p-6 lg:p-8" className="sticky top-4">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold" style={{ color: colors.text }}>Confirmed Services</h3>
+                <h3 className="text-xl font-bold" style={{ color: colors.text }}>{t('supSvc.confirmedServices')}</h3>
                 <Icons.Filter className="w-5 h-5" style={{ color: colors.primary }} />
               </div>
 
               {/* Filter Controls */}
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Zone</label>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>{t('supSvc.filter.zone')}</label>
                   <select
                     className="w-full rounded-xl px-4 py-3 border focus:outline-none focus:ring-2 transition-all duration-300"
                     style={{ 
@@ -571,7 +594,7 @@ export default function SupervisorServices() {
                     value={zoneFilter}
                     onChange={(e) => setZoneFilter(e.target.value)}
                   >
-                    <option value="">All Zones</option>
+                    <option value="">{t('supSvc.allZones')}</option>
                     {zones.map(z => (
                       <option key={z.id} value={String(z.id)}>{z.name}</option>
                     ))}
@@ -580,7 +603,7 @@ export default function SupervisorServices() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Year</label>
+                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>{t('supSvc.filter.year')}</label>
                     <select
                       className="w-full rounded-xl px-3 py-3 border focus:outline-none focus:ring-2 transition-all duration-300"
                       style={{ 
@@ -591,7 +614,7 @@ export default function SupervisorServices() {
                       value={year}
                       onChange={(e) => setYear(e.target.value)}
                     >
-                      <option value="">All Years</option>
+                      <option value="">{t('supSvc.allYears')}</option>
                       {Array.from({ length: 7 }).map((_, i) => {
                         const y = new Date().getFullYear() - i;
                         return <option key={y} value={String(y)}>{y}</option>;
@@ -600,7 +623,7 @@ export default function SupervisorServices() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>Month</label>
+                    <label className="block text-sm font-semibold mb-2" style={{ color: colors.text }}>{t('supSvc.filter.month')}</label>
                     <select
                       className="w-full rounded-xl px-3 py-3 border focus:outline-none focus:ring-2 transition-all duration-300"
                       style={{ 
@@ -611,7 +634,7 @@ export default function SupervisorServices() {
                       value={month}
                       onChange={(e) => setMonth(e.target.value)}
                     >
-                      <option value="">All Months</option>
+                      <option value="">{t('supSvc.allMonths')}</option>
                       {Array.from({ length: 12 }).map((_, i) => {
                         const m = i + 1;
                         return <option key={m} value={String(m)}>{m.toString().padStart(2, '0')}</option>;
@@ -639,7 +662,7 @@ export default function SupervisorServices() {
                 ) : completed.length === 0 ? (
                   <div className="text-center py-8 rounded-xl border-2 border-dashed" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
                     <Icons.Calendar className="w-8 h-8 mx-auto mb-2" style={{ color: colors.textLighter }} />
-                    <div className="text-sm" style={{ color: colors.textLight }}>No confirmed services</div>
+                    <div className="text-sm" style={{ color: colors.textLight }}>{t('supSvc.noConfirmed')}</div>
                   </div>
                 ) : (
                   completed.map((c) => (
@@ -656,7 +679,7 @@ export default function SupervisorServices() {
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="font-semibold" style={{ color: colors.text }}>
-                          {c.vehicle_plate ?? '—'} • {c.driver_username ?? '—'}
+                          {c.vehicle_plate ?? '—'} • {(() => { const dd = driverDisplay(c); return dd.name || '—'; })()}
                         </div>
                         {getStatusBadge(c.supervisor_status ?? null)}
                       </div>
@@ -667,11 +690,11 @@ export default function SupervisorServices() {
                       {selectedCompletedId === c.id && (
                         <div className="mt-3 pt-3 border-t space-y-2" style={{ borderColor: colors.border }}>
                           <div className="text-sm" style={{ color: colors.text }}>
-                            <span className="font-semibold">Time:</span> {String(c.service_start).slice(0,5)} - {String(c.service_end).slice(0,5)}
+                            <span className="font-semibold">{t('supSvc.time')}</span> {String(c.service_start).slice(0,5)} - {String(c.service_end).slice(0,5)}
                           </div>
                           {c.supervisor_reason && (
                             <div className="text-sm" style={{ color: colors.text }}>
-                              <span className="font-semibold">Note:</span> {c.supervisor_reason}
+                              <span className="font-semibold">{t('supSvc.note')}</span> {c.supervisor_reason}
                             </div>
                           )}
                         </div>
@@ -692,14 +715,14 @@ export default function SupervisorServices() {
               <div className="flex items-center gap-3 mb-4">
                 <div className={`w-3 h-3 rounded-full ${verifyStatus === 'complete' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
                 <h3 className="text-xl font-bold" style={{ color: colors.text }}>
-                  {verifyStatus === 'complete' ? 'Confirm Completion' : 'Mark as Not Completed'}
+                  {verifyStatus === 'complete' ? t('supSvc.confirmComplete') : t('supSvc.markIncomplete')}
                 </h3>
               </div>
               
               <p className="text-sm mb-4" style={{ color: colors.textLight }}>
                 {verifyStatus === 'complete' 
-                  ? 'Add an optional note about this completion'
-                  : 'Please provide a reason for marking this service as not completed'}
+                  ? t('supSvc.note')
+                  : t('supSvc.note')}
               </p>
               
               <textarea
@@ -711,7 +734,7 @@ export default function SupervisorServices() {
                   borderColor: colors.border,
                   color: colors.text,
                 }}
-                placeholder={verifyStatus === 'complete' ? 'Optional completion note...' : 'Reason for marking as not completed...'}
+                placeholder={verifyStatus === 'complete' ? t('supSvc.note') : t('supSvc.note')}
                 disabled={verifySubmitting}
               />
               
@@ -726,11 +749,11 @@ export default function SupervisorServices() {
                   }}
                   disabled={verifySubmitting}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={submitVerify}
-                  className={`flex-1 px-4 py-3 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-60 ${
+                  className={`flex-1 px-4 py-3 rounded-xl font-semibold text-white transition-all duration-300 hover:shadow-lg active:scale-95 disabled:opacity-60 ${
                     verifyStatus === 'complete' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
                   }`}
                   disabled={verifySubmitting}
@@ -740,7 +763,7 @@ export default function SupervisorServices() {
                   ) : (
                     <Icons.Check className="w-4 h-4" />
                   )}
-                  <span>Submit</span>
+                  <span>{t('common.submit')}</span>
                 </button>
               </div>
             </div>

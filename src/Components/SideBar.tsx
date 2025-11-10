@@ -69,6 +69,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { name: t('sidebar.reports'), icon: <Icons.Reports />, to: '/reports' },
     { name: t('sidebar.payments'), icon: <Icons.Payments />, to: '/payments' },
     { name: t('sidebar.chat'), icon: <Icons.Chat />, to: '/chat' },
+    { name: t('sidebar.superuser'), icon: <Icons.Dashboard />, to: '/superuser' },
   ];
 
   const storedUser = typeof localStorage !== 'undefined' ? localStorage.getItem('user') : null;
@@ -130,6 +131,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       '/driver-dashboard',
       '/profile',
       '/chat',
+    ]),
+    superuser: new Set([
+      '/superuser',
+      '/profile',
     ]),
   };
 

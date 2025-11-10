@@ -103,7 +103,7 @@ const DriverDashboard = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-zinc-800 to-indigo-600 bg-clip-text text-transparent">{t('driver.title')}</h1>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-zinc-800 to-amber-600 bg-clip-text text-transparent">{t('driver.title')}</h1>
           <p className="text-zinc-600 mt-2">{t('driver.subtitle')}</p>
         </div>
         <div className="flex items-center space-x-2 mt-4 sm:mt-0 text-sm text-zinc-500">
@@ -119,7 +119,7 @@ const DriverDashboard = () => {
               <div className="text-sm font-semibold text-zinc-600">{t('driver.name')}</div>
               <div className="text-2xl font-bold text-zinc-900 mt-1">{loading ? '…' : info.name || '-'}</div>
             </div>
-            <div className="shrink-0 p-2 rounded-lg bg-indigo-50 text-indigo-600">
+            <div className="shrink-0 p-2 rounded-lg bg-amber-50 text-amber-600">
               <User className="h-8 w-8" />
             </div>
           </div>
@@ -153,7 +153,7 @@ const DriverDashboard = () => {
       {/* Service Schedule */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
         <div className="flex items-center space-x-2 mb-4">
-          <CalendarClock className="h-5 w-5 text-indigo-600" />
+          <CalendarClock className="h-5 w-5 text-amber-600" />
           <h2 className="text-sm font-semibold text-zinc-700">{t('driver.schedule.title')}</h2>
         </div>
         {schedule.length === 0 ? (

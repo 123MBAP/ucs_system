@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useI18n } from '../lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -24,6 +25,7 @@ type ClientRow = {
 };
 
 const Clients = () => {
+  const { t, lang, setLang } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const [role, setRole] = useState<string | null>(null);
@@ -194,31 +196,43 @@ const Clients = () => {
 
   return (
     <div className="p-6 min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
-      <div className="mb-2">
-        <button onClick={() => navigate(-1)} className="text-amber-600 underline text-sm">← Back</button>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <button onClick={() => navigate(-1)} className="text-amber-600 underline text-sm">← {t('clients.back')}</button>
+        <div className="flex items-center gap-2">
+          <label className="text-sm" style={{ color: '#1E1E1E' }}>{t('common.language')}</label>
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value as any)}
+            className="border rounded px-2 py-1 text-sm"
+            style={{ borderColor: '#E2E8F0' }}
+          >
+            <option value="en">{t('lang.english')}</option>
+            <option value="rw">{t('lang.kinyarwanda')}</option>
+          </select>
+        </div>
       </div>
-      <h2 className="text-2xl font-bold mb-4" style={{ color: '#1E1E1E' }}>Clients</h2>
+      <h2 className="text-2xl font-bold mb-4" style={{ color: '#1E1E1E' }}>{t('clients.title')}</h2>
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-sm" style={{ color: '#1E1E1E' }}>Search</label>
+          <label className="block text-sm" style={{ color: '#1E1E1E' }}>{t('clients.search.label')}</label>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="mt-1 border rounded px-3 py-2 focus:outline-none focus:ring-2"
             style={{ borderColor: '#E2E8F0' }}
-            placeholder="Search by name, username or phone"
+            placeholder={t('clients.search.placeholder')}
           />
         </div>
         {role === 'manager' && (
           <div>
-            <label className="block text-sm" style={{ color: '#1E1E1E' }}>Supervisor</label>
+            <label className="block text-sm" style={{ color: '#1E1E1E' }}>{t('clients.manager.supervisor')}</label>
             <select
               className="mt-1 border rounded px-2 py-2 focus:outline-none focus:ring-2"
               style={{ borderColor: '#E2E8F0' }}
               value={supervisorId}
               onChange={e => setSupervisorId(e.target.value)}
             >
-              <option value="">All Supervisors</option>
+              <option value="">{t('clients.allSupervisors')}</option>
               {supervisors.map(s => (
                 <option key={s.id} value={s.id}>{s.username}</option>
               ))}
@@ -228,7 +242,7 @@ const Clients = () => {
       </div>
       {error && <div className="text-red-600 mb-3">{error}</div>}
       {loading ? (
-        <div>Loading…</div>
+        <div>{t('clients.loading')}</div>
       ) : (
         <>
           {role === 'chief' ? (
@@ -236,12 +250,12 @@ const Clients = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.photo')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.name')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.username')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.phone')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.amountToPay')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -268,13 +282,13 @@ const Clients = () => {
                             to={`/payments?scope=chief&clientId=${encodeURIComponent(String(c.id))}&clientName=${encodeURIComponent(((c.name ? `${c.name.first || ''} ${c.name.last || ''}`.trim() : '') || c.username))}`}
                             className="px-2 py-1 text-sm rounded"
                             style={{ backgroundColor: '#D97706', color: '#1E1E1E' }}
-                          >Pay</Link>
+                          >{t('clients.pay')}</Link>
                         </td>
                       </tr>
                     );
                   })}
                   {!filteredChiefClients.length && (
-                    <tr><td className="px-3 py-4 text-gray-600" colSpan={5}>No clients.</td></tr>
+                    <tr><td className="px-3 py-4 text-gray-600" colSpan={5}>{t('clients.noClients')}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -284,13 +298,13 @@ const Clients = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">Sel</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">{t('clients.table.sel')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.photo')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.name')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.username')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.phone')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.amountToPay')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('clients.table.zone')}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -302,7 +316,7 @@ const Clients = () => {
                         <td className="px-3 py-2 text-gray-600" colSpan={6}>
                           <div className="flex items-center justify-between">
                             <div className="font-semibold">{z.zone_name} <span className="text-xs text-gray-500">(#{z.id})</span></div>
-                            <div className="text-sm text-gray-600">Clients: {list.length}</div>
+                            <div className="text-sm text-gray-600">{t('clients.zones.header', { count: list.length })}</div>
                           </div>
                         </td>
                       </tr>
@@ -334,15 +348,15 @@ const Clients = () => {
                         <tr key={`actions-${c.id}`} className="bg-gray-50">
                           <td className="px-3 py-2" colSpan={7}>
                             <div className="flex flex-wrap items-center gap-3">
-                              <button disabled={!selectedIds.size} onClick={bulkDelete} className={`px-3 py-2 rounded text-white ${selectedIds.size ? 'bg-red-600' : 'bg-gray-300 cursor-not-allowed'}`}>Delete Selected</button>
+                              <button disabled={!selectedIds.size} onClick={bulkDelete} className={`px-3 py-2 rounded text-white ${selectedIds.size ? 'bg-red-600' : 'bg-gray-300 cursor-not-allowed'}`}>{t('clients.deleteSelected')}</button>
                               <div className="flex items-center gap-2">
                                 <select className="border rounded px-2 py-2 focus:outline-none focus:ring-2" style={{ borderColor: '#E2E8F0' }} value={moveTargetZone} onChange={e => setMoveTargetZone(e.target.value)}>
-                                  <option value="">Move to zone…</option>
+                                  <option value="">{t('clients.moveToZone')}</option>
                                   {zones.map(z2 => (
                                     <option key={z2.id} value={z2.id}>{z2.zone_name}</option>
                                   ))}
                                 </select>
-                                <button disabled={!selectedIds.size || !moveTargetZone} onClick={bulkMove} className={`px-3 py-2 rounded text-white ${selectedIds.size && moveTargetZone ? 'bg-amber-600' : 'bg-gray-300 cursor-not-allowed'}`}>Move Selected</button>
+                                <button disabled={!selectedIds.size || !moveTargetZone} onClick={bulkMove} className={`px-3 py-2 rounded text-white ${selectedIds.size && moveTargetZone ? 'bg-amber-600' : 'bg-gray-300 cursor-not-allowed'}`}>{t('clients.moveSelected')}</button>
                               </div>
                             </div>
                           </td>
@@ -353,21 +367,21 @@ const Clients = () => {
                     return [headerRow, ...rows];
                   })}
                   {!zones.length && (
-                    <tr><td className="px-3 py-4 text-gray-600" colSpan={6}>No zones.</td></tr>
+                    <tr><td className="px-3 py-4 text-gray-600" colSpan={6}>{t('clients.noZones')}</td></tr>
                   )}
                 </tbody>
               </table>
               {(role === 'manager' || role === 'supervisor') && !(selectedIds.size > 0 && lastSelectedId !== null) && (
                 <div className="p-3 border-t flex items-center gap-3">
-                  <button disabled={!selectedIds.size} onClick={bulkDelete} className={`px-3 py-2 rounded text-white ${selectedIds.size ? 'bg-red-600' : 'bg-gray-300 cursor-not-allowed'}`}>Delete Selected</button>
+                  <button disabled={!selectedIds.size} onClick={bulkDelete} className={`px-3 py-2 rounded text-white ${selectedIds.size ? 'bg-red-600' : 'bg-gray-300 cursor-not-allowed'}`}>{t('clients.deleteSelected')}</button>
                   <div className="flex items-center gap-2">
                     <select className="border rounded px-2 py-2 focus:outline-none focus:ring-2" style={{ borderColor: '#E2E8F0' }} value={moveTargetZone} onChange={e => setMoveTargetZone(e.target.value)}>
-                      <option value="">Move to zone…</option>
+                      <option value="">{t('clients.moveToZone')}</option>
                       {zones.map(z => (
                         <option key={z.id} value={z.id}>{z.zone_name}</option>
                       ))}
                     </select>
-                    <button disabled={!selectedIds.size || !moveTargetZone} onClick={bulkMove} className={`px-3 py-2 rounded text-white ${selectedIds.size && moveTargetZone ? 'bg-amber-600' : 'bg-gray-300 cursor-not-allowed'}`}>Move Selected</button>
+                    <button disabled={!selectedIds.size || !moveTargetZone} onClick={bulkMove} className={`px-3 py-2 rounded text-white ${selectedIds.size && moveTargetZone ? 'bg-amber-600' : 'bg-gray-300 cursor-not-allowed'}`}>{t('clients.moveSelected')}</button>
                   </div>
                 </div>
               )}
@@ -379,15 +393,15 @@ const Clients = () => {
             <div className="mt-4 bg-white border rounded shadow p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">Make Payment</h3>
+                  <h3 className="text-lg font-semibold">{t('clients.makePayment')}</h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    For client: <span className="font-medium">{(selectedClient.name ? `${selectedClient.name.first || ''} ${selectedClient.name.last || ''}`.trim() : '') || selectedClient.username}</span>
+                    {t('clients.forClient')} <span className="font-medium">{(selectedClient.name ? `${selectedClient.name.first || ''} ${selectedClient.name.last || ''}`.trim() : '') || selectedClient.username}</span>
                   </p>
                 </div>
                 <button
                   onClick={() => setSelectedClient(null)}
                   className="text-sm text-gray-600 hover:text-gray-800"
-                >Clear</button>
+                >{t('clients.clear')}</button>
               </div>
               <div className="mt-3">
                 <Link
@@ -395,7 +409,7 @@ const Clients = () => {
                   className="inline-flex items-center px-4 py-2 rounded font-semibold"
                   style={{ backgroundColor: '#D97706', color: '#1E1E1E' }}
                 >
-                  Proceed to Payment
+                  {t('clients.proceedToPayment')}
                 </Link>
               </div>
             </div>
@@ -411,7 +425,7 @@ const Clients = () => {
                   <button
                     onClick={() => setPreviewPhoto(null)}
                     className="px-3 py-1 rounded-md text-white bg-black/60 hover:bg-black/80 text-sm"
-                  >Close</button>
+                  >{t('clients.close')}</button>
                 </div>
               </div>
             </div>

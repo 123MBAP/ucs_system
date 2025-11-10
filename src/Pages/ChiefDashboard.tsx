@@ -80,28 +80,26 @@ const ChiefDashboard = () => {
   return (
     <div className="space-y-8">
       {/* Password Reset Requests */}
-      <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-amber-100">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-[#1E1E1E]">Client Password Reset Requests</h2>
-          <button
-            onClick={async () => {
-              const token = localStorage.getItem('token');
-              if (!token) return;
-              try {
-                const r = await fetch(`${apiBase}/api/password/chief/requests`, { headers: { Authorization: `Bearer ${token}` } });
-                const d = await r.json();
-                if (!r.ok) throw new Error(d?.error || 'Failed');
-                setResetReqs(Array.isArray(d?.requests) ? d.requests : []);
-              } catch {}
-            }}
-            className="text-[#D97706] hover:text-[#B45309] underline text-sm"
-          >
-            {t('common.refresh')}
-          </button>
-        </div>
-        {resetReqs.length === 0 ? (
-          <div className="text-sm text-gray-600">No pending client reset requests.</div>
-        ) : (
+      {resetReqs.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-amber-100">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-[#1E1E1E]">Client Password Reset Requests</h2>
+            <button
+              onClick={async () => {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                try {
+                  const r = await fetch(`${apiBase}/api/password/chief/requests`, { headers: { Authorization: `Bearer ${token}` } });
+                  const d = await r.json();
+                  if (!r.ok) throw new Error(d?.error || 'Failed');
+                  setResetReqs(Array.isArray(d?.requests) ? d.requests : []);
+                } catch {}
+              }}
+              className="text-[#D97706] hover:text-[#B45309] underline text-sm"
+            >
+              {t('common.refresh')}
+            </button>
+          </div>
           <div className="space-y-2">
             {resetReqs.map((r) => (
               <div key={r.id} className="flex items-center justify-between p-3 rounded-lg border border-amber-100 bg-amber-50/40">
@@ -139,8 +137,8 @@ const ChiefDashboard = () => {
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#1E1E1E]">{t('chief.title')}</h1>

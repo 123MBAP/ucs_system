@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type SVGProps } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useI18n } from '../lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -181,6 +182,7 @@ const FilterChip = ({ label, active, onClick }: { label: string; active: boolean
 );
 
 export default function SupervisorServiceSchedule() {
+  const { t, lang, setLang } = useI18n();
   const { id } = useParams();
   const zoneId = Number(id);
   const navigate = useNavigate();
@@ -327,7 +329,19 @@ export default function SupervisorServiceSchedule() {
     setSchedule(prev => prev.filter(e => e.id !== entryId));
   }
 
-  const dayName = (d: number) => new Date(2000, 0, d).toLocaleString(undefined, { weekday: 'long' });
+  function weekdayKey(n: number): string {
+    switch (n) {
+      case 1: return 'weekday.mon';
+      case 2: return 'weekday.tue';
+      case 3: return 'weekday.wed';
+      case 4: return 'weekday.thu';
+      case 5: return 'weekday.fri';
+      case 6: return 'weekday.sat';
+      case 7: return 'weekday.sun';
+      default: return 'weekday.mon';
+    }
+  }
+  const dayName = (d: number) => t(weekdayKey(d));
   const allDays = [1,2,3,4,5,6,7];
   const nonSavedDays = allDays.filter(d => !savedDays.includes(d));
   const vehiclePlateById = useMemo(() => {
@@ -396,21 +410,35 @@ export default function SupervisorServiceSchedule() {
               style={{ backgroundColor: colors.cardBg, color: colors.textLight }}
             >
               <Icons.Back className="w-5 h-5" />
-              <span className="font-semibold">Back</span>
+              <span className="font-semibold">{t('supSched.back')}</span>
             </button>
             <div className="w-px h-8" style={{ backgroundColor: colors.border }}></div>
             <div>
               <h1 className="text-3xl lg:text-4xl font-bold" style={{ color: colors.text }}>
-                Service Schedule
+                {t('supSched.title')}
               </h1>
-              <p className="text-lg mt-2" style={{ color: colors.textLight }}>Managing services for <span style={{ color: colors.primary, fontWeight: '600' }}>{zoneName}</span></p>
+              <p className="text-lg mt-2" style={{ color: colors.textLight }}>
+                {t('supSched.subtitle', { zone: zoneName })}
+              </p>
             </div>
           </div>
           
           <div className="flex items-center space-x-3">
             <div className="text-right">
               <div className="text-2xl font-bold" style={{ color: colors.primary }}>{schedule.length}</div>
-              <div className="text-sm" style={{ color: colors.textLight }}>Total Services</div>
+              <div className="text-sm" style={{ color: colors.textLight }}>{t('supSched.totalServices')}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm" style={{ color: colors.textLight }}>{t('common.language')}</label>
+              <select
+                value={lang}
+                onChange={(e) => setLang(e.target.value as any)}
+                className="rounded-xl px-3 py-2 border text-sm"
+                style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}
+              >
+                <option value="en">{t('lang.english')}</option>
+                <option value="rw">{t('lang.kinyarwanda')}</option>
+              </select>
             </div>
           </div>
         </div>
@@ -428,9 +456,9 @@ export default function SupervisorServiceSchedule() {
         {/* SECTION 1: ADD NEW SERVICE - Enhanced Layout */}
         <section>
           <SectionHeader 
-            title="Schedule New Service" 
+            title={t('supSched.section.addNew')} 
             number={1}
-            subtitle="Plan and organize service entries for your zone"
+            subtitle={t('supSched.section.addNewSub')}
           />
           <Card padding="p-6 lg:p-8">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -439,7 +467,7 @@ export default function SupervisorServiceSchedule() {
                 <div>
                   <label className="block text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.text }}>
                     <Icons.Calendar className="w-5 h-5" style={{ color: colors.primary }} />
-                    Service Day Selection
+                    {t('supSched.daySelection')}
                   </label>
                   
                   <div className="flex flex-wrap gap-3 mb-6">
@@ -456,8 +484,8 @@ export default function SupervisorServiceSchedule() {
                         color: colors.text
                       }}
                     >
-                      <div className="font-semibold">Regular Days</div>
-                      <div className="text-sm opacity-90 mt-1">Saved Schedule</div>
+                      <div className="font-semibold">{t('supSched.regularDays')}</div>
+                      <div className="text-sm opacity-90 mt-1">{t('supSched.savedSchedule')}</div>
                     </button>
                     <button
                       onClick={() => setDayMode('special')}
@@ -472,8 +500,8 @@ export default function SupervisorServiceSchedule() {
                         color: colors.text
                       }}
                     >
-                      <div className="font-semibold">Special Days</div>
-                      <div className="text-sm opacity-90 mt-1">One-time Events</div>
+                      <div className="font-semibold">{t('supSched.specialDays')}</div>
+                      <div className="text-sm opacity-90 mt-1">{t('supSched.oneTimeEvents')}</div>
                     </button>
                   </div>
                   
@@ -497,7 +525,7 @@ export default function SupervisorServiceSchedule() {
                   >
                     {dayMode === 'saved' ? (
                       <>
-                        {!savedDays.length && <option value="">No regular days configured</option>}
+                        {!savedDays.length && <option value="">{t('supSched.noRegularDays')}</option>}
                         {savedDays.map(d => (
                           <option key={d} value={d}>{dayName(d)}</option>
                         ))}
@@ -522,7 +550,7 @@ export default function SupervisorServiceSchedule() {
                   <div>
                     <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}>
                       <Icons.Time className="w-4 h-4" style={{ color: colors.primary }} />
-                      Start Time
+                      {t('supSched.startTime')}
                     </label>
                     <input 
                       type="time" 
@@ -539,7 +567,7 @@ export default function SupervisorServiceSchedule() {
                   <div>
                     <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}>
                       <Icons.Time className="w-4 h-4" style={{ color: colors.primary }} />
-                      End Time
+                      {t('supSched.endTime')}
                     </label>
                     <input 
                       type="time" 
@@ -562,7 +590,7 @@ export default function SupervisorServiceSchedule() {
                   <div>
                     <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}>
                       <Icons.Vehicle className="w-4 h-4" style={{ color: colors.primary }} />
-                      Select Vehicle
+                      {t('supSched.selectVehicle')}
                     </label>
                     <select 
                       value={vehicleId} 
@@ -574,30 +602,30 @@ export default function SupervisorServiceSchedule() {
                         color: colors.text
                       }}
                     >
-                      <option value="">Choose a vehicle...</option>
+                      <option value="">{t('supSched.chooseVehicle')}</option>
                       {vehicles.map(v => (
-                        <option key={v.id} value={v.id}>{v.plate} - Vehicle</option>
+                        <option key={v.id} value={v.id}>{v.plate} - {t('supSched.vehicleSuffix')}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: colors.text }}>
                       <Icons.Driver className="w-4 h-4" style={{ color: colors.primary }} />
-                      Assigned Driver
+                      {t('supSched.assignedDriver')}
                     </label>
                     {vehicleId ? (
                       <>
                         <div className="w-full rounded-xl px-4 py-3 text-lg border" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.text }}>
-                          {vehicleDriverNameMap.get(Number(vehicleId)) || 'None assigned'}
+                          {vehicleDriverNameMap.get(Number(vehicleId)) || t('supSched.noneAssigned')}
                         </div>
                         <div className="mt-2 rounded-xl p-3 text-sm border" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
-                          You can temporarily change the driver for this service day without affecting permanent assignments.
+                          {t('supSched.tempChangeDriverInfo')}
                           <button
                             type="button"
                             onClick={() => setOverrideOpen(v => !v)}
                             className="ml-2 inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold shadow-sm"
                             style={{ backgroundColor: colors.primary, color: 'white' }}
-                          >{overrideOpen ? 'Close' : 'Change'}</button>
+                          >{overrideOpen ? t('supSched.close') : t('supSched.change')}</button>
                         </div>
                         {overrideOpen && (
                           <div className="mt-3">
@@ -607,7 +635,7 @@ export default function SupervisorServiceSchedule() {
                               className="w-full rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-4 border transition-all duration-300"
                               style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}
                             >
-                              <option value="">Use default assigned driver</option>
+                              <option value="">{t('supSched.useDefaultDriver')}</option>
                               {drivers.map(d => (
                                 <option key={d.id} value={d.id}>{displayName(d)}</option>
                               ))}
@@ -617,7 +645,7 @@ export default function SupervisorServiceSchedule() {
                       </>
                     ) : (
                       <div className="p-4 rounded-xl border text-sm" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
-                        Choose a vehicle to see its assigned driver.
+                        {t('supSched.chooseVehicleToSeeDriver')}
                       </div>
                     )}
                   </div>
@@ -626,10 +654,10 @@ export default function SupervisorServiceSchedule() {
                 <div>
                   <label className="block text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: colors.text }}>
                     <Icons.Manpower className="w-4 h-4" style={{ color: colors.primary }} />
-                    {vehicleId ? 'Assigned Manpower Team' : 'Assign Manpower Team'}
+                    {vehicleId ? t('supSched.assignedManpowerTeam') : t('supSched.assignManpowerTeam')}
                     {selectedManpower.length > 0 && (
                       <span className="text-xs px-2 py-1 rounded-full ml-2" style={{ backgroundColor: colors.primary, color: 'white' }}>
-                        {selectedManpower.length} selected
+                        {t('supSched.selectedCount', { count: selectedManpower.length })}
                       </span>
                     )}
                   </label>
@@ -641,21 +669,21 @@ export default function SupervisorServiceSchedule() {
                             <span key={idx} className="px-3 py-2 rounded-xl text-sm border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}>{n}</span>
                           ))
                         ) : (
-                          <span className="italic" style={{ color: colors.textLight }}>None assigned</span>
+                          <span className="italic" style={{ color: colors.textLight }}>{t('supSched.noneAssigned')}</span>
                         )}
                       </div>
                       <div className="mt-2 rounded-xl p-3 text-sm border" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
-                        You can temporarily add or remove manpower for this service day without affecting permanent assignments.
+                        {t('supSched.tempChangeMpInfo')}
                         <button
                           type="button"
                           onClick={() => setOverrideOpen(v => !v)}
                           className="ml-2 inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold shadow-sm"
                           style={{ backgroundColor: colors.primary, color: 'white' }}
-                        >{overrideOpen ? 'Close' : 'Change'}</button>
+                        >{overrideOpen ? t('supSched.close') : t('supSched.change')}</button>
                       </div>
                       {overrideOpen && (
                         <div className="mt-3">
-                          <label className="block text-xs mb-2" style={{ color: colors.textLight }}>Select manpower for this service</label>
+                          <label className="block text-xs mb-2" style={{ color: colors.textLight }}>{t('supSched.selectMpForService')}</label>
                           <select
                             multiple
                             value={selectedManpower.map(String)}
@@ -675,7 +703,7 @@ export default function SupervisorServiceSchedule() {
                     </>
                   ) : (
                     <div className="p-4 rounded-xl border text-sm" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.textLight }}>
-                      Choose a vehicle to work on the selected service day. The assigned driver and manpowers for that vehicle will be used.
+                      {t('supSched.chooseVehicleToWork')}
                     </div>
                   )}
                 </div>
@@ -684,7 +712,7 @@ export default function SupervisorServiceSchedule() {
 
             <div className="flex flex-col sm:flex-row justify-end items-center gap-4 mt-8 pt-6 border-t" style={{ borderColor: colors.borderLight }}>
               <div className="text-sm" style={{ color: colors.textLight }}>
-                {selectedManpower.length} manpower • {vehicleId ? 'Vehicle selected' : 'No vehicle'} • {driverId ? 'Driver (auto)' : 'No driver'}
+                {t('supSched.summary.manpower', { count: selectedManpower.length })} • {vehicleId ? t('supSched.summary.vehicleSelected') : t('supSched.summary.noVehicle')} • {driverId ? t('supSched.summary.driverAuto') : t('supSched.summary.noDriver')}
               </div>
               <PrimaryButton 
                 onClick={addEntry}
@@ -692,7 +720,7 @@ export default function SupervisorServiceSchedule() {
                 className="w-full sm:w-auto"
               >
                 <Icons.Add className="w-5 h-5" />
-                <span>Create Service Entry</span>
+                <span>{t('supSched.createEntry')}</span>
               </PrimaryButton>
             </div>
           </Card>
@@ -701,9 +729,9 @@ export default function SupervisorServiceSchedule() {
         {/* SECTION 2: SCHEDULED SERVICES - Enhanced with Filtering */}
         <section>
           <SectionHeader 
-            title="Scheduled Services" 
+            title={t('supSched.scheduledServices')} 
             number={2}
-            subtitle="Manage and monitor all scheduled services"
+            subtitle={t('supSched.scheduledServicesSub')}
           />
           
           {/* Enhanced Filter Bar */}
@@ -714,7 +742,7 @@ export default function SupervisorServiceSchedule() {
                   <Icons.Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: colors.textLight }} />
                   <input
                     type="text"
-                    placeholder="Search services..."
+                    placeholder={t('supSched.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full lg:w-64 pl-10 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-300"
@@ -729,7 +757,7 @@ export default function SupervisorServiceSchedule() {
               
               <div className="flex flex-wrap gap-2 w-full lg:w-auto">
                 <FilterChip 
-                  label="All Days" 
+                  label={t('supSched.allDays')} 
                   active={filterDay === 'all'} 
                   onClick={() => setFilterDay('all')} 
                 />
@@ -744,7 +772,7 @@ export default function SupervisorServiceSchedule() {
               </div>
               
               <div className="text-sm font-semibold px-3 py-2 rounded-xl" style={{ backgroundColor: colors.primary, color: 'white' }}>
-                {filteredSchedule.length} of {schedule.length}
+                {t('supSched.filterCount', { filtered: filteredSchedule.length, total: schedule.length })}
               </div>
             </div>
           </Card>
@@ -753,21 +781,21 @@ export default function SupervisorServiceSchedule() {
             {!schedule.length ? (
               <div className="text-center py-12 lg:py-16 rounded-2xl border-2 border-dashed" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
                 <Icons.Calendar className="w-16 h-16 mx-auto mb-4" style={{ color: colors.textLighter }} />
-                <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>No services scheduled yet</h3>
-                <p className="text-lg mb-6" style={{ color: colors.textLighter }}>Create your first service entry to get started</p>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>{t('supSched.empty.noScheduledTitle')}</h3>
+                <p className="text-lg mb-6" style={{ color: colors.textLighter }}>{t('supSched.empty.noScheduledDesc')}</p>
                 <PrimaryButton 
                   onClick={() => document.getElementById('schedule-form')?.scrollIntoView({ behavior: 'smooth' })}
                   size="md"
                 >
                   <Icons.Add className="w-5 h-5" />
-                  <span>Schedule First Service</span>
+                  <span>{t('supSched.empty.scheduleFirst')}</span>
                 </PrimaryButton>
               </div>
             ) : !filteredSchedule.length ? (
               <div className="text-center py-12 rounded-2xl" style={{ backgroundColor: colors.background }}>
                 <Icons.Search className="w-16 h-16 mx-auto mb-4" style={{ color: colors.textLighter }} />
-                <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>No matching services</h3>
-                <p style={{ color: colors.textLighter }}>Try adjusting your search or filters</p>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: colors.textLight }}>{t('supSched.empty.noMatchTitle')}</h3>
+                <p style={{ color: colors.textLighter }}>{t('supSched.empty.noMatchDesc')}</p>
               </div>
             ) : (
               <div className="grid gap-4">
@@ -791,14 +819,14 @@ export default function SupervisorServiceSchedule() {
                             <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: colors.background }}>
                               <Icons.Time className="w-4 h-4 flex-shrink-0" style={{ color: colors.primary }} />
                               <div>
-                                <div className="text-xs" style={{ color: colors.textLight }}>Service Start Time</div>
+                                <div className="text-xs" style={{ color: colors.textLight }}>{t('supSched.list.startTimeLabel')}</div>
                                 <div className="font-semibold" style={{ color: colors.text }}>{e.service_start.substring(0,5)}</div>
                               </div>
                             </div>
                             <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: colors.background }}>
                               <Icons.Time className="w-4 h-4 flex-shrink-0" style={{ color: colors.primary }} />
                               <div>
-                                <div className="text-xs" style={{ color: colors.textLight }}>Service End Time</div>
+                                <div className="text-xs" style={{ color: colors.textLight }}>{t('supSched.list.endTimeLabel')}</div>
                                 <div className="font-semibold" style={{ color: colors.text }}>{e.service_end.substring(0,5)}</div>
                               </div>
                             </div>
@@ -812,7 +840,7 @@ export default function SupervisorServiceSchedule() {
                               <div className="font-semibold" style={{ color: colors.text }}>
                                 {vehiclePlateById.get(e.vehicle_id) || `Vehicle #${e.vehicle_id}`}
                               </div>
-                              <div className="text-sm" style={{ color: colors.textLight }}>Vehicle</div>
+                              <div className="text-sm" style={{ color: colors.textLight }}>{t('supSched.vehicle')}</div>
                             </div>
                           </div>
                           
@@ -823,7 +851,7 @@ export default function SupervisorServiceSchedule() {
                                 <div className="font-semibold" style={{ color: colors.text }}>
                                   {driverNameById.get(e.driver_id) || `Driver #${e.driver_id}`}
                                 </div>
-                                <div className="text-sm" style={{ color: colors.textLight }}>Driver</div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>{t('supSched.driver')}</div>
                               </div>
                             </div>
                           )}
@@ -832,7 +860,7 @@ export default function SupervisorServiceSchedule() {
                             <Icons.Manpower className="w-5 h-5 flex-shrink-0 mt-1" style={{ color: colors.primary }} />
                             <div className="min-w-0">
                               <div className="font-semibold mb-1" style={{ color: colors.text }}>
-                                {e.assigned_manpower_ids?.length ? 'Manpower' : 'No team assigned'}
+                                {e.assigned_manpower_ids?.length ? t('supSched.manpower') : t('supSched.noTeamAssigned')}
                               </div>
                               {e.assigned_manpower_ids?.length ? (
                                 <div className="flex flex-wrap gap-2">
@@ -843,7 +871,7 @@ export default function SupervisorServiceSchedule() {
                                   ))}
                                 </div>
                               ) : (
-                                <div className="text-sm" style={{ color: colors.textLight }}>Manpower</div>
+                                <div className="text-sm" style={{ color: colors.textLight }}>{t('supSched.manpower')}</div>
                               )}
                             </div>
                           </div>
@@ -859,7 +887,7 @@ export default function SupervisorServiceSchedule() {
                         }}
                       >
                         <Icons.Delete className="w-4 h-4" />
-                        <span>Remove</span>
+                        <span>{t('supSched.remove')}</span>
                       </button>
                     </div>
                   </div>

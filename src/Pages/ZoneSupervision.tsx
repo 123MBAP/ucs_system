@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { SVGProps } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useI18n } from '../lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -92,9 +93,17 @@ const Icons = {
   },
 };
 
-function weekdayName(n: number) {
-  const d = new Date(2000, 0, n);
-  return d.toLocaleString(undefined, { weekday: 'long' });
+function weekdayKey(n: number): string {
+  switch (n) {
+    case 1: return 'weekday.mon';
+    case 2: return 'weekday.tue';
+    case 3: return 'weekday.wed';
+    case 4: return 'weekday.thu';
+    case 5: return 'weekday.fri';
+    case 6: return 'weekday.sat';
+    case 7: return 'weekday.sun';
+    default: return 'weekday.mon';
+  }
 }
 
 // UI Components
@@ -185,6 +194,7 @@ const AccentButton = ({ children, onClick, disabled = false, loading = false, cl
  
 
 const ZoneSupervision = () => {
+  const { t, lang, setLang } = useI18n();
   const { id } = useParams();
   const navigate = useNavigate();
   const [detail, setDetail] = useState<Detail | null>(null);
@@ -271,7 +281,7 @@ const ZoneSupervision = () => {
       <div className="max-w-none md:max-w-6xl mx-auto">
         <Card>
           <div className="text-center">
-            <div style={{ color: colors.textLight }}>Zone not found</div>
+            <div style={{ color: colors.textLight }}>{t('zoneSup.notFound')}</div>
           </div>
         </Card>
       </div>
@@ -290,23 +300,37 @@ const ZoneSupervision = () => {
               style={{ color: colors.textLight }}
             >
               <Icons.Back />
-              <span className="font-medium">Back to Zones</span>
+              <span className="font-medium">{t('zoneSup.backToZones')}</span>
             </button>
             <div className="w-px h-6" style={{ backgroundColor: colors.border }}></div>
             <div>
               <h1 className="text-3xl font-bold" style={{ color: colors.text }}>
-                Zone Supervision
+                {t('zoneSup.title')}
               </h1>
-              <p className="mt-1" style={{ color: colors.textLight }}>Manage {detail.zone.name} operations and assignments</p>
+              <p className="mt-1" style={{ color: colors.textLight }}>{t('zoneSup.subtitle', { zone: detail.zone.name })}</p>
             </div>
           </div>
-          <AccentButton
-            onClick={() => navigate(`/supervisor/zones/${detail.zone.id}/schedule`)}
-            className="hidden md:flex px-6 py-3"
-          >
-            <Icons.Schedule />
-            <span>Plan Service Schedule</span>
-          </AccentButton>
+          <div className="flex items-center gap-3">
+            <AccentButton
+              onClick={() => navigate(`/supervisor/zones/${detail.zone.id}/schedule`)}
+              className="hidden md:flex px-6 py-3"
+            >
+              <Icons.Schedule />
+              <span>{t('zoneSup.planSchedule')}</span>
+            </AccentButton>
+            <div className="flex items-center gap-2">
+              <label className="text-sm" style={{ color: colors.textLight }}>{t('common.language')}</label>
+              <select
+                value={lang}
+                onChange={(e) => setLang(e.target.value as any)}
+                className="rounded-lg px-2 py-1 border text-sm"
+                style={{ backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.text }}
+              >
+                <option value="en">{t('lang.english')}</option>
+                <option value="rw">{t('lang.kinyarwanda')}</option>
+              </select>
+            </div>
+          </div>
         </div>
         {/* Mobile: Plan Schedule Button in its own card */}
         <div className="md:hidden">
@@ -316,18 +340,18 @@ const ZoneSupervision = () => {
               className="w-full justify-center py-3"
             >
               <Icons.Schedule />
-              <span>Plan Service Schedule</span>
+              <span>{t('zoneSup.planSchedule')}</span>
             </AccentButton>
           </Card>
         </div>
 
         {/* SECTION 1: SUPERVISOR VEHICLES */}
         <section>
-          <SectionHeader title="Supervisor Vehicles" number={1} />
+          <SectionHeader title={t('zoneSup.supervisorVehicles')} number={1} />
           <Card>
             <div className="flex items-center space-x-2 mb-4">
               <Icons.Vehicle style={{ color: colors.primary }} />
-              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Your Assigned Vehicles</h3>
+              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>{t('zoneSup.yourAssignedVehicles')}</h3>
             </div>
             <div>
               {detail.supervisorVehicles && detail.supervisorVehicles.length ? (
@@ -348,7 +372,7 @@ const ZoneSupervision = () => {
                 </div>
               ) : (
                 <div style={{ color: colors.textLight }} className="italic">
-                  No vehicles assigned to you yet
+                  {t('zoneSup.noVehiclesAssignedToYou')}
                 </div>
               )}
             </div>
@@ -357,11 +381,11 @@ const ZoneSupervision = () => {
 
         {/* SECTION 2: SERVICE DAYS */}
         <section>
-          <SectionHeader title="Service Days Configuration" number={2} />
+          <SectionHeader title={t('zoneSup.serviceDaysConfig')} number={2} />
           <Card>
             <div className="flex items-center space-x-2 mb-6">
               <Icons.Calendar style={{ color: colors.primary }} />
-              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Active Service Days</h3>
+              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>{t('zoneSup.activeServiceDays')}</h3>
             </div>
 
             {!daysEditMode ? (
@@ -376,13 +400,13 @@ const ZoneSupervision = () => {
                         className={`px-4 py-3 rounded-lg border font-medium ${on ? 'text-white' : ''}`}
                         style={on ? { backgroundColor: colors.primary, borderColor: colors.primary } : { backgroundColor: colors.cardBg, color: colors.text, borderColor: colors.border }}
                       >
-                        {weekdayName(d)}
+                        {t(weekdayKey(d))}
                       </span>
                     );
                   })}
                 </div>
                 <PrimaryButton onClick={() => setDaysEditMode(true)} className="px-6 py-3">
-                  <span>Edit Service Days</span>
+                  <span>{t('zoneSup.editServiceDays')}</span>
                 </PrimaryButton>
               </div>
             ) : (
@@ -398,7 +422,7 @@ const ZoneSupervision = () => {
                         className={`px-4 py-3 rounded-lg border font-medium transition-all duration-200 ${on ? 'text-white shadow-lg' : 'border hover:shadow-md'}`}
                         style={on ? { backgroundColor: colors.primary, borderColor: colors.primary } : { backgroundColor: colors.cardBg, color: colors.text, borderColor: colors.border }}
                       >
-                        {weekdayName(d)}
+                        {t(weekdayKey(d))}
                       </button>
                     );
                   })}
@@ -406,14 +430,14 @@ const ZoneSupervision = () => {
                 <div className="flex gap-3">
                   <AccentButton onClick={async () => { await saveDays(); setDaysEditMode(false); }} className="px-6 py-3">
                     <Icons.Save />
-                    <span>Save</span>
+                    <span>{t('vehDrv.save')}</span>
                   </AccentButton>
                   <button
                     onClick={() => { setEditDays(detail.serviceDays || []); setDaysEditMode(false); }}
                     className="px-4 py-2 rounded-lg font-medium border"
                     style={{ backgroundColor: colors.cardBg, color: colors.text, borderColor: colors.border }}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                 </div>
               </div>
@@ -425,11 +449,11 @@ const ZoneSupervision = () => {
 
         {/* SECTION 3: VEHICLE AND DRIVER MANAGEMENT */}
         <section>
-          <SectionHeader title="Vehicle & Driver Management" number={3} />
+          <SectionHeader title={t('zoneSup.vehicleDriverMgmt')} number={3} />
           <Card>
             <div className="flex items-center space-x-2 mb-6">
               <Icons.Vehicle style={{ color: colors.primary }} />
-              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Vehicles with Assignments</h3>
+              <h3 className="text-lg font-semibold" style={{ color: colors.text }}>{t('zoneSup.vehiclesWithAssignments')}</h3>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -439,22 +463,23 @@ const ZoneSupervision = () => {
                   <div key={v.id} className="rounded-lg p-4 border" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
                     <div className="flex items-center space-x-2 mb-3">
                       <Icons.Vehicle className="w-4 h-4" style={{ color: colors.primary }} />
-                      <h4 className="font-semibold" style={{ color: colors.text }}>Vehicle {v.plate}</h4>
+                      <h4 className="font-semibold" style={{ color: colors.text }}>{t('zoneSup.vehicleLabel', { plate: v.plate })}</h4>
                     </div>
                     
                     <div className="space-y-3 mb-4">
                       <div className="text-sm">
-                        <span className="font-medium" style={{ color: colors.text }}>Current driver:</span>{' '}
+                        <span className="font-medium" style={{ color: colors.text }}>{t('zoneSup.currentDriver')}</span>{' '}
                         {currentDriver ? (
                           <span style={{ color: colors.text }}>{displayName(currentDriver)}</span>
                         ) : (
-                          <span style={{ color: colors.error }}>None assigned</span>
+                          <span style={{ color: colors.error }}>{t('zoneSup.noneAssigned')}</span>
                         )}
+                        
                       </div>
                       
                       {Array.isArray(v.assigned_manpower_users) && (
                         <div className="text-sm">
-                          <div className="font-medium mb-1" style={{ color: colors.text }}>Assigned Manpower:</div>
+                          <div className="font-medium mb-1" style={{ color: colors.text }}>{t('zoneSup.assignedManpower')}</div>
                           {v.assigned_manpower_users.length ? (
                             <div className="space-y-1">
                               {v.assigned_manpower_users.map(u => (
@@ -464,7 +489,7 @@ const ZoneSupervision = () => {
                               ))}
                             </div>
                           ) : (
-                            <div style={{ color: colors.textLight }} className="italic">None assigned</div>
+                            <div style={{ color: colors.textLight }} className="italic">{t('zoneSup.none')}</div>
                           )}
                         </div>
                       )}

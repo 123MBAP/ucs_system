@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@/lib/i18n';
 import { User, Truck, Wallet, BadgeCheck } from 'lucide-react';
 
@@ -16,7 +16,7 @@ type ManpowerInfo = {
 
 const ManpowerDashboard = () => {
   const { t } = useI18n();
-  const [, setMe] = useState<Me | null>(null);
+  const [me, setMe] = useState<Me | null>(null);
   const [info, setInfo] = useState<ManpowerInfo>({ name: '', salary: null, vehicle: null, driver: null, supervisor: null });
   const [loading, setLoading] = useState(false);
   const [schedule, setSchedule] = useState<Array<{
@@ -69,7 +69,7 @@ const ManpowerDashboard = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-zinc-800 to-indigo-600 bg-clip-text text-transparent">{t('manpower.title')}</h1>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-zinc-800 to-amber-600 bg-clip-text text-transparent">{t('manpower.title')}</h1>
           <p className="text-zinc-600 mt-2">{t('manpower.subtitle')}</p>
         </div>
         <div className="flex items-center space-x-2 mt-4 sm:mt-0 text-sm text-zinc-500">
@@ -85,7 +85,7 @@ const ManpowerDashboard = () => {
               <div className="text-sm font-semibold text-zinc-600">{t('manpower.name')}</div>
               <div className="text-2xl font-bold text-zinc-900 mt-1">{loading ? '…' : info.name || '-'}</div>
             </div>
-            <div className="shrink-0 p-2 rounded-lg bg-indigo-50 text-indigo-600">
+            <div className="shrink-0 p-2 rounded-lg bg-amber-50 text-amber-600">
               <User className="h-8 w-8" />
             </div>
           </div>
@@ -115,6 +115,30 @@ const ManpowerDashboard = () => {
           </div>
         </div>
       </div>
+
+      {(() => {
+        const team = useMemo(() => {
+          const s = new Set<string>();
+          for (const e of schedule) {
+            const arr = e.assigned_manpower_usernames || [];
+            for (const u of arr) s.add(u);
+          }
+          if (me?.username) s.delete(me.username);
+          return Array.from(s);
+        }, [schedule, me]);
+        return team.length > 0 ? (
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-zinc-700">{t('manpower.team')}</h3>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {team.map(name => (
+                <span key={name} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">{name}</span>
+              ))}
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       {/* Service Schedule */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">

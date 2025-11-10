@@ -36,6 +36,7 @@ const Zones = lazy(() => import('src/Pages/Zones'));
 const ZoneSupervision = lazy(() => import('src/Pages/ZoneSupervision'));
 const Chat = lazy(() => import('src/Pages/Chat'));
 const VerifyEmail = lazy(() => import('src/Pages/VerifyEmail'));
+const Superuser = lazy(() => import('src/Pages/Superuser'));
 
 function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -51,7 +52,7 @@ function AppShell() {
   const location = useLocation();
   const onLoginPage = location.pathname === '/login';
   const publicRoutes = new Set(['/login', '/verify-email']);
-  const shellBg = onLoginPage ? '' : 'bg-gradient-to-br from-zinc-50 to-amber-50';
+  const shellBg = onLoginPage ? 'bg-neutral-900' : 'bg-gradient-to-br from-zinc-50 to-amber-50';
   const { t, lang, setLang } = useI18n();
   const [langOpen, setLangOpen] = useState(false);
   const langRef = React.useRef<HTMLDivElement | null>(null);
@@ -239,7 +240,7 @@ function AppShell() {
               : 'flex-1 p-0 sm:p-2 md:p-4 bg-gradient-to-b from-white to-amber-50/30'
           }
         >
-          <div className="max-w-none md:max-w-7xl mx-auto w-full min-w-0">
+          <div className={onLoginPage ? 'w-full min-w-0' : 'max-w-none md:max-w-7xl mx-auto w-full min-w-0'}>
             <Suspense fallback={<div className="p-6">Loading...</div>}>
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -268,6 +269,7 @@ function AppShell() {
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/payments" element={<Payments />} />
                 <Route path="/chat" element={<Chat />} />
+                <Route path="/superuser" element={<Superuser />} />
                 <Route path="/manage-workers" element={<ManageWorkers />} />
                 <Route path="/workers" element={<Workers />} />
                 <Route path="/profile" element={<Profile />} />
@@ -336,6 +338,8 @@ function RoleHome() {
       return <Navigate to="/manpower-dashboard" replace />;
     case 'driver':
       return <Navigate to="/driver-dashboard" replace />;
+    case 'superuser':
+      return <Navigate to="/superuser" replace />;
     default:
       return <Navigate to="/login" replace />;
   }

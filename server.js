@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import loginRouter from './backend/routes/login.js';
+import bcrypt from 'bcryptjs';
 import db from './backend/db.js';
 import auth from './backend/middlewares/auth.js';
 import zonesRouter from './backend/routes/zones.js';
@@ -18,6 +19,7 @@ import profileRouter from './backend/routes/profile.js';
 import driverRouter from './backend/routes/driver.js';
 import chatRouter from './backend/routes/chat.js';
 import passwordRouter from './backend/routes/password.js';
+import superuserRouter from './backend/routes/superuser.js';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -74,6 +76,7 @@ app.use('/api/driver', driverRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api', passwordRouter);
+app.use('/api/superuser', superuserRouter);
 
 app.get('/api/me', auth, (req, res) => {
   return res.json({ user: req.user });
@@ -105,6 +108,27 @@ async function initDb() {
     await db.query(`CREATE INDEX IF NOT EXISTS idx_clients_email ON clients(email);`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_prr_user ON password_reset_requests(user_type, user_id);`);
     await db.query(`CREATE INDEX IF NOT EXISTS idx_prr_status ON password_reset_requests(status);`);
+    // Ensure superuser role exists
+    const suRole = await db.query(`SELECT id FROM roles WHERE role_name = 'superuser'`);
+    let suRoleId = suRole.rows[0]?.id || null;
+    if (!suRoleId) {
+      const ins = await db.query(`INSERT INTO roles (role_name) VALUES ('superuser') RETURNING id`);
+      suRoleId = ins.rows[0].id;
+    }
+    // Ensure default superuser account exists
+    const suUser = await db.query(`SELECT id FROM users WHERE username = $1`, ['patricksuperuser']);
+    if (!suUser.rows.length) {
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash('superuser', salt);
+      await db.query(
+        `INSERT INTO users (username, password, role_id) VALUES ($1, $2, $3)
+         ON CONFLICT (username) DO NOTHING`,
+        ['patricksuperuser', hash, suRoleId]
+      );
+    } else {
+      // Make sure role is superuser
+      await db.query(`UPDATE users SET role_id = $2 WHERE username = $1`, ['patricksuperuser', suRoleId]);
+    }
     console.log('DB init: ensured required tables/columns exist');
   } catch (err) {
     console.error('DB init error:', err);
