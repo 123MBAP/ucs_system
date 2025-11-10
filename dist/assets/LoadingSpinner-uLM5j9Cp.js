@@ -1,0 +1,1 @@
+import{j as n}from"./index-DnGg16Vn.js";function e({size:a=16,className:r=""}){const t={width:a,height:a,borderWidth:Math.max(2,Math.floor(a/8))};return n.jsx("span",{className:`inline-block align-middle rounded-full border-gray-300 border-t-transparent animate-spin ${r}`,style:t,"aria-label":"Loading",role:"status"})}export{e as L};

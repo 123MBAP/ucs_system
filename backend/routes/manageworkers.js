@@ -269,4 +269,93 @@ router.delete('/manpower/:id', auth, requireManager, async (req, res) => {
   }
 });
 
+// Delete supervisor user (unassign zones and vehicles first)
+router.delete('/supervisors/:id', auth, requireManager, async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    if (!Number.isFinite(userId)) return res.status(400).json({ error: 'Invalid id' });
+    await db.query('BEGIN');
+    await db.query(`UPDATE zones SET supervisor_id = NULL WHERE supervisor_id = $1`, [userId]);
+    await db.query(`UPDATE vehicles SET supervisor_id = NULL WHERE supervisor_id = $1`, [userId]);
+    const del = await db.query(
+      `DELETE FROM users
+       WHERE id = $1 AND role_id = (SELECT id FROM roles WHERE role_name = 'supervisor')
+       RETURNING id`,
+      [userId]
+    );
+    await db.query('COMMIT');
+    if (!del.rows.length) return res.status(404).json({ error: 'Supervisor not found' });
+    return res.json({ success: true });
+  } catch (e) {
+    try { await db.query('ROLLBACK'); } catch {}
+    console.error('delete supervisor', e);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete driver user (remove driver_vehicle_assignments first)
+router.delete('/drivers/:id', auth, requireManager, async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    if (!Number.isFinite(userId)) return res.status(400).json({ error: 'Invalid id' });
+    await db.query('BEGIN');
+    await db.query(`DELETE FROM driver_vehicle_assignments WHERE user_id = $1`, [userId]);
+    const del = await db.query(
+      `DELETE FROM users
+       WHERE id = $1 AND role_id = (SELECT id FROM roles WHERE role_name = 'driver')
+       RETURNING id`,
+      [userId]
+    );
+    await db.query('COMMIT');
+    if (!del.rows.length) return res.status(404).json({ error: 'Driver not found' });
+    return res.json({ success: true });
+  } catch (e) {
+    try { await db.query('ROLLBACK'); } catch {}
+    console.error('delete driver', e);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete chief user (unassign from zones)
+router.delete('/chiefs/:id', auth, requireManager, async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    if (!Number.isFinite(userId)) return res.status(400).json({ error: 'Invalid id' });
+    await db.query('BEGIN');
+    await db.query(`UPDATE zones SET assigned_chief = NULL WHERE assigned_chief = $1`, [userId]);
+    const del = await db.query(
+      `DELETE FROM users
+       WHERE id = $1 AND role_id = (SELECT id FROM roles WHERE role_name = 'chief')
+       RETURNING id`,
+      [userId]
+    );
+    await db.query('COMMIT');
+    if (!del.rows.length) return res.status(404).json({ error: 'Chief not found' });
+    return res.json({ success: true });
+  } catch (e) {
+    try { await db.query('ROLLBACK'); } catch {}
+    console.error('delete chief', e);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete vehicle (remove assignments then delete vehicle)
+router.delete('/vehicles/:id', auth, requireManager, async (req, res) => {
+  try {
+    const vehicleId = Number(req.params.id);
+    if (!Number.isFinite(vehicleId)) return res.status(400).json({ error: 'Invalid id' });
+    await db.query('BEGIN');
+    await db.query(`DELETE FROM driver_vehicle_assignments WHERE vehicle_id = $1`, [vehicleId]);
+    await db.query(`DELETE FROM manpower_vehicle_assignments WHERE vehicle_id = $1`, [vehicleId]);
+    const del = await db.query(`DELETE FROM vehicles WHERE id = $1 RETURNING id`, [vehicleId]);
+    await db.query('COMMIT');
+    if (!del.rows.length) return res.status(404).json({ error: 'Vehicle not found' });
+    return res.json({ success: true });
+  } catch (e) {
+    try { await db.query('ROLLBACK'); } catch {}
+    console.error('delete vehicle', e);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

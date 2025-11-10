@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import LoadingSpinner from '../../Components/LoadingSpinner';
 
 type Zone = { id: number; name: string; assigned_chief?: number | null };
 
@@ -78,6 +79,7 @@ export default function ChiefsSection(props: {
       onMouseOver={(e) => { if (!disabled && !loading) e.currentTarget.style.backgroundColor = colors.primaryHover; }}
       onMouseOut={(e) => { if (!disabled && !loading) e.currentTarget.style.backgroundColor = colors.primary; }}
     >
+      {loading && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
       {children}
     </button>
   );
@@ -115,7 +117,7 @@ export default function ChiefsSection(props: {
                                 <option key={c.id} value={c.id}>{c.username}</option>
                               ))}
                             </select>
-                            <PrimaryButton disabled={!moveZoneChiefTarget[z.id] || !!actionLoading[`setChief-${z.id}`]} onClick={() => {
+                            <PrimaryButton loading={!!actionLoading[`setChief-${z.id}`]} disabled={!moveZoneChiefTarget[z.id] || !!actionLoading[`setChief-${z.id}`]} onClick={() => {
                               const target = Number(moveZoneChiefTarget[z.id]);
                               if (Number.isFinite(target)) setZoneChief(z.id, target);
                             }} className="text-xs px-2 py-1">Move</PrimaryButton>
@@ -152,7 +154,7 @@ export default function ChiefsSection(props: {
                       <option value="">Select chief…</option>
                       {chiefsNoZones.map(c => <option key={c.id} value={c.id}>{c.username}</option>)}
                     </select>
-                    <PrimaryButton disabled={!noChiefSelectedZone || !noChiefAssignChiefId || !!actionLoading[`setChief-${Number(noChiefSelectedZone)}`]} onClick={() => {
+                    <PrimaryButton loading={!!actionLoading[`setChief-${Number(noChiefSelectedZone)}`]} disabled={!noChiefSelectedZone || !noChiefAssignChiefId || !!actionLoading[`setChief-${Number(noChiefSelectedZone)}`]} onClick={() => {
                       const zId = Number(noChiefSelectedZone); const cId = Number(noChiefAssignChiefId);
                       if (Number.isFinite(zId) && Number.isFinite(cId)) setZoneChief(zId, cId);
                       setNoChiefSelectedZone(''); setNoChiefAssignChiefId('');
@@ -184,7 +186,7 @@ export default function ChiefsSection(props: {
                       <option value="">Select zone…</option>
                       {zonesNoChief.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
                     </select>
-                    <PrimaryButton disabled={!noZoneSelectedChief || !noZoneAssignZoneId || !!actionLoading[`setChief-${Number(noZoneAssignZoneId)}`]} onClick={() => {
+                    <PrimaryButton loading={!!actionLoading[`setChief-${Number(noZoneAssignZoneId)}`]} disabled={!noZoneSelectedChief || !noZoneAssignZoneId || !!actionLoading[`setChief-${Number(noZoneAssignZoneId)}`]} onClick={() => {
                       const cId = Number(noZoneSelectedChief); const zId = Number(noZoneAssignZoneId);
                       if (Number.isFinite(zId) && Number.isFinite(cId)) setZoneChief(zId, cId);
                       setNoZoneSelectedChief(''); setNoZoneAssignZoneId('');

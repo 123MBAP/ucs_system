@@ -205,17 +205,17 @@ const ClientDashboard = () => {
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^\+?\d{9,15}$/.test(phoneNumber)) {
-      setStatus({ type: 'error', message: 'Enter a valid phone number (9-15 digits, optionally starting with +).' });
+      setStatus({ type: 'error', message: t('clientDashboard.pay.phoneInvalid') });
       return;
     }
 
     setSubmitting(true);
-    setStatus({ type: 'pending', message: 'Payment initiated. Please confirm on your phone…' });
+    setStatus({ type: 'pending', message: t('clientDashboard.pay.initiated') });
 
     try {
       const token = localStorage.getItem('token');
       if (!token || monthlyAmount == null) {
-        setStatus({ type: 'error', message: 'Missing session or amount. Please reload and try again.' });
+        setStatus({ type: 'error', message: t('clientDashboard.pay.missing') });
         return;
       }
       const amountToPay = Number(monthlyAmount);
@@ -232,9 +232,9 @@ const ClientDashboard = () => {
       if (!res.ok) {
         throw new Error(data?.error || 'Failed to initiate payment');
       }
-      setStatus({ type: 'pending', message: 'Request sent. Approve the prompt on your phone to complete payment.' });
+      setStatus({ type: 'pending', message: t('clientDashboard.pay.requestSent') });
     } catch (err) {
-      setStatus({ type: 'error', message: (err as any)?.message || 'Payment failed. Please try again.' });
+      setStatus({ type: 'error', message: (err as any)?.message || t('clientDashboard.pay.failed') });
     } finally {
       setSubmitting(false);
     }
@@ -254,7 +254,7 @@ const ClientDashboard = () => {
           <div className="flex items-center space-x-4 mt-4 sm:mt-0">
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-              <span>Account Active</span>
+              <span>{t('clientDashboard.accountActive')}</span>
             </div>
           </div>
         </div>
@@ -274,7 +274,7 @@ const ClientDashboard = () => {
                     </span>
                   </div>
                   <p className="text-xl sm:text-2xl font-bold text-charcoal">{clientName}</p>
-                  <p className="text-gray-600 mt-1 text-sm sm:text-base">Active client since 2024</p>
+                  <p className="text-gray-600 mt-1 text-sm sm:text-base">{t('clientDashboard.activeClient')}</p>
                 </div>
                 <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg">
                   <Icons.Client />
@@ -289,9 +289,9 @@ const ClientDashboard = () => {
                 <div className="flex items-center space-x-2 mb-3">
                   <span className="text-sm font-semibold text-gray-600">{t('clientDashboard.serviceDay')}</span>
                 </div>
-                <p className="text-gray-600 text-sm mb-2">The day of service in your zone is:</p>
+                <p className="text-gray-600 text-sm mb-2">{t('clientDashboard.serviceDayDesc')}</p>
                 <p className="text-lg sm:text-xl font-bold text-charcoal">
-                  {zoneServiceDayNames.length ? zoneServiceDayNames.join(', ') : 'Not set'}
+                  {zoneServiceDayNames.length ? zoneServiceDayNames.join(', ') : t('clientDashboard.notSet')}
                 </p>
               </div>
 
@@ -301,12 +301,12 @@ const ClientDashboard = () => {
                   <span className="text-sm font-semibold text-gray-600">{t('clientDashboard.amountToPay')}</span>
                 </div>
                 <p className="text-lg sm:text-xl font-bold text-charcoal">
-                  {monthlyAmount != null ? `$${monthlyAmount.toLocaleString()}` : '—'}
+                  {monthlyAmount != null ? `$${monthlyAmount.toLocaleString()}` : t('clientDashboard.amountToPayUnknown')}
                 </p>
-                <p className="text-gray-600 text-sm mt-1">Your monthly amount</p>
+                <p className="text-gray-600 text-sm mt-1">{t('clientDashboard.monthlyAmountLabel')}</p>
                 {monthlyAmount != null && (
                   <p className="text-gray-500 text-xs mt-2">
-                    Remaining this month: ${Math.max(0, monthlyAmount - paidThisMonth).toLocaleString()}
+                    {t('clientDashboard.remainingThisMonth')} ${Math.max(0, monthlyAmount - paidThisMonth).toLocaleString()}
                   </p>
                 )}
               </div>
@@ -318,7 +318,7 @@ const ClientDashboard = () => {
                   <span className="text-sm font-semibold text-gray-600">{t('clientDashboard.paidThisMonth')}</span>
                 </div>
                 <p className="text-lg sm:text-xl font-bold text-charcoal">${paidThisMonth.toLocaleString()}</p>
-                <p className="text-gray-600 text-sm mt-1">Total paid this month</p>
+                <p className="text-gray-600 text-sm mt-1">{t('clientDashboard.totalPaidThisMonth')}</p>
                 {monthlyAmount != null && (
                   <div className="flex items-center space-x-2 mt-3">
                     <div className={`w-2 h-2 rounded-full ${paidThisMonth >= monthlyAmount ? 'bg-green-600' : 'bg-amber-500'}`}></div>
@@ -331,13 +331,13 @@ const ClientDashboard = () => {
 
               {/* Quick Actions Card */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-charcoal mb-4">Quick Actions</h3>
+                <h3 className="text-sm font-semibold text-charcoal mb-4">{t('clientDashboard.quickActions')}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: 'Payment History', Icon: BarChart3, color: 'text-amber-600 bg-amber-50' },
-                    { label: 'Receipts', Icon: Receipt, color: 'text-green-600 bg-green-50' },
-                    { label: 'Profile', Icon: User, color: 'text-charcoal bg-gray-100' },
-                    { label: 'Support', Icon: MessageSquare, color: 'text-gray-600 bg-gray-50' },
+                    { label: t('clientDashboard.qa.paymentHistory'), Icon: BarChart3, color: 'text-amber-600 bg-amber-50' },
+                    { label: t('clientDashboard.qa.receipts'), Icon: Receipt, color: 'text-green-600 bg-green-50' },
+                    { label: t('clientDashboard.qa.profile'), Icon: User, color: 'text-charcoal bg-gray-100' },
+                    { label: t('clientDashboard.qa.support'), Icon: MessageSquare, color: 'text-gray-600 bg-gray-50' },
                   ].map(({ label, Icon, color }, index) => (
                     <button
                       key={index}
@@ -366,10 +366,10 @@ const ClientDashboard = () => {
                     const dayName = weekdayNames[(Number(e.service_day) || 1) - 1] || '';
                     const status = e.supervisor_status;
                     const badge = status == null
-                      ? { text: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200' }
+                      ? { text: t('clientDashboard.badge.pending'), cls: 'bg-amber-50 text-amber-700 border-amber-200' }
                       : status === 'complete'
-                      ? { text: 'Completed', cls: 'bg-green-50 text-green-700 border-green-200' }
-                      : { text: 'Not Completed', cls: 'bg-red-50 text-red-700 border-red-200' };
+                      ? { text: t('clientDashboard.badge.completed'), cls: 'bg-green-50 text-green-700 border-green-200' }
+                      : { text: t('clientDashboard.badge.notCompleted'), cls: 'bg-red-50 text-red-700 border-red-200' };
                     return (
                       <div key={e.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex-1 min-w-0">
@@ -383,22 +383,22 @@ const ClientDashboard = () => {
                             </span>
                           </div>
                           <div className="text-gray-500 text-xs mt-2">
-                            {e.vehicle_plate ? `Vehicle: ${e.vehicle_plate}` : ''}
+                            {e.vehicle_plate ? `${t('clientDashboard.vehiclePrefix')} ${e.vehicle_plate}` : ''}
                             {e.vehicle_plate && e.driver_username ? ' • ' : ''}
-                            {e.driver_username ? `Driver: ${e.driver_username}` : ''}
+                            {e.driver_username ? `${t('clientDashboard.driverPrefix')} ${e.driver_username}` : ''}
                           </div>
                           {status === 'not_complete' && e.supervisor_reason && (
-                            <div className="text-red-600 text-xs mt-2">Reason: {e.supervisor_reason}</div>
+                            <div className="text-red-600 text-xs mt-2">{t('clientDashboard.reasonPrefix')} {e.supervisor_reason}</div>
                           )}
                           {status === 'complete' && (e.complained_client_ids || []).includes(clientId || -1) && (
-                            <div className="text-amber-700 text-xs mt-2">Complaint submitted. Awaiting review.</div>
+                            <div className="text-amber-700 text-xs mt-2">{t('clientDashboard.complaintSubmitted')}</div>
                           )}
                           {status === 'complete' && canComplain(e) && (
                             <button
                               className="text-xs text-amber-700 font-medium mt-2 hover:text-amber-800 transition-colors"
                               onClick={() => submitComplaint(e.id)}
                             >
-                              My home not yet serviced
+                              {t('clientDashboard.complainCta')}
                             </button>
                           )}
                         </div>
@@ -442,7 +442,7 @@ const ClientDashboard = () => {
               <form onSubmit={handlePay} className="space-y-6">
                 {monthlyAmount != null && (
                   <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
-                    <div className="text-xs text-amber-700">Amount to pay (current month)</div>
+                    <div className="text-xs text-amber-700">{t('clientDashboard.amountToPay')}</div>
                     <div className="text-lg font-bold text-charcoal">
                       {`$${Number(monthlyAmount).toLocaleString()}`}
                     </div>
@@ -459,12 +459,12 @@ const ClientDashboard = () => {
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="e.g. +2507XXXXXXXX"
+                    placeholder={t('clientDashboard.pay.phonePlaceholder')}
                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 text-charcoal placeholder-gray-400"
                     disabled={submitting}
                   />
                   <p className="text-xs text-gray-500 mt-2">
-                    Enter your mobile money phone number
+                    {t('clientDashboard.pay.phoneHelp')}
                   </p>
                 </div>
 
@@ -492,10 +492,10 @@ const ClientDashboard = () => {
               <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
                 <h3 className="text-sm font-semibold text-charcoal mb-2">{t('payment.infoTitle')}</h3>
                 <ul className="text-xs text-gray-600 space-y-1">
-                  <li>• Payments are processed via mobile money</li>
-                  <li>• You will receive an STK push notification</li>
-                  <li>• Standard transaction fees apply</li>
-                  <li>• Receipts are generated automatically</li>
+                  <li>• {t('clientDashboard.info.paymentsProcessed')}</li>
+                  <li>• {t('clientDashboard.info.stkPush')}</li>
+                  <li>• {t('clientDashboard.info.fees')}</li>
+                  <li>• {t('clientDashboard.info.receipts')}</li>
                 </ul>
               </div>
             </div>

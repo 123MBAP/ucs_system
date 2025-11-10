@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import LoadingSpinner from '@/Components/LoadingSpinner';
+import { useI18n } from 'src/lib/i18n';
 
 const apiBase = import.meta.env.VITE_API_URL as string;
 
@@ -31,6 +32,7 @@ type WorkerWithSalary = {
 type Vehicle = { id: number; plate: string; make?: string | null; model?: string | null; supervisor_id?: number | null; image_url?: string | null };
 
 const Workers = () => {
+  const { t } = useI18n();
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,12 @@ const Workers = () => {
 
   const [editingSalary, setEditingSalary] = useState<{ userId: number; amount: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteLoadingManpower, setDeleteLoadingManpower] = useState<Record<number, boolean>>({});
+  const [deleteLoadingSupervisor, setDeleteLoadingSupervisor] = useState<Record<number, boolean>>({});
+  const [deleteLoadingDriver, setDeleteLoadingDriver] = useState<Record<number, boolean>>({});
+  const [deleteLoadingChief, setDeleteLoadingChief] = useState<Record<number, boolean>>({});
+  const [vehicleDeleting, setVehicleDeleting] = useState<Record<number, boolean>>({});
+  const [confirmDel, setConfirmDel] = useState<{ type: 'supervisor'|'driver'|'chief'|'manpower'|'vehicle'|'veh_image'; id: number } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -119,6 +127,134 @@ const Workers = () => {
       setError(e?.message || 'Failed to save salary');
     } finally {
       setSaving(false);
+    }
+
+  }
+
+  async function deleteSupervisorUser(userId: number) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setDeleteLoadingSupervisor(prev => ({ ...prev, [userId]: true }));
+    try {
+      const r = await fetch(`${apiBase}/api/manageworkers/supervisors/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d?.error || 'Failed to delete');
+      setSupervisors(prev => prev.filter(x => x.id !== userId));
+      // also clear from vehicles/zones in UI
+      setVehicles(prev => prev.map(v => v.supervisor_id === userId ? { ...v, supervisor_id: null } : v));
+    } catch (e: any) {
+      setError(e?.message || 'Failed to delete supervisor');
+    } finally {
+      setDeleteLoadingSupervisor(prev => ({ ...prev, [userId]: false }));
+    }
+  }
+
+  async function deleteDriverUser(userId: number) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setDeleteLoadingDriver(prev => ({ ...prev, [userId]: true }));
+    try {
+      const r = await fetch(`${apiBase}/api/manageworkers/drivers/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d?.error || 'Failed to delete');
+      setDrivers(prev => prev.filter(x => x.id !== userId));
+    } catch (e: any) {
+      setError(e?.message || 'Failed to delete driver');
+    } finally {
+      setDeleteLoadingDriver(prev => ({ ...prev, [userId]: false }));
+    }
+  }
+
+  async function deleteChiefUser(userId: number) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setDeleteLoadingChief(prev => ({ ...prev, [userId]: true }));
+    try {
+      const r = await fetch(`${apiBase}/api/manageworkers/chiefs/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d?.error || 'Failed to delete');
+      setChiefs(prev => prev.filter(x => x.id !== userId));
+      // zones UI will reflect assigned_chief cleared on next load; we only remove chief row here
+    } catch (e: any) {
+      setError(e?.message || 'Failed to delete chief');
+    } finally {
+      setDeleteLoadingChief(prev => ({ ...prev, [userId]: false }));
+    }
+  }
+
+  async function deleteVehicleRecord(vehicleId: number) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setVehicleDeleting(prev => ({ ...prev, [vehicleId]: true }));
+    try {
+      const r = await fetch(`${apiBase}/api/manageworkers/vehicles/${vehicleId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d?.error || 'Failed to delete');
+      setVehicles(prev => prev.filter(v => v.id !== vehicleId));
+      setEditVehImgOpen(prev => ({ ...prev, [vehicleId]: false }));
+    } catch (e: any) {
+      setError(e?.message || 'Failed to delete vehicle');
+    } finally {
+      setVehicleDeleting(prev => ({ ...prev, [vehicleId]: false }));
+    }
+  }
+
+  async function deleteManpowerUser(userId: number) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setDeleteLoadingManpower(prev => ({ ...prev, [userId]: true }));
+    try {
+      const r = await fetch(`${apiBase}/api/manageworkers/manpower/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d?.error || 'Failed to delete');
+      setManpower(prev => prev.filter(x => x.id !== userId));
+    } catch (e: any) {
+      setError(e?.message || 'Failed to delete manpower');
+    } finally {
+      setDeleteLoadingManpower(prev => ({ ...prev, [userId]: false }));
+    }
+  }
+
+  function handleConfirmDelete() {
+    if (!confirmDel) return;
+    const { type, id } = confirmDel;
+    setConfirmDel(null);
+    switch (type) {
+      case 'supervisor':
+        deleteSupervisorUser(id);
+        break;
+      case 'driver':
+        deleteDriverUser(id);
+        break;
+      case 'chief':
+        deleteChiefUser(id);
+        break;
+      case 'manpower':
+        deleteManpowerUser(id);
+        break;
+      case 'vehicle':
+        deleteVehicleRecord(id);
+        break;
+      case 'veh_image':
+        deleteVehicleImage(id);
+        break;
+      default:
+        break;
     }
   }
 
@@ -192,8 +328,8 @@ const Workers = () => {
   if (role !== 'manager') {
     return (
       <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Workers</h2>
-        <div className="text-red-600">Only managers can view this page.</div>
+        <h2 className="text-2xl font-bold mb-4">{t('workers.title')}</h2>
+        <div className="text-red-600">{t('workers.onlyManagers')}</div>
       </div>
     );
   }
@@ -201,38 +337,38 @@ const Workers = () => {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">Workers</h2>
+        <h2 className="text-2xl font-bold">{t('workers.title')}</h2>
         <div className="flex items-center gap-2 flex-wrap">
-          <QuickLink label="Supervisors" target="#supervisors" />
-          <QuickLink label="Chiefs" target="#chiefs" />
-          <QuickLink label="Manpower" target="#manpower" />
-          <QuickLink label="Drivers" target="#drivers" />
-          <QuickLink label="Vehicles" target="#vehicles" />
+          <QuickLink label={t('workers.quick.supervisors')} target="#supervisors" />
+          <QuickLink label={t('workers.quick.chiefs')} target="#chiefs" />
+          <QuickLink label={t('workers.quick.manpower')} target="#manpower" />
+          <QuickLink label={t('workers.quick.drivers')} target="#drivers" />
+          <QuickLink label={t('workers.quick.vehicles')} target="#vehicles" />
         </div>
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm text-gray-700">Search</label>
-        <input value={search} onChange={e => setSearch(e.target.value)} className="mt-1 border rounded px-3 py-2 w-full max-w-md" placeholder="Search by name, username or plate" />
+        <label className="block text-sm text-gray-700">{t('workers.search')}</label>
+        <input value={search} onChange={e => setSearch(e.target.value)} className="mt-1 border rounded px-3 py-2 w-full max-w-md" placeholder={t('workers.search.placeholder')} />
       </div>
 
       {error && <div className="text-red-600 mb-3">{error}</div>}
       {loading ? (
-        <div className="py-12 flex items-center gap-3 text-amber-700"><LoadingSpinner size={24} /><span>Loading…</span></div>
+        <div className="py-12 flex items-center gap-3 text-amber-700"><LoadingSpinner size={24} /><span>{t('workers.loading')}</span></div>
       ) : (
         <div className="space-y-8">
           {/* Supervisors */}
           <section id="supervisors" className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 py-3 font-semibold border-b">Supervisors</div>
+            <div className="px-4 py-3 font-semibold border-b">{t('workers.section.supervisors')}</div>
             <div className="overflow-x-auto">
             <table className="min-w-[720px] sm:min-w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">Username</th>
-                  <th className="px-4 py-3 text-left">Zones</th>
-                  <th className="px-4 py-3 text-right">Salary</th>
-                  <th className="px-4 py-3 text-left">Action</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.name')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.username')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.zones')}</th>
+                  <th className="px-4 py-3 text-right">{t('workers.col.salary')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -246,17 +382,26 @@ const Workers = () => {
                       {editingSalary?.userId === s.id ? (
                         <div className="flex items-center gap-2">
                           <input type="number" className="border rounded px-2 py-1 w-32" value={editingSalary.amount} onChange={e => setEditingSalary({ userId: s.id, amount: e.target.value })} />
-                          <button disabled={saving} onClick={() => saveSalary(s.id, editingSalary.amount)} className="px-2 sm:px-3 py-1 rounded bg-green-600 text-white text-xs sm:text-sm whitespace-nowrap">Save</button>
-                          <button disabled={saving} onClick={() => setEditingSalary(null)} className="px-2 sm:px-3 py-1 rounded bg-gray-200 text-xs sm:text-sm whitespace-nowrap">Cancel</button>
+                          <button disabled={saving} onClick={() => saveSalary(s.id, editingSalary.amount)} className="px-2 sm:px-3 py-1 rounded bg-green-600 text-white text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+                            {saving && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
+                            <span>{t('workers.btn.save')}</span>
+                          </button>
+                          <button disabled={saving} onClick={() => setEditingSalary(null)} className="px-2 sm:px-3 py-1 rounded bg-gray-200 text-xs sm:text-sm whitespace-nowrap">{t('workers.btn.cancel')}</button>
                         </div>
                       ) : (
-                        <button onClick={() => setEditingSalary({ userId: s.id, amount: s.salary != null ? String(s.salary) : '' })} className="px-2 sm:px-3 py-1 rounded bg-amber-500 text-black text-xs sm:text-sm whitespace-nowrap">Edit Salary</button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setEditingSalary({ userId: s.id, amount: s.salary != null ? String(s.salary) : '' })} className="px-2 sm:px-3 py-1 rounded bg-amber-500 text-black text-xs sm:text-sm whitespace-nowrap">{t('workers.btn.editSalary')}</button>
+                          <button disabled={!!deleteLoadingSupervisor[s.id]} onClick={() => setConfirmDel({ type: 'supervisor', id: s.id })} className="px-2 sm:px-3 py-1 rounded bg-red-600 text-white text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+                            {deleteLoadingSupervisor[s.id] && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
+                            <span>{t('workers.btn.delete')}</span>
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
                 ))}
                 {!filteredSupervisors.length && (
-                  <tr><td className="px-4 py-6 text-gray-500" colSpan={4}>No supervisors found.</td></tr>
+                  <tr><td className="px-4 py-6 text-gray-500" colSpan={4}>{t('workers.empty.supervisors')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -266,12 +411,12 @@ const Workers = () => {
           {vehViewerOpen && (
             <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setVehViewerOpen(false)}>
               <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-                <img src={vehViewerSrc} alt="Vehicle" className="w-full h-auto rounded-lg shadow-lg" />
+                <img src={vehViewerSrc} alt={t('workers.viewer.alt')} className="w-full h-auto rounded-lg shadow-lg" />
                 <button
                   type="button"
                   onClick={() => setVehViewerOpen(false)}
                   className="absolute top-2 right-2 inline-flex items-center justify-center rounded-full bg-black/60 text-white w-9 h-9 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  aria-label="Close"
+                  aria-label={t('workers.viewer.close')}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -283,14 +428,15 @@ const Workers = () => {
 
           {/* Chiefs */}
           <section id="chiefs" className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 py-3 font-semibold border-b">Chiefs</div>
+            <div className="px-4 py-3 font-semibold border-b">{t('workers.section.chiefs')}</div>
             <div className="overflow-x-auto">
             <table className="min-w-[720px] sm:min-w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">Username</th>
-                  <th className="px-4 py-3 text-left">Zones</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.name')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.username')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.zones')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -299,10 +445,16 @@ const Workers = () => {
                     <td className="px-4 py-3">{[c.first_name,c.last_name].filter(Boolean).join(' ') || '-'}</td>
                     <td className="px-4 py-3">{c.username}</td>
                     <td className="px-4 py-3">{c.zones?.length ? c.zones.map(z => z.name).join(', ') : '-'}</td>
+                    <td className="px-4 py-3">
+                      <button disabled={!!deleteLoadingChief[c.id]} onClick={() => setConfirmDel({ type: 'chief', id: c.id })} className="px-2 sm:px-3 py-1 rounded bg-red-600 text-white text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+                        {deleteLoadingChief[c.id] && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
+                        <span>{t('workers.btn.delete')}</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {!filteredChiefs.length && (
-                  <tr><td className="px-4 py-6 text-gray-500" colSpan={2}>No chiefs found.</td></tr>
+                  <tr><td className="px-4 py-6 text-gray-500" colSpan={2}>{t('workers.empty.chiefs')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -311,15 +463,15 @@ const Workers = () => {
 
           {/* Manpower */}
           <section id="manpower" className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 py-3 font-semibold border-b">Manpower</div>
+            <div className="px-4 py-3 font-semibold border-b">{t('workers.section.manpower')}</div>
             <div className="overflow-x-auto">
             <table className="min-w-[720px] sm:min-w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">Username</th>
-                  <th className="px-4 py-3 text-right">Salary</th>
-                  <th className="px-4 py-3 text-left">Action</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.name')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.username')}</th>
+                  <th className="px-4 py-3 text-right">{t('workers.col.salary')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -332,17 +484,26 @@ const Workers = () => {
                       {editingSalary?.userId === m.id ? (
                         <div className="flex items-center gap-2">
                           <input type="number" className="border rounded px-2 py-1 w-32" value={editingSalary.amount} onChange={e => setEditingSalary({ userId: m.id, amount: e.target.value })} />
-                          <button disabled={saving} onClick={() => saveSalary(m.id, editingSalary.amount)} className="px-2 sm:px-3 py-1 rounded bg-green-600 text-white text-xs sm:text-sm whitespace-nowrap">Save</button>
-                          <button disabled={saving} onClick={() => setEditingSalary(null)} className="px-2 sm:px-3 py-1 rounded bg-gray-200 text-xs sm:text-sm whitespace-nowrap">Cancel</button>
+                          <button disabled={saving} onClick={() => saveSalary(m.id, editingSalary.amount)} className="px-2 sm:px-3 py-1 rounded bg-green-600 text-white text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+                            {saving && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
+                            <span>{t('workers.btn.save')}</span>
+                          </button>
+                          <button disabled={saving} onClick={() => setEditingSalary(null)} className="px-2 sm:px-3 py-1 rounded bg-gray-200 text-xs sm:text-sm whitespace-nowrap">{t('workers.btn.cancel')}</button>
                         </div>
                       ) : (
-                        <button onClick={() => setEditingSalary({ userId: m.id, amount: m.salary != null ? String(m.salary) : '' })} className="px-2 sm:px-3 py-1 rounded bg-amber-500 text-black text-xs sm:text-sm whitespace-nowrap">Edit Salary</button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setEditingSalary({ userId: m.id, amount: m.salary != null ? String(m.salary) : '' })} className="px-2 sm:px-3 py-1 rounded bg-amber-500 text-black text-xs sm:text-sm whitespace-nowrap">{t('workers.btn.editSalary')}</button>
+                          <button disabled={!!deleteLoadingManpower[m.id]} onClick={() => setConfirmDel({ type: 'manpower', id: m.id })} className="px-2 sm:px-3 py-1 rounded bg-red-600 text-white text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+                            {deleteLoadingManpower[m.id] && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
+                            <span>{t('workers.btn.delete')}</span>
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
                 ))}
                 {!filteredManpower.length && (
-                  <tr><td className="px-4 py-6 text-gray-500" colSpan={3}>No manpower found.</td></tr>
+                  <tr><td className="px-4 py-6 text-gray-500" colSpan={3}>{t('workers.empty.manpower')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -351,15 +512,15 @@ const Workers = () => {
 
           {/* Drivers */}
           <section id="drivers" className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 py-3 font-semibold border-b">Drivers</div>
+            <div className="px-4 py-3 font-semibold border-b">{t('workers.section.drivers')}</div>
             <div className="overflow-x-auto">
             <table className="min-w-[720px] sm:min-w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">Username</th>
-                  <th className="px-4 py-3 text-right">Salary</th>
-                  <th className="px-4 py-3 text-left">Action</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.name')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.username')}</th>
+                  <th className="px-4 py-3 text-right">{t('workers.col.salary')}</th>
+                  <th className="px-4 py-3 text-left">{t('workers.col.action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -372,17 +533,26 @@ const Workers = () => {
                       {editingSalary?.userId === d.id ? (
                         <div className="flex items-center gap-2">
                           <input type="number" className="border rounded px-2 py-1 w-32" value={editingSalary.amount} onChange={e => setEditingSalary({ userId: d.id, amount: e.target.value })} />
-                          <button disabled={saving} onClick={() => saveSalary(d.id, editingSalary.amount)} className="px-2 sm:px-3 py-1 rounded bg-green-600 text-white text-xs sm:text-sm whitespace-nowrap">Save</button>
-                          <button disabled={saving} onClick={() => setEditingSalary(null)} className="px-2 sm:px-3 py-1 rounded bg-gray-200 text-xs sm:text-sm whitespace-nowrap">Cancel</button>
+                          <button disabled={saving} onClick={() => saveSalary(d.id, editingSalary.amount)} className="px-2 sm:px-3 py-1 rounded bg-green-600 text-white text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+                            {saving && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
+                            <span>{t('workers.btn.save')}</span>
+                          </button>
+                          <button disabled={saving} onClick={() => setEditingSalary(null)} className="px-2 sm:px-3 py-1 rounded bg-gray-200 text-xs sm:text-sm whitespace-nowrap">{t('workers.btn.cancel')}</button>
                         </div>
                       ) : (
-                        <button onClick={() => setEditingSalary({ userId: d.id, amount: d.salary != null ? String(d.salary) : '' })} className="px-2 sm:px-3 py-1 rounded bg-amber-500 text-black text-xs sm:text-sm whitespace-nowrap">Edit Salary</button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setEditingSalary({ userId: d.id, amount: d.salary != null ? String(d.salary) : '' })} className="px-2 sm:px-3 py-1 rounded bg-amber-500 text-black text-xs sm:text-sm whitespace-nowrap">{t('workers.btn.editSalary')}</button>
+                          <button disabled={!!deleteLoadingDriver[d.id]} onClick={() => setConfirmDel({ type: 'driver', id: d.id })} className="px-2 sm:px-3 py-1 rounded bg-red-600 text-white text-xs sm:text-sm whitespace-nowrap flex items-center gap-2">
+                            {deleteLoadingDriver[d.id] && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
+                            <span>{t('workers.btn.delete')}</span>
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
                 ))}
                 {!filteredDrivers.length && (
-                  <tr><td className="px-4 py-6 text-gray-500" colSpan={3}>No drivers found.</td></tr>
+                  <tr><td className="px-4 py-6 text-gray-500" colSpan={3}>{t('workers.empty.drivers')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -391,17 +561,17 @@ const Workers = () => {
 
           {/* Vehicles */}
           <section id="vehicles" className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 py-3 font-semibold border-b">Vehicles</div>
+            <div className="px-4 py-3 font-semibold border-b">{t('workers.section.vehicles')}</div>
             <div className="overflow-x-auto">
               <table className="min-w-[720px] sm:min-w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left">Image</th>
-                    <th className="px-4 py-3 text-left">Plate</th>
-                    <th className="px-4 py-3 text-left">Make</th>
-                    <th className="px-4 py-3 text-left">Model</th>
-                    <th className="px-4 py-3 text-left">Supervisor ID</th>
-                    <th className="px-4 py-3 text-left">Actions</th>
+                    <th className="px-4 py-3 text-left">{t('workers.col.image')}</th>
+                    <th className="px-4 py-3 text-left">{t('workers.col.plate')}</th>
+                    <th className="px-4 py-3 text-left">{t('workers.col.make')}</th>
+                    <th className="px-4 py-3 text-left">{t('workers.col.model')}</th>
+                    <th className="px-4 py-3 text-left">{t('workers.col.supervisorId')}</th>
+                    <th className="px-4 py-3 text-left">{t('workers.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -409,11 +579,11 @@ const Workers = () => {
                     <tr key={v.id} className="border-t">
                       <td className="px-4 py-3">
                         {v.image_url ? (
-                          <button type="button" onClick={() => { setVehViewerSrc(v.image_url!); setVehViewerOpen(true); }} title="Click to view">
+                          <button type="button" onClick={() => { setVehViewerSrc(v.image_url!); setVehViewerOpen(true); }} title={t('workers.viewer.title')}>
                             <img src={v.image_url} alt={v.plate} className="w-20 h-12 object-cover rounded border" />
                           </button>
                         ) : (
-                          <span className="text-gray-400">No image</span>
+                          <span className="text-gray-400">{t('workers.noImage')}</span>
                         )}
                       </td>
                       <td className="px-4 py-3">{v.plate}</td>
@@ -425,22 +595,31 @@ const Workers = () => {
                           className="px-2 sm:px-3 py-1 rounded bg-amber-500 text-black text-xs sm:text-sm whitespace-nowrap"
                           onClick={() => setEditVehImgOpen(prev => ({ ...prev, [v.id]: !prev[v.id] }))}
                         >
-                          {editVehImgOpen[v.id] ? 'Close' : 'Edit Image'}
+                          {editVehImgOpen[v.id] ? t('workers.btn.close') : t('workers.btn.editImage')}
                         </button>
                         {v.image_url && (
                           <button
-                            className="px-2 sm:px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 text-xs sm:text-sm whitespace-nowrap"
+                            className="px-2 sm:px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 text-xs sm:text-sm whitespace-nowrap flex items-center gap-2"
                             disabled={!!vehImgSaving[v.id]}
-                            onClick={() => deleteVehicleImage(v.id)}
+                            onClick={() => setConfirmDel({ type: 'veh_image', id: v.id })}
                           >
-                            Delete Image
+                            {vehImgSaving[v.id] && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
+                            <span>{t('workers.btn.deleteImage')}</span>
                           </button>
                         )}
+                        <button
+                          className="px-2 sm:px-3 py-1 rounded bg-red-700 text-white hover:bg-red-800 text-xs sm:text-sm whitespace-nowrap flex items-center gap-2"
+                          disabled={!!vehicleDeleting[v.id]}
+                          onClick={() => setConfirmDel({ type: 'vehicle', id: v.id })}
+                        >
+                          {vehicleDeleting[v.id] && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
+                          <span>{t('workers.btn.deleteVehicle')}</span>
+                        </button>
                       </td>
                     </tr>
                   ))}
                   {!filteredVehicles.length && (
-                    <tr><td className="px-4 py-6 text-gray-500" colSpan={6}>No vehicles found.</td></tr>
+                    <tr><td className="px-4 py-6 text-gray-500" colSpan={6}>{t('workers.empty.vehicles')}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -489,6 +668,25 @@ const Workers = () => {
               ))}
             </div>
           </section>
+        </div>
+      )}
+      {confirmDel && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true" onClick={() => setConfirmDel(null)}>
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-2">{t('workers.modal.title')}</h3>
+            <p className="text-sm text-gray-700 mb-4">
+              {confirmDel.type === 'supervisor' && t('workers.modal.msg.supervisor')}
+              {confirmDel.type === 'driver' && t('workers.modal.msg.driver')}
+              {confirmDel.type === 'chief' && t('workers.modal.msg.chief')}
+              {confirmDel.type === 'manpower' && t('workers.modal.msg.manpower')}
+              {confirmDel.type === 'vehicle' && t('workers.modal.msg.vehicle')}
+              {confirmDel.type === 'veh_image' && t('workers.modal.msg.veh_image')}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button type="button" onClick={() => setConfirmDel(null)} className="px-3 py-1.5 rounded bg-gray-200 text-sm">{t('workers.btn.cancel')}</button>
+              <button type="button" onClick={handleConfirmDelete} className="px-3 py-1.5 rounded bg-red-600 text-white text-sm">{t('workers.btn.delete')}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

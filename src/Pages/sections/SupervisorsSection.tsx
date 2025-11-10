@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import LoadingSpinner from '../../Components/LoadingSpinner';
 
 type SupervisorRow = {
   id: number;
@@ -101,6 +102,7 @@ export default function SupervisorsSection(props: {
       onMouseOver={(e) => { if (!disabled && !loading) e.currentTarget.style.backgroundColor = colors.primaryHover; }}
       onMouseOut={(e) => { if (!disabled && !loading) e.currentTarget.style.backgroundColor = colors.primary; }}
     >
+      {loading && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
       {children}
     </button>
   );
@@ -158,7 +160,7 @@ export default function SupervisorsSection(props: {
                               <option key={sv.id} value={sv.id}>{sv.username}</option>
                             ))}
                           </select>
-                          <PrimaryButton disabled={!moveSelection[z.id] || !!actionLoading[`moveZone-${z.id}`]} onClick={() => moveZone(z.id, moveSelection[z.id])} className="text-xs px-2 py-1">Move</PrimaryButton>
+                          <PrimaryButton loading={!!actionLoading[`moveZone-${z.id}`]} disabled={!moveSelection[z.id] || !!actionLoading[`moveZone-${z.id}`]} onClick={() => moveZone(z.id, moveSelection[z.id])} className="text-xs px-2 py-1">Move</PrimaryButton>
                         </div>
                       )}
                     </div>
@@ -202,7 +204,7 @@ export default function SupervisorsSection(props: {
                               <option key={sv.id} value={sv.id}>{sv.username}</option>
                             ))}
                           </select>
-                          <PrimaryButton disabled={!moveSelection[v.id] || !!actionLoading[`saveVehicle-${s.id}`]} onClick={() => {
+                          <PrimaryButton loading={!!actionLoading[`saveVehicle-${s.id}`]} disabled={!moveSelection[v.id] || !!actionLoading[`saveVehicle-${s.id}`]} onClick={() => {
                             const target = Number(moveSelection[v.id]);
                             if (Number.isFinite(target)) assignVehicleToSupervisor(target, v.id);
                           }} className="text-xs px-2 py-1">Move</PrimaryButton>
@@ -218,7 +220,7 @@ export default function SupervisorsSection(props: {
                           <option key={v.id} value={v.id}>{v.plate}</option>
                         ))}
                       </select>
-                      <PrimaryButton onClick={() => saveVehicle(s.id)} disabled={!editVehicleId || !!actionLoading[`saveVehicle-${s.id}`]} className="text-sm px-3 py-1">
+                      <PrimaryButton loading={!!actionLoading[`saveVehicle-${s.id}`]} onClick={() => saveVehicle(s.id)} disabled={!editVehicleId || !!actionLoading[`saveVehicle-${s.id}`]} className="text-sm px-3 py-1">
                         {t('manageWorkers.addVehicle')}
                       </PrimaryButton>
                     </div>
@@ -252,7 +254,7 @@ export default function SupervisorsSection(props: {
                     <option value="">Select zone…</option>
                     {zonesNoSupervisor.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
                   </select>
-                  <PrimaryButton disabled={!assignZoneNoSup || !assignZoneToSupervisorId || !!actionLoading.assignZoneNoSup} onClick={() => {
+                  <PrimaryButton loading={!!actionLoading.assignZoneNoSup} disabled={!assignZoneNoSup || !assignZoneToSupervisorId || !!actionLoading.assignZoneNoSup} onClick={() => {
                     const zId = Number(assignZoneNoSup); const sId = Number(assignZoneToSupervisorId);
                     if (Number.isFinite(zId) && Number.isFinite(sId)) assignZoneToSupervisor(sId, zId);
                   }} className="text-sm whitespace-nowrap">Assign</PrimaryButton>
@@ -281,7 +283,7 @@ export default function SupervisorsSection(props: {
                     <option value="">Select supervisor…</option>
                     {supervisors.map(s => <option key={s.id} value={s.id}>{s.username}</option>)}
                   </select>
-                  <PrimaryButton disabled={!assignVehicleNoSup || !assignVehicleToSupervisorId || !!actionLoading.assignVehicleNoSup} onClick={() => {
+                  <PrimaryButton loading={!!actionLoading.assignVehicleNoSup} disabled={!assignVehicleNoSup || !assignVehicleToSupervisorId || !!actionLoading.assignVehicleNoSup} onClick={() => {
                     const vId = Number(assignVehicleNoSup); const sId = Number(assignVehicleToSupervisorId);
                     if (Number.isFinite(vId) && Number.isFinite(sId)) assignVehicleToSupervisor(sId, vId);
                   }} className="text-sm whitespace-nowrap">Assign</PrimaryButton>

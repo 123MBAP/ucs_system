@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import LoadingSpinner from '../../Components/LoadingSpinner';
 
 type Vehicle = { id: number; plate: string; manpower?: { manpower_id: number; username: string }[]; drivers?: { user_id: number; username?: string }[] };
 
@@ -93,6 +94,7 @@ export default function DriversManpowerSection(props: {
       onMouseOver={(e) => { if (!disabled && !loading) e.currentTarget.style.backgroundColor = colors.primaryHover; }}
       onMouseOut={(e) => { if (!disabled && !loading) e.currentTarget.style.backgroundColor = colors.primary; }}
     >
+      {loading && <LoadingSpinner size={14} className="border-white/40 border-t-white" />}
       {children}
     </button>
   );
@@ -131,7 +133,7 @@ export default function DriversManpowerSection(props: {
                                 <option key={ov.id} value={ov.id}>{ov.plate}</option>
                               ))}
                             </select>
-                            <PrimaryButton disabled={!moveManpowerTarget[m.manpower_id] || !!actionLoading[`assignManpower-${m.manpower_id}`]} onClick={() => {
+                            <PrimaryButton loading={!!actionLoading[`assignManpower-${m.manpower_id}`]} disabled={!moveManpowerTarget[m.manpower_id] || !!actionLoading[`assignManpower-${m.manpower_id}`]} onClick={() => {
                               const target = Number(moveManpowerTarget[m.manpower_id]);
                               if (Number.isFinite(target)) assignManpowerVehicle(m.manpower_id, target);
                             }} className="text-xs px-2 py-1">Move</PrimaryButton>
@@ -158,7 +160,7 @@ export default function DriversManpowerSection(props: {
                       <option value="">Select vehicle…</option>
                       {vehicles.map(v => (<option key={v.id} value={v.id}>{v.plate}</option>))}
                     </select>
-                    <PrimaryButton disabled={!assignVehicleForSelection || Object.keys(unassignedSelected).filter(id => unassignedSelected[Number(id)]).length === 0} onClick={async () => {
+                    <PrimaryButton disabled={!assignVehicleForSelection || Object.keys(unassignedSelected).filter(id => unassignedSelected[Number(id)]).length === 0} loading={!!actionLoading['assignManpower']} onClick={async () => {
                       const selectedIds = Object.keys(unassignedSelected).map(Number).filter(id => unassignedSelected[id]);
                       const target = Number(assignVehicleForSelection);
                       for (const mid of selectedIds) { await assignManpowerVehicle(mid, target); }
@@ -233,7 +235,7 @@ export default function DriversManpowerSection(props: {
                                   <option key={v.id} value={v.id}>{v.plate}</option>
                                 ))}
                               </select>
-                              <PrimaryButton disabled={!moveDriverTargetVehicle[driver.id] || !!actionLoading[`assignDriver-${driver.id}`]} onClick={() => {
+                              <PrimaryButton loading={!!actionLoading[`assignDriver-${driver.id}`]} disabled={!moveDriverTargetVehicle[driver.id] || !!actionLoading[`assignDriver-${driver.id}`]} onClick={() => {
                                 const target = Number(moveDriverTargetVehicle[driver.id]);
                                 if (Number.isFinite(target)) assignDriverVehicle(driver.id, target);
                               }} className="text-xs px-2 py-1">Move</PrimaryButton>
@@ -272,7 +274,7 @@ export default function DriversManpowerSection(props: {
                         <option value="">Select vehicle…</option>
                         {vehiclesNoDriver.map(v => <option key={v.id} value={v.id}>{v.plate}</option>)}
                       </select>
-                      <PrimaryButton disabled={!unassignedDriverId || !vehicleForUnassignedDriver || !!actionLoading[`assignDriver-${Number(unassignedDriverId)}`]} onClick={() => {
+                      <PrimaryButton loading={!!actionLoading[`assignDriver-${Number(unassignedDriverId)}`]} disabled={!unassignedDriverId || !vehicleForUnassignedDriver || !!actionLoading[`assignDriver-${Number(unassignedDriverId)}`]} onClick={() => {
                         const dId = Number(unassignedDriverId); const vId = Number(vehicleForUnassignedDriver);
                         if (Number.isFinite(dId) && Number.isFinite(vId)) assignDriverVehicle(dId, vId);
                         setUnassignedDriverId(''); setVehicleForUnassignedDriver('');
@@ -306,7 +308,7 @@ export default function DriversManpowerSection(props: {
                         <option value="">Select driver…</option>
                         {unassignedDrivers.map(d => <option key={d.id} value={d.id}>{d.username}</option>)}
                       </select>
-                      <PrimaryButton disabled={!vehicleNoDriverId || !driverNoVehicleId || !!actionLoading[`assignDriver-${Number(driverNoVehicleId)}`]} onClick={() => {
+                      <PrimaryButton loading={!!actionLoading[`assignDriver-${Number(driverNoVehicleId)}`]} disabled={!vehicleNoDriverId || !driverNoVehicleId || !!actionLoading[`assignDriver-${Number(driverNoVehicleId)}`]} onClick={() => {
                         const vId = Number(vehicleNoDriverId); const dId = Number(driverNoVehicleId);
                         if (Number.isFinite(dId) && Number.isFinite(vId)) assignDriverVehicle(dId, vId);
                         setVehicleNoDriverId(''); setDriverNoVehicleId('');
